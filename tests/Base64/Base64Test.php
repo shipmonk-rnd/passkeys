@@ -55,4 +55,28 @@ class Base64Test extends WebAuthnTestCase
 		yield 'standard base64 padding' => ['Zm9vYmE='];
 		yield 'invalid length (mod 4 == 1)' => ['a'];
 	}
+
+	/**
+	 * Inputs with the correct alphabet/length but non-zero unused trailing bits: they decode
+	 * (base64_decode is lenient here) but re-encode to a different string, so we reject them.
+	 * 'QR' decodes to 0x41 (canonical 'QQ'); 'Zm9vYmF' decodes to 'fooba' (canonical 'Zm9vYmE').
+	 */
+	#[DataProvider('provideNonCanonical')]
+	public function testDecodeRejectsNonCanonical(string $encoded): void
+	{
+		self::assertException(
+			InvalidBase64Exception::class,
+			'Non-canonical base64url data',
+			static fn () => Base64::urlDecode($encoded),
+		);
+	}
+
+	/**
+	 * @return iterable<array{string}>
+	 */
+	public static function provideNonCanonical(): iterable
+	{
+		yield 'two-char group' => ['QR'];
+		yield 'three-char group' => ['Zm9vYmF'];
+	}
 }

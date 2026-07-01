@@ -9,7 +9,6 @@ use WebAuthnX\Binary\Bytes;
 use function json_encode;
 
 use const JSON_THROW_ON_ERROR;
-use const JSON_UNESCAPED_SLASHES;
 
 /**
  * Options for a registration ceremony, serializable to the
@@ -70,6 +69,8 @@ readonly class PublicKeyCredentialCreationOptions implements JsonSerializable
 
 	public function toJson(): string
 	{
-		return json_encode($this, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+		// Default escaping (slashes escaped to "<\/…") is kept deliberately: it neutralises a
+		// "</script>" breakout if a relying party inlines this JSON into an HTML <script> block.
+		return json_encode($this, JSON_THROW_ON_ERROR);
 	}
 }

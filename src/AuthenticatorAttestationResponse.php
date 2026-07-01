@@ -12,9 +12,15 @@ use WebAuthnX\Json\JsonObject;
  */
 final readonly class AuthenticatorAttestationResponse extends AuthenticatorResponse
 {
+	/**
+	 * @param  list<string>|null $transports the authenticator's transports as reported by the
+	 *     client; unlike the rest of the response it cannot be recovered from the attestation
+	 *     object, and a relying party stores it to seed `allowCredentials` on later assertions.
+	 */
 	private function __construct(
 		Bytes $clientDataJSON,
 		public Bytes $attestationObject,
+		public ?array $transports,
 	) {
 		parent::__construct($clientDataJSON);
 	}
@@ -24,6 +30,7 @@ final readonly class AuthenticatorAttestationResponse extends AuthenticatorRespo
 		return new self(
 			$jsonObject->getBytes('clientDataJSON'),
 			$jsonObject->getBytes('attestationObject'),
+			$jsonObject->getOptionalStringList('transports'),
 		);
 	}
 

@@ -56,4 +56,41 @@ class AuthenticatorDataTest extends WebAuthnTestCase
 		self::assertSame(32, $credentialPublicKey->x->length);
 		self::assertSame(32, $credentialPublicKey->y->length);
 	}
+
+	/**
+	 * Minimal assertion authenticator data (no attested credential data, no extensions) with the
+	 * backup-eligible and backup-state flags set: rpIdHash(32) || flags(0x1D) || signCount(4).
+	 */
+	public function testBackupFlags(): void
+	{
+		$authenticatorData = AuthenticatorData::fromBytes(
+			self::bytesFromHex(str_repeat('00', 32) . '1d' . '00000000'),
+		);
+
+		self::assertTrue($authenticatorData->isUserPresent());
+		self::assertTrue($authenticatorData->isUserVerified());
+		self::assertTrue($authenticatorData->isBackupEligible());
+		self::assertTrue($authenticatorData->isBackupState());
+		self::assertFalse($authenticatorData->hasAttestedCredentialData());
+		self::assertNull($authenticatorData->attestedCredentialData);
+		self::assertFalse($authenticatorData->hasExtensionData());
+		self::assertNull($authenticatorData->extensions);
+	}
+
+	/**
+	 * Authenticator data with the extension-data flag set but no attested credential data:
+	 * rpIdHash(32) || flags(0x81 = UP+ED) || signCount(4) || CBOR extensions (empty map 0xA0).
+	 */
+	public function testExtensionDataWithoutAttestedCredentialData(): void
+	{
+		$authenticatorData = AuthenticatorData::fromBytes(
+			self::bytesFromHex(str_repeat('00', 32) . '81' . '00000000' . 'a0'),
+		);
+
+		self::assertTrue($authenticatorData->isUserPresent());
+		self::assertFalse($authenticatorData->hasAttestedCredentialData());
+		self::assertNull($authenticatorData->attestedCredentialData);
+		self::assertTrue($authenticatorData->hasExtensionData());
+		self::assertNotNull($authenticatorData->extensions);
+	}
 }

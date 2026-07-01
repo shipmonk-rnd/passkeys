@@ -31,6 +31,13 @@ class Base64
 			throw new InvalidBase64Exception('Invalid base64url data');
 		}
 
+		// base64_decode() accepts non-canonical input (non-zero unused trailing bits), so two
+		// distinct strings can decode to the same bytes. WebAuthn requires canonical base64url,
+		// so reject anything that does not round-trip back to its own encoding.
+		if (self::urlEncode($decoded) !== $data) {
+			throw new InvalidBase64Exception('Non-canonical base64url data');
+		}
+
 		return $decoded;
 	}
 }

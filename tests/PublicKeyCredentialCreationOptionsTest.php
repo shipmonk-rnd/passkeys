@@ -27,7 +27,7 @@ class PublicKeyCredentialCreationOptionsTest extends WebAuthnTestCase
 	public function testSerializesAllMembers(): void
 	{
 		$options = new PublicKeyCredentialCreationOptions(
-			rp: new PublicKeyCredentialRpEntity('example.com', 'Example RP'),
+			rp: new PublicKeyCredentialRpEntity(name: 'Example RP', id: 'example.com'),
 			user: new PublicKeyCredentialUserEntity(Bytes::fromBinaryString('user-id'), 'alice', 'Alice Smith'),
 			challenge: Bytes::fromBinaryString('challenge-bytes'),
 			pubKeyCredParams: [
@@ -53,7 +53,7 @@ class PublicKeyCredentialCreationOptionsTest extends WebAuthnTestCase
 
 		self::assertSame(
 			[
-				'rp' => ['id' => 'example.com', 'name' => 'Example RP'],
+				'rp' => ['name' => 'Example RP', 'id' => 'example.com'],
 				'user' => [
 					'id' => Base64::urlEncode('user-id'),
 					'name' => 'alice',
@@ -87,7 +87,7 @@ class PublicKeyCredentialCreationOptionsTest extends WebAuthnTestCase
 	public function testSerializesOnlyRequiredMembers(): void
 	{
 		$options = new PublicKeyCredentialCreationOptions(
-			rp: new PublicKeyCredentialRpEntity('example.com', 'Example RP'),
+			rp: new PublicKeyCredentialRpEntity(name: 'Example RP', id: 'example.com'),
 			user: new PublicKeyCredentialUserEntity(Bytes::fromBinaryString('user-id'), 'alice', 'Alice Smith'),
 			challenge: Bytes::fromBinaryString('challenge-bytes'),
 			pubKeyCredParams: [
@@ -97,7 +97,7 @@ class PublicKeyCredentialCreationOptionsTest extends WebAuthnTestCase
 
 		self::assertSame(
 			[
-				'rp' => ['id' => 'example.com', 'name' => 'Example RP'],
+				'rp' => ['name' => 'Example RP', 'id' => 'example.com'],
 				'user' => [
 					'id' => Base64::urlEncode('user-id'),
 					'name' => 'alice',
@@ -110,6 +110,43 @@ class PublicKeyCredentialCreationOptionsTest extends WebAuthnTestCase
 			],
 			json_decode($options->toJson(), true, flags: JSON_THROW_ON_ERROR),
 		);
+	}
+
+	public function testRpEntityOmitsIdWhenNull(): void
+	{
+		$options = new PublicKeyCredentialCreationOptions(
+			rp: new PublicKeyCredentialRpEntity(name: 'Example RP'),
+			user: new PublicKeyCredentialUserEntity(Bytes::fromBinaryString('user-id'), 'alice', 'Alice Smith'),
+			challenge: Bytes::fromBinaryString('challenge-bytes'),
+			pubKeyCredParams: [
+				new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::ES256),
+			],
+		);
+
+		$decoded = json_decode($options->toJson(), true, flags: JSON_THROW_ON_ERROR);
+		self::assertIsArray($decoded);
+		self::assertSame(['name' => 'Example RP'], $decoded['rp']);
+	}
+
+	/**
+	 * User-controlled text (name/displayName) must not be able to break out of an HTML <script>
+	 * block: json_encode's default slash-escaping turns "</script>" into "<\/script>", which the
+	 * HTML script-data end-tag scanner does not match. Guards against re-adding JSON_UNESCAPED_SLASHES.
+	 */
+	public function testUserTextIsScriptSafe(): void
+	{
+		$options = new PublicKeyCredentialCreationOptions(
+			rp: new PublicKeyCredentialRpEntity(name: 'Example RP'),
+			user: new PublicKeyCredentialUserEntity(Bytes::fromBinaryString('user-id'), 'alice', 'a</script>b'),
+			challenge: Bytes::fromBinaryString('challenge-bytes'),
+			pubKeyCredParams: [
+				new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::ES256),
+			],
+		);
+
+		$json = $options->toJson();
+		self::assertStringNotContainsString('</script>', $json);
+		self::assertStringContainsString('a<\/script>b', $json);
 	}
 
 	public function testDescriptorOmitsTransportsWhenNull(): void

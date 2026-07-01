@@ -185,11 +185,37 @@ rejects trailing bytes), so item 11 reduced to adding the accessors.
     ✅ deleted (dead code; no CBOR encoder is needed — options serialize as JSON, DER/SPKI
     builds plain strings, and signature verification does not re-encode CBOR).
 
-**Deferred to Phase D (fixture/coverage work, not blocking):** the `AuthenticatorData`
-no-attested-data and extensions-present branches, plus several pre-existing untested
-`JsonObject`/`CollectedClientData` accessors, remain uncovered pending real spec test
-vectors; option JSON does not yet model `attestation`/`attestationFormats`/`extensions`
-inputs (add when the ceremony layer needs them).
+**Post-review hardening (2026-07-01).** Four fresh-eyes review agents (spec / correctness /
+security / tests) audited Phase C. No HIGH code defects; the generic typing was verified
+*real* (statically narrows `->response` at PHPStan max). Fixes applied:
+- **[MEDIUM security] Non-canonical base64url accepted.** `Base64::urlDecode` relied on
+  `base64_decode(strict:true)`, which ignores non-zero unused trailing bits, so distinct
+  strings (`"QQ"`/`"QR"`) decoded to the same bytes — a credential-id-confusion risk and a
+  WebAuthn canonical-base64url violation. Now rejects input that does not round-trip to its
+  own encoding.
+- **[MEDIUM security] `</script>` breakout.** `toJson()` used `JSON_UNESCAPED_SLASHES`, which
+  disables json_encode's default slash-escaping (`</script>` → `<\/script>`) that neutralises
+  a script-context breakout via user-controlled `name`/`displayName`. Flag removed; locked by a test.
+- **[MEDIUM spec] Dropped `transports`.** `AuthenticatorAttestationResponse` now parses the
+  `transports` member (via new `JsonObject::getOptionalStringList`) — the one response datum
+  not recoverable from the attestation object (RPs persist it to seed later `allowCredentials`).
+- **[MEDIUM spec] Over-required `rp.id`.** `PublicKeyCredentialRpEntity::$id` is now optional
+  (spec marks it non-`required`); when null it is omitted so the browser defaults it to the
+  effective domain.
+- **[tests]** Added the missing negatives/edges: assertion response without `userHandle`;
+  missing/wrong-typed required members; `getObject` on an explicit-null value; the
+  `AuthenticatorData` BE/BS true-paths and the no-AT / extensions-present parse branches; the
+  new `getOptionalStringList` error branches. Every Phase C class + every file touched here is
+  now at 100% line coverage (overall `src/` 97.1%, 2215 tests).
+
+**Deliberately deferred (documented, non-blocking):** `type` value is not validated (consistent
+with `AttestationObject` leaving `fmt` unchecked — a documenting test pins the behaviour);
+outbound option invariants (`user.id` 1–64 bytes, non-empty `pubKeyCredParams`, min challenge
+length) are RP-controlled and left to a later options-validation pass; a decoded-size DoS cap
+(bounded by PHP limits already). Fixture/coverage: the remaining pre-existing untested
+`JsonObject::fromString`/`getOptionalBoolean`, `CollectedClientData`, and two `BytesReader`
+guard lines await Phase D spec vectors; option JSON does not yet model
+`attestation`/`attestationFormats`/`extensions` inputs (add when the ceremony layer needs them).
 
 ### Phase D — Coverage, fixtures, and tooling completion
 Goal: near-100% coverage enforced in CI, backed by real spec vectors.

@@ -7,6 +7,7 @@ use stdClass;
 use WebAuthnX\Base64\Base64;
 use WebAuthnX\Base64\InvalidBase64Exception;
 use WebAuthnX\Binary\Bytes;
+use function is_array;
 use function is_string;
 
 
@@ -81,6 +82,34 @@ readonly class JsonObject
 		}
 
 		return $this->object->$key;
+	}
+
+
+	/**
+	 * @return list<string>|null
+	 * @throws JsonObjectException
+	 */
+	public function getOptionalStringList(string $key): ?array
+	{
+		if (!isset($this->object->$key)) {
+			return null;
+		}
+
+		if (!is_array($this->object->$key)) {
+			throw new JsonObjectException("Value of key '$key' is not an array");
+		}
+
+		$list = [];
+
+		foreach ($this->object->$key as $item) {
+			if (!is_string($item)) {
+				throw new JsonObjectException("Value of key '$key' is not an array of strings");
+			}
+
+			$list[] = $item;
+		}
+
+		return $list;
 	}
 
 
