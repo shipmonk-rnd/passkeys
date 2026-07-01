@@ -18,7 +18,14 @@ class Base64
 	 */
 	public static function urlDecode(string $data): string
 	{
-		$decoded = base64_decode(str_pad(strtr($data, '-_', '+/'), strlen($data) % 4, '='));
+		if ($data !== '' && preg_match('~^[A-Za-z0-9_-]+$~', $data) !== 1) {
+			throw new InvalidBase64Exception('Invalid base64url data');
+		}
+
+		$base64 = strtr($data, '-_', '+/');
+		$base64 .= str_repeat('=', (4 - strlen($base64) % 4) % 4);
+
+		$decoded = base64_decode($base64, strict: true);
 
 		if ($decoded === false) {
 			throw new InvalidBase64Exception('Invalid base64url data');

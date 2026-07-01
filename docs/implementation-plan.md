@@ -63,8 +63,16 @@ Reference specs are checked into `spec/` (see §7).
 
 ## 3. Phased plan
 
-### Phase A — Fix correctness bugs in existing plumbing
+### Phase A — Fix correctness bugs in existing plumbing — ✅ done 2026-07-01
 Goal: everything that exists compiles, is type-clean at PHPStan max, and behaves per spec.
+
+Outcome: PHPStan level max is clean; test suite green (2136 tests, no risky); line
+coverage 48% → 74%. `Base64` decoding now validates strictly; the response classes are
+concrete and the `authenticatorData` copy-paste bug is fixed; `CborMap` has the optional
+accessors; COSE keys parse into a real `CoseEc2Key`/`CoseRsaKey` hierarchy and are wired
+into `AttestedCredentialData` (now exercised end-to-end by `AuthenticatorDataTest`).
+Decision: `BytesReader` now assumes 64-bit PHP (manual byte arithmetic replaced the
+`mixed`-typed `unpack()` path; the incomplete 32-bit guards were removed).
 
 1. **`Base64::urlDecode`** — use strict decoding and actually reject invalid input;
    fix padding restoration (`strlen % 4` is wrong for the no-padding case). Add tests for

@@ -4,37 +4,36 @@ namespace WebAuthnX\Cose;
 
 use WebAuthnX\Cbor\CborMap;
 
+/**
+ * A COSE_Key as used by WebAuthn credential public keys.
+ *
+ * @see https://www.rfc-editor.org/rfc/rfc9052.html#section-7 COSE key structure
+ * @see https://www.rfc-editor.org/rfc/rfc9053.html key type / algorithm parameters
+ */
 abstract class CoseKey
 {
+	/** Common COSE key label: key type (kty). */
+	protected const LABEL_KTY = 1;
 
-	private const KEY_KTY = 1;
-	private const KEY_ALG = 3;
+	/** Common COSE key label: algorithm (alg). */
+	protected const LABEL_ALG = 3;
 
 	protected function __construct(
-		public int $kty,
 		public int $alg,
-		public ?int $crv,
-		public ?string $x,
-		public ?string $y,
-		public ?string $n,
-		public ?string $e,
 	) {
 	}
 
-
-	public static function fromCborMap(CborMap $cborMap): CoseKey
+	/**
+	 * @throws CoseKeyException
+	 */
+	public static function fromCborMap(CborMap $map): CoseKey
 	{
-		// kty (1): 2 (EC2)
-		// alg (3): -7 (ES256)
+		$kty = $map->getInt(self::LABEL_KTY);
 
-		return new static(
-			$cborMap->getInt(self::KEY_KTY),
-			$cborMap->getInt(self::KEY_ALG),
-			$cborMap->getInt('-1'),
-			$cborMap->getOptionalBytes('-2'),
-			$cborMap->getOptionalBytes('-3'),
-			$cborMap->getOptionalBytes('-1'),
-			$cborMap->getOptionalBytes('-2'),
-		);
+		return match ($kty) {
+			CoseEc2Key::KTY => CoseEc2Key::fromCborMap($map),
+			CoseRsaKey::KTY => CoseRsaKey::fromCborMap($map),
+			default => throw new CoseKeyException("Unsupported COSE key type {$kty}"),
+		};
 	}
 }

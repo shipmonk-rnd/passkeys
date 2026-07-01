@@ -57,7 +57,7 @@ class DerEncoderTest extends TestCase
 		}
 	}
 
-	private static function _der_length($len)
+	private static function _der_length(int $len): string
 	{
 		if ($len < 128) {
 			return \chr($len);
@@ -70,7 +70,7 @@ class DerEncoderTest extends TestCase
 		return \chr(0x80 | \strlen($lenBytes)) . $lenBytes;
 	}
 
-	private static function _der_unsignedInteger($bytes)
+	private static function _der_unsignedInteger(string $bytes): string
 	{
 		$len = \strlen($bytes);
 

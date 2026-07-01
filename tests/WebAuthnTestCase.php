@@ -4,16 +4,34 @@ namespace WebAuthnXTests;
 
 use PHPUnit\Framework\Constraint\Exception as ExceptionConstraint;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use Throwable;
+use WebAuthnX\Binary\Bytes;
 
 use function file_get_contents;
 use function file_put_contents;
 use function getenv;
+use function hex2bin;
 use function is_file;
+use function str_replace;
 use function strlen;
 
 abstract class WebAuthnTestCase extends TestCase
 {
+	/**
+	 * Decodes a (possibly space-separated) hex string into {@see Bytes}.
+	 */
+	protected static function bytesFromHex(string $hex): Bytes
+	{
+		$binary = hex2bin(str_replace(' ', '', $hex));
+
+		if ($binary === false) {
+			throw new RuntimeException('Invalid hex string in test data');
+		}
+
+		return Bytes::fromBinaryString($binary);
+	}
+
 	protected static function assertSnapshot(string $snapshotPath, string $actual): void
 	{
 		if (is_file($snapshotPath) && getenv('UPDATE_SNAPSHOTS') === false) {

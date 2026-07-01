@@ -2,44 +2,39 @@
 
 namespace WebAuthnX\Cose;
 
-class CoseRsaKey extends CoseKey
+use WebAuthnX\Binary\Bytes;
+use WebAuthnX\Cbor\CborMap;
+
+/**
+ * COSE key of type RSA, e.g. RS256.
+ *
+ * @see https://www.rfc-editor.org/rfc/rfc8230.html#section-4 RSA key parameters
+ */
+final class CoseRsaKey extends CoseKey
 {
+	/** Key type value for RSA keys. */
+	public const KTY = 3;
+
+	/** RSA key label: modulus (n). */
+	private const LABEL_N = -1;
+
+	/** RSA key label: public exponent (e). */
+	private const LABEL_E = -2;
+
+	private function __construct(
+		int $alg,
+		public Bytes $n,
+		public Bytes $e,
+	) {
+		parent::__construct($alg);
+	}
+
+	public static function fromCborMap(CborMap $map): self
+	{
+		return new self(
+			$map->getInt(self::LABEL_ALG),
+			$map->getBytes(self::LABEL_N),
+			$map->getBytes(self::LABEL_E),
+		);
+	}
 }
-
-
-//RSAPublicKey ::= SEQUENCE {
-//	modulus INTEGER, -- n
-//	publicExponent INTEGER -- e
-//}
-
-// https://datatracker.ietf.org/doc/html/rfc8017#appendix-A.1
-// https://datatracker.ietf.org/doc/html/rfc8017#appendix-C
-
-// pkcs-1    OBJECT IDENTIFIER ::= {
-//     iso(1) member-body(2) us(840) rsadsi(113549) pkcs(1) 1
-// }
-
-// sha256WithRSAEncryption      OBJECT IDENTIFIER ::= { pkcs-1 11 }
-
-//SubjectPublicKeyInfo  ::=  SEQUENCE  {
-//        algorithm            AlgorithmIdentifier,
-//        subjectPublicKey     BIT STRING  }
-
-//AlgorithmIdentifier  ::=  SEQUENCE  {
-//    algorithm               OBJECT IDENTIFIER,
-//    parameters              ANY DEFINED BY algorithm OPTIONAL  }
-
-// The DER encoded RSAPublicKey is the value of the BIT
-//   STRING subjectPublicKey.
-
-//
-//   The OID rsaEncryption identifies RSA public keys.
-//
-//      pkcs-1 OBJECT IDENTIFIER ::= { iso(1) member-body(2) us(840)
-//                     rsadsi(113549) pkcs(1) 1 }
-//
-//      rsaEncryption OBJECT IDENTIFIER ::=  { pkcs-1 1}
-//
-//   The rsaEncryption OID is intended to be used in the algorithm field
-//   of a value of type AlgorithmIdentifier.  The parameters field MUST
-//   have ASN.1 type NULL for this algorithm identifier.

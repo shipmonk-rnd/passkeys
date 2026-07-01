@@ -5,18 +5,17 @@ namespace WebAuthnX\Binary;
 use Closure;
 use LogicException;
 
+use function is_float;
+use function ord;
 use function preg_match;
+use function substr;
 use function unpack;
 
 use const INF;
 use const NAN;
-use const PHP_INT_SIZE;
 
 class BytesReader
 {
-	/**
-	 * @param  int<0, max> $offset
-	 */
 	private function __construct(
 		private readonly Bytes $bytes,
 		private int $offset,
@@ -44,7 +43,7 @@ class BytesReader
 	 */
 	public function u8(): int
 	{
-		return $this->unpack('C', 1);
+		return ord($this->readRaw(1));
 	}
 
 	/**
@@ -52,7 +51,9 @@ class BytesReader
 	 */
 	public function u16(): int
 	{
-		return $this->unpack('n', 2);
+		$bytes = $this->readRaw(2);
+
+		return (ord($bytes[0]) << 8) | ord($bytes[1]);
 	}
 
 	/**
@@ -60,13 +61,12 @@ class BytesReader
 	 */
 	public function u32(): int
 	{
-		$value = $this->unpack('N', 4);
+		$bytes = $this->readRaw(4);
 
-		if (PHP_INT_SIZE === 4 && $value < 0) {
-			throw new BytesReaderException('Value is too large for 32-bit signed integer');
-		}
-
-		return $value;
+		return (ord($bytes[0]) << 24)
+			| (ord($bytes[1]) << 16)
+			| (ord($bytes[2]) << 8)
+			| ord($bytes[3]);
 	}
 
 	/**
@@ -74,13 +74,15 @@ class BytesReader
 	 */
 	public function u64(): int
 	{
-		if (PHP_INT_SIZE < 8) {
-			throw new BytesReaderException('64-bit integers are not supported');
+		$bytes = $this->readRaw(8);
+
+		$value = 0;
+		for ($i = 0; $i < 8; $i++) {
+			$value = ($value << 8) | ord($bytes[$i]);
 		}
 
-		$value = $this->unpack('J', 8);
-
-		if (PHP_INT_SIZE === 8 && $value < 0) {
+		// A set most significant bit overflows PHP's signed 64-bit integer into a negative value.
+		if ($value < 0) {
 			throw new BytesReaderException('Value is too large for 64-bit signed integer');
 		}
 
@@ -110,7 +112,7 @@ class BytesReader
 	 */
 	public function f32(): float
 	{
-		return $this->unpack('G', 4);
+		return $this->unpackFloat('G', 4);
 	}
 
 	/**
@@ -118,7 +120,7 @@ class BytesReader
 	 */
 	public function f64(): float
 	{
-		return $this->unpack('E', 8);
+		return $this->unpackFloat('E', 8);
 	}
 
 	/**
@@ -157,19 +159,29 @@ class BytesReader
 	/**
 	 * @throws BytesReaderException
 	 */
-	private function unpack(string $format, int $length): mixed
+	private function readRaw(int $length): string
 	{
 		if ($this->offset + $length > $this->bytes->length) {
 			throw new BytesReaderException('Unexpected end of data');
 		}
 
-		$value = unpack($format, $this->bytes->data, $this->bytes->offset + $this->offset);
+		$raw = substr($this->bytes->data, $this->bytes->offset + $this->offset, $length);
+		$this->offset += $length;
 
-		if ($value === false) {
+		return $raw;
+	}
+
+	/**
+	 * @throws BytesReaderException
+	 */
+	private function unpackFloat(string $format, int $length): float
+	{
+		$value = unpack($format, $this->readRaw($length));
+
+		if ($value === false || !is_float($value[1])) {
 			throw new BytesReaderException('Failed to unpack data');
 		}
 
-		$this->offset += $length;
 		return $value[1];
 	}
 

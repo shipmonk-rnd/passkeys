@@ -11,6 +11,9 @@ use function is_string;
 
 readonly class CborMap
 {
+	/**
+	 * @param  array<int|string, mixed> $map
+	 */
 	private function __construct(
 		private array $map,
 	) {
@@ -73,6 +76,31 @@ readonly class CborMap
 		}
 
 		return new self($value);
+	}
+
+	public function has(int|string $key): bool
+	{
+		return array_key_exists($key, $this->map);
+	}
+
+	public function getOptionalInt(int|string $key): ?int
+	{
+		return $this->has($key) ? $this->getInt($key) : null;
+	}
+
+	public function getOptionalString(int|string $key): ?string
+	{
+		return $this->has($key) ? $this->getString($key) : null;
+	}
+
+	public function getOptionalBytes(int|string $key): ?Bytes
+	{
+		return $this->has($key) ? $this->getBytes($key) : null;
+	}
+
+	public function getOptionalMap(int|string $key): ?self
+	{
+		return $this->has($key) ? $this->getMap($key) : null;
 	}
 
 	private function getMixed(int|string $key): mixed

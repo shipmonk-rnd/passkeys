@@ -7,7 +7,7 @@ use WebAuthnX\Binary\BytesReader;
 use WebAuthnX\Cbor\CborMap;
 use WebAuthnX\Json\JsonObject;
 
-readonly abstract class AuthenticatorAttestationResponse
+final readonly class AuthenticatorAttestationResponse
 {
 	private function __construct(
 		public Bytes $clientDataJSON,
@@ -15,9 +15,9 @@ readonly abstract class AuthenticatorAttestationResponse
 	) {
 	}
 
-	public static function fromJsonObject(JsonObject $jsonObject): AuthenticatorAttestationResponse
+	public static function fromJsonObject(JsonObject $jsonObject): self
 	{
-		return new static(
+		return new self(
 			$jsonObject->getBytes('clientDataJSON'),
 			$jsonObject->getBytes('attestationObject'),
 		);

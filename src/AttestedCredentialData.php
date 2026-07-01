@@ -5,13 +5,14 @@ namespace WebAuthnX;
 use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Binary\BytesReader;
 use WebAuthnX\Cbor\CborMap;
+use WebAuthnX\Cose\CoseKey;
 
 readonly class AttestedCredentialData
 {
 	private function __construct(
 		public Bytes $aaGuid,
 		public Bytes $credentialId,
-		public CborMap $credentialPublicKey,
+		public CoseKey $credentialPublicKey,
 	) {
 	}
 
@@ -20,7 +21,7 @@ readonly class AttestedCredentialData
 		$aaGuid = $bytesReader->bytes(16);
 		$credentialIdLength = $bytesReader->u16();
 		$credentialId = $bytesReader->bytes($credentialIdLength);
-		$credentialPublicKey = CborMap::fromBytesReader($bytesReader);
+		$credentialPublicKey = CoseKey::fromCborMap(CborMap::fromBytesReader($bytesReader));
 
 		return new AttestedCredentialData($aaGuid, $credentialId, $credentialPublicKey);
 	}

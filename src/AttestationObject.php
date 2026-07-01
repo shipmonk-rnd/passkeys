@@ -16,7 +16,7 @@ readonly class AttestationObject
 
 	public static function fromCborMap(CborMap $map): AttestationObject
 	{
-		return new static(
+		return new self(
 			$map->getBytes('authData'),
 			$map->getString('fmt'),
 			$map->getMap('attStmt'), // keys are utf-8 strings

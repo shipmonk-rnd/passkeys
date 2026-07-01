@@ -10,18 +10,16 @@ use WebAuthnX\Cbor\CborDecoder;
 use WebAuthnX\Cbor\InvalidCborException;
 use WebAuthnXTests\WebAuthnTestCase;
 
-use function hex2bin;
 use function is_float;
 use function is_nan;
-use function str_replace;
 
 #[CoversClass(CborDecoder::class)]
 class CborDecoderTest extends WebAuthnTestCase
 {
 	#[DataProvider('provideDecodeData')]
-	public function testDecode($data, $expected): void
+	public function testDecode(string $data, mixed $expected): void
 	{
-		$bytes = Bytes::fromBinaryString(hex2bin(str_replace(' ', '', $data)));
+		$bytes = self::bytesFromHex($data);
 
 		$actual = BytesReader::read($bytes, static function (BytesReader $reader): mixed {
 			return CborDecoder::decode($reader);
@@ -39,6 +37,9 @@ class CborDecoderTest extends WebAuthnTestCase
 		}
 	}
 
+	/**
+	 * @return iterable<array{string, mixed}>
+	 */
 	public static function provideDecodeData(): iterable
 	{
 		// positive int or zero
@@ -118,9 +119,9 @@ class CborDecoderTest extends WebAuthnTestCase
 	}
 
 	#[DataProvider('provideDecodeInvalid')]
-	public function testDecodeInvalid(mixed $data, string $message): void
+	public function testDecodeInvalid(string $data, string $message): void
 	{
-		$bytes = Bytes::fromBinaryString(hex2bin(str_replace(' ', '', $data)));
+		$bytes = self::bytesFromHex($data);
 
 		self::assertException(
 			InvalidCborException::class,
@@ -133,6 +134,9 @@ class CborDecoderTest extends WebAuthnTestCase
 		);
 	}
 
+	/**
+	 * @return iterable<array{string, string}>
+	 */
 	public static function provideDecodeInvalid(): iterable
 	{
 		yield ['', 'Unexpected end of data'];

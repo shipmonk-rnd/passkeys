@@ -6,7 +6,7 @@ use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Json\JsonObject;
 
 
-readonly abstract class AuthenticatorAssertionResponse
+final readonly class AuthenticatorAssertionResponse
 {
 	private function __construct(
 		public Bytes $clientDataJSON,
@@ -17,11 +17,11 @@ readonly abstract class AuthenticatorAssertionResponse
 	}
 
 
-	public static function fromJsonObject(JsonObject $jsonObject): AuthenticatorAssertionResponse
+	public static function fromJsonObject(JsonObject $jsonObject): self
 	{
-		return new static(
+		return new self(
 			$jsonObject->getBytes('clientDataJSON'),
-			$jsonObject->getBytes('attestationObject'),
+			$jsonObject->getBytes('authenticatorData'),
 			$jsonObject->getBytes('signature'),
 			$jsonObject->getOptionalBytes('userHandle'),
 		);
