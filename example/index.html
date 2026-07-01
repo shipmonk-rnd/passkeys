@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>WebAuthnX passkey demo</title>
+	<style>
+		body { font: 16px/1.5 system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1rem; color: #1a1a1a; }
+		h1 { font-size: 1.4rem; }
+		p.lead { color: #555; }
+		button { font-size: 1rem; padding: 0.6rem 1.1rem; margin: 0.3rem 0.3rem 0.3rem 0; border: 0; border-radius: 0.5rem; background: #2563eb; color: #fff; cursor: pointer; }
+		button:hover { background: #1d4ed8; }
+		#log { margin-top: 1.5rem; padding: 1rem; background: #f5f5f5; border-radius: 0.5rem; white-space: pre-wrap; word-break: break-word; font: 13px/1.5 ui-monospace, monospace; min-height: 3rem; }
+		.ok { color: #15803d; }
+		.err { color: #b91c1c; }
+	</style>
+</head>
+<body>
+	<h1>🔑 WebAuthnX passkey demo</h1>
+	<p class="lead">Register a passkey, then log in with it. Everything is verified server-side by the
+		<code>WebAuthnX\RelyingParty</code> façade.</p>
+
+	<button id="register">Register a passkey</button>
+	<button id="login">Log in</button>
+
+	<div id="log">Ready.</div>
+
+	<script>
+		const logEl = document.getElementById('log');
+		const log = (msg, cls = '') => { logEl.textContent = msg; logEl.className = cls; };
+
+		if (!window.PublicKeyCredential || !PublicKeyCredential.parseCreationOptionsFromJSON) {
+			log('This browser is too old: it lacks PublicKeyCredential JSON helpers. Use a recent Chrome, Safari, or Firefox.', 'err');
+		}
+
+		async function post(url, json) {
+			const res = await fetch(url, {
+				method: 'POST',
+				headers: json ? { 'Content-Type': 'application/json' } : {},
+				body: json ? JSON.stringify(json) : undefined,
+			});
+			return { ok: res.ok, data: await res.json() };
+		}
+
+		document.getElementById('register').addEventListener('click', async () => {
+			try {
+				log('Requesting registration options…');
+				const { data: optionsJSON } = await post('/register/options');
+				const options = PublicKeyCredential.parseCreationOptionsFromJSON(optionsJSON);
+
+				log('Waiting for your authenticator…');
+				const credential = await navigator.credentials.create({ publicKey: options });
+
+				const { ok, data } = await post('/register/verify', credential.toJSON());
+				log(JSON.stringify(data, null, 2), ok ? 'ok' : 'err');
+			} catch (e) {
+				log('Registration failed: ' + e, 'err');
+			}
+		});
+
+		document.getElementById('login').addEventListener('click', async () => {
+			try {
+				log('Requesting login options…');
+				const { data: optionsJSON } = await post('/login/options');
+				const options = PublicKeyCredential.parseRequestOptionsFromJSON(optionsJSON);
+
+				log('Waiting for your authenticator…');
+				const credential = await navigator.credentials.get({ publicKey: options });
+
+				const { ok, data } = await post('/login/verify', credential.toJSON());
+				log(JSON.stringify(data, null, 2), ok ? 'ok' : 'err');
+			} catch (e) {
+				log('Login failed: ' + e, 'err');
+			}
+		});
+	</script>
+</body>
+</html>
