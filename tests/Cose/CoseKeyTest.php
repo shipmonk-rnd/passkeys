@@ -7,6 +7,7 @@ use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 use WebAuthnX\Cose\CoseEc2Key;
 use WebAuthnX\Cose\CoseKey;
 use WebAuthnX\Cose\CoseKeyException;
+use WebAuthnX\Cose\CoseOkpKey;
 use WebAuthnX\Cose\CoseRsaKey;
 use WebAuthnXTests\CryptoTestCase;
 
@@ -16,15 +17,17 @@ use function str_pad;
 class CoseKeyTest extends CryptoTestCase
 {
 	/**
-	 * The DER SubjectPublicKeyInfo we build from a COSE EC2 key must be byte-for-byte
+	 * The DER SubjectPublicKeyInfo we build from a COSE key must be byte-for-byte
 	 * identical to what OpenSSL emits for the same key.
+	 *
+	 * @param  class-string<CoseKey> $expectedClass
 	 */
-	#[DataProvider('provideEc2Algorithms')]
-	public function testEc2SubjectPublicKeyInfoMatchesOpenssl(int $alg): void
+	#[DataProvider('provideAlgorithms')]
+	public function testSubjectPublicKeyInfoMatchesOpenssl(int $alg, string $expectedClass): void
 	{
 		[$coseKey, $privateKey] = self::generateCoseKeyPair($alg);
 
-		self::assertInstanceOf(CoseEc2Key::class, $coseKey);
+		self::assertInstanceOf($expectedClass, $coseKey);
 		self::assertSame(
 			bin2hex(self::pemToDer(self::stringField(self::keyDetails($privateKey), 'key'))),
 			bin2hex($coseKey->toDerSubjectPublicKeyInfo()->toBinaryString()),
@@ -32,24 +35,15 @@ class CoseKeyTest extends CryptoTestCase
 	}
 
 	/**
-	 * @return iterable<string, array{int}>
+	 * @return iterable<string, array{int, class-string<CoseKey>}>
 	 */
-	public static function provideEc2Algorithms(): iterable
+	public static function provideAlgorithms(): iterable
 	{
-		yield 'P-256 / ES256' => [CoseAlgorithmIdentifier::ES256];
-		yield 'P-384 / ES384' => [CoseAlgorithmIdentifier::ES384];
-		yield 'P-521 / ES512' => [CoseAlgorithmIdentifier::ES512];
-	}
-
-	public function testRsaSubjectPublicKeyInfoMatchesOpenssl(): void
-	{
-		[$coseKey, $privateKey] = self::generateCoseKeyPair(CoseAlgorithmIdentifier::RS256);
-
-		self::assertInstanceOf(CoseRsaKey::class, $coseKey);
-		self::assertSame(
-			bin2hex(self::pemToDer(self::stringField(self::keyDetails($privateKey), 'key'))),
-			bin2hex($coseKey->toDerSubjectPublicKeyInfo()->toBinaryString()),
-		);
+		yield 'P-256 / ES256' => [CoseAlgorithmIdentifier::ES256, CoseEc2Key::class];
+		yield 'P-384 / ES384' => [CoseAlgorithmIdentifier::ES384, CoseEc2Key::class];
+		yield 'P-521 / ES512' => [CoseAlgorithmIdentifier::ES512, CoseEc2Key::class];
+		yield 'RSA / RS256' => [CoseAlgorithmIdentifier::RS256, CoseRsaKey::class];
+		yield 'Ed25519 / EdDSA' => [CoseAlgorithmIdentifier::EdDSA, CoseOkpKey::class];
 	}
 
 	/**
@@ -101,6 +95,21 @@ class CoseKeyTest extends CryptoTestCase
 		yield 'empty RSA modulus' => [
 			'RSA modulus and exponent must not be empty',
 			[1 => CoseRsaKey::KTY, 3 => CoseAlgorithmIdentifier::RS256, -1 => '', -2 => "\x01\x00\x01"],
+		];
+
+		yield 'unsupported OKP algorithm' => [
+			'Unsupported OKP algorithm -7',
+			[1 => CoseOkpKey::KTY, 3 => CoseAlgorithmIdentifier::ES256, -1 => CoseOkpKey::CRV_ED25519, -2 => $x],
+		];
+
+		yield 'OKP curve mismatch' => [
+			'OKP algorithm -8 requires curve 6, got 99',
+			[1 => CoseOkpKey::KTY, 3 => CoseAlgorithmIdentifier::EdDSA, -1 => 99, -2 => $x],
+		];
+
+		yield 'OKP wrong key length' => [
+			'OKP curve 6 requires 32-byte public key',
+			[1 => CoseOkpKey::KTY, 3 => CoseAlgorithmIdentifier::EdDSA, -1 => CoseOkpKey::CRV_ED25519, -2 => 'short'],
 		];
 	}
 }

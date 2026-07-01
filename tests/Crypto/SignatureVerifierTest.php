@@ -67,11 +67,12 @@ class SignatureVerifierTest extends CryptoTestCase
 		yield 'ES384' => [CoseAlgorithmIdentifier::ES384];
 		yield 'ES512' => [CoseAlgorithmIdentifier::ES512];
 		yield 'RS256' => [CoseAlgorithmIdentifier::RS256];
+		yield 'EdDSA' => [CoseAlgorithmIdentifier::EdDSA];
 	}
 
 	public function testThrowsOnUnsupportedAlgorithm(): void
 	{
-		$key = new class (-8) extends CoseKey {
+		$key = new class (9999) extends CoseKey {
 			public function __construct(int $alg)
 			{
 				parent::__construct($alg);
@@ -85,7 +86,7 @@ class SignatureVerifierTest extends CryptoTestCase
 
 		self::assertException(
 			SignatureVerificationException::class,
-			'Unsupported algorithm -8',
+			'Unsupported algorithm 9999',
 			static fn () => (new SignatureVerifier())->verify($key, self::bytes('x'), self::bytes('y')),
 		);
 	}
@@ -139,6 +140,7 @@ class SignatureVerifierTest extends CryptoTestCase
 			CoseAlgorithmIdentifier::ES256, CoseAlgorithmIdentifier::RS256 => OPENSSL_ALGO_SHA256,
 			CoseAlgorithmIdentifier::ES384 => OPENSSL_ALGO_SHA384,
 			CoseAlgorithmIdentifier::ES512 => OPENSSL_ALGO_SHA512,
+			CoseAlgorithmIdentifier::EdDSA => 0, // EdDSA is a pure signature scheme (no prehash)
 			default => self::fail("Unsupported test algorithm {$alg}"),
 		};
 	}

@@ -6,6 +6,7 @@ use OpenSSLAsymmetricKey;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 use WebAuthnX\Cose\CoseEc2Key;
 use WebAuthnX\Cose\CoseKey;
+use WebAuthnX\Cose\CoseOkpKey;
 use WebAuthnX\Cose\CoseRsaKey;
 
 use function array_key_exists;
@@ -20,6 +21,7 @@ use function preg_replace;
 use function str_pad;
 
 use const OPENSSL_KEYTYPE_EC;
+use const OPENSSL_KEYTYPE_ED25519;
 use const OPENSSL_KEYTYPE_RSA;
 use const STR_PAD_LEFT;
 
@@ -46,6 +48,20 @@ abstract class CryptoTestCase extends WebAuthnTestCase
 				3 => $alg,
 				-1 => self::stringField($details, 'rsa', 'n'),
 				-2 => self::stringField($details, 'rsa', 'e'),
+			]));
+
+			return [$coseKey, $privateKey];
+		}
+
+		if ($alg === CoseAlgorithmIdentifier::EdDSA) {
+			$privateKey = self::generateKey(['private_key_type' => OPENSSL_KEYTYPE_ED25519]);
+			$details = self::keyDetails($privateKey);
+
+			$coseKey = CoseKey::fromCborMap(self::cborMap([
+				1 => CoseOkpKey::KTY,
+				3 => $alg,
+				-1 => CoseOkpKey::CRV_ED25519,
+				-2 => self::stringField($details, 'ed25519', 'pub_key'),
 			]));
 
 			return [$coseKey, $privateKey];

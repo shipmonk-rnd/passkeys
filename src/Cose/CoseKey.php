@@ -32,6 +32,7 @@ abstract class CoseKey
 		$kty = $map->getInt(self::LABEL_KTY);
 
 		return match ($kty) {
+			CoseOkpKey::KTY => CoseOkpKey::fromCborMap($map),
 			CoseEc2Key::KTY => CoseEc2Key::fromCborMap($map),
 			CoseRsaKey::KTY => CoseRsaKey::fromCborMap($map),
 			default => throw new CoseKeyException("Unsupported COSE key type {$kty}"),

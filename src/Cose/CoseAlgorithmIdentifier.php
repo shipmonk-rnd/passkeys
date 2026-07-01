@@ -15,4 +15,7 @@ class CoseAlgorithmIdentifier
 
 	/** RSASSA-PKCS1-v1_5 w/ SHA-256 */
 	final public const RS256 = -257;
+
+	/** EdDSA (Ed25519) */
+	final public const EdDSA = -8;
 }
