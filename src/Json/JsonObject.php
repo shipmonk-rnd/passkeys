@@ -1,0 +1,119 @@
+<?php declare(strict_types = 1);
+
+namespace WebAuthnX\Json;
+
+use JsonException;
+use stdClass;
+use WebAuthnX\Base64\Base64;
+use WebAuthnX\Base64\InvalidBase64Exception;
+use WebAuthnX\Binary\Bytes;
+use function is_string;
+
+
+readonly class JsonObject
+{
+	private function __construct(
+		private stdClass $object,
+	) {
+	}
+
+
+	public static function fromArray(array $data): self
+	{
+		return new self((object) $data);
+	}
+
+
+	/**
+	 * @throws JsonObjectException
+	 */
+	public static function fromString(string $json): self
+	{
+		try {
+			$data = json_decode($json, flags: JSON_THROW_ON_ERROR);
+
+		} catch (JsonException $e) {
+			throw new JsonObjectException('Invalid JSON', previous: $e);
+		}
+
+		if (!$data instanceof stdClass) {
+			throw new JsonObjectException('JSON is not an object');
+		}
+
+		return new self($data);
+	}
+
+
+	/**
+	 * @throws JsonObjectException
+	 */
+	public static function fromBytes(Bytes $bytes): self
+	{
+		return self::fromString($bytes->toBinaryString());
+	}
+
+
+	public function getOptionalBoolean(string $key): ?bool
+	{
+		if (!isset($this->object->$key)) {
+			return null;
+		}
+
+		if (!is_bool($this->object->$key)) {
+			throw new JsonObjectException("Value of key '$key' is not a boolean");
+		}
+
+		return $this->object->$key;
+	}
+
+
+	public function getString(string $key): string
+	{
+		if (!isset($this->object->$key)) {
+			throw new JsonObjectException("Missing key '$key' in JSON object");
+		}
+
+		if (!is_string($this->object->$key)) {
+			throw new JsonObjectException("Value of key '$key' is not a string");
+		}
+
+		return $this->object->$key;
+	}
+
+
+	public function getOptionalString(string $key): ?string
+	{
+		if (!isset($this->object->$key)) {
+			return null;
+		}
+
+		if (!is_string($this->object->$key)) {
+			throw new JsonObjectException("Value of key '$key' is not a string");
+		}
+
+		return $this->object->$key;
+	}
+
+
+	/**
+	 * @throws JsonObjectException
+	 * @throws InvalidBase64Exception
+	 */
+	public function getBytes(string $key): Bytes
+	{
+		return Bytes::fromBinaryString(Base64::urlDecode($this->getString($key)));
+	}
+
+
+	/**
+	 * @throws JsonObjectException
+	 */
+	public function getOptionalBytes(string $key): ?Bytes
+	{
+		if (!isset($this->object->$key)) {
+			return null;
+		}
+
+		return Bytes::fromBinaryString(Base64::urlDecode($this->getString($key)));
+	}
+}
