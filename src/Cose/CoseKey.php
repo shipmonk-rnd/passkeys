@@ -3,8 +3,11 @@
 namespace WebAuthnX\Cose;
 
 use WebAuthnX\Binary\Bytes;
+use WebAuthnX\Binary\BytesReader;
+use WebAuthnX\Binary\BytesReaderException;
 use WebAuthnX\Cbor\CborMap;
 use WebAuthnX\Cbor\CborMapException;
+use WebAuthnX\Cbor\InvalidCborException;
 
 /**
  * A COSE_Key as used by WebAuthn credential public keys.
@@ -41,6 +44,32 @@ abstract class CoseKey
 			default => throw new CoseKeyException("Unsupported COSE key type {$kty}"),
 		};
 	}
+
+	/**
+	 * Reconstructs a key previously produced by {@see self::toBytes()} — for loading a stored
+	 * credential's public key. The inverse of {@see self::toBytes()}.
+	 *
+	 * @throws CoseKeyException on malformed input (not a single, complete COSE_Key CBOR map)
+	 */
+	public static function fromBytes(Bytes $bytes): CoseKey
+	{
+		try {
+			return BytesReader::read(
+				$bytes,
+				static fn (BytesReader $reader): CoseKey => self::fromCborMap(CborMap::fromBytesReader($reader)),
+			);
+
+		} catch (BytesReaderException | InvalidCborException | CborMapException $e) {
+			throw new CoseKeyException('Malformed COSE key', previous: $e);
+		}
+	}
+
+	/**
+	 * Serialises this key as a COSE_Key CBOR map — a stable, self-contained byte string suitable
+	 * for persisting a credential's public key (e.g. one blob column per credential). Reconstruct
+	 * it with {@see self::fromBytes()}.
+	 */
+	abstract public function toBytes(): Bytes;
 
 	/**
 	 * Encodes this key as a DER-encoded SubjectPublicKeyInfo (RFC 5280 §4.1.2.7),

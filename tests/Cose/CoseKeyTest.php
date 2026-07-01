@@ -3,6 +3,7 @@
 namespace WebAuthnXTests\Cose;
 
 use PHPUnit\Framework\Attributes\DataProvider;
+use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 use WebAuthnX\Cose\CoseEc2Key;
 use WebAuthnX\Cose\CoseKey;
@@ -64,6 +65,52 @@ class CoseKeyTest extends CryptoTestCase
 		self::assertSame(
 			'302a300506032b6570032100d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a',
 			bin2hex($coseKey->toDerSubjectPublicKeyInfo()->toBinaryString()),
+		);
+	}
+
+	/**
+	 * {@see CoseKey::toBytes()} then {@see CoseKey::fromBytes()} must reconstruct an equivalent key
+	 * (same type, same key material) and re-encode to the same bytes — this is the round-trip a
+	 * relying party relies on to persist and later load a credential's public key.
+	 *
+	 * @param  class-string<CoseKey> $expectedClass
+	 */
+	#[DataProvider('provideAlgorithms')]
+	public function testToBytesRoundTrips(int $alg, string $expectedClass): void
+	{
+		[$coseKey] = self::generateCoseKeyPair($alg);
+
+		$restored = CoseKey::fromBytes($coseKey->toBytes());
+
+		self::assertInstanceOf($expectedClass, $restored);
+		self::assertSame(
+			bin2hex($coseKey->toDerSubjectPublicKeyInfo()->toBinaryString()),
+			bin2hex($restored->toDerSubjectPublicKeyInfo()->toBinaryString()),
+		);
+		self::assertSame(
+			bin2hex($coseKey->toBytes()->toBinaryString()),
+			bin2hex($restored->toBytes()->toBinaryString()),
+		);
+	}
+
+	public function testFromBytesRejectsMalformedCbor(): void
+	{
+		self::assertException(
+			CoseKeyException::class,
+			'Malformed COSE key',
+			static fn () => CoseKey::fromBytes(self::bytesFromHex('ff')),
+		);
+	}
+
+	public function testFromBytesRejectsTrailingBytes(): void
+	{
+		[$coseKey] = self::generateCoseKeyPair(CoseAlgorithmIdentifier::ES256);
+		$withTrailingByte = Bytes::fromBinaryString($coseKey->toBytes()->toBinaryString() . "\x00");
+
+		self::assertException(
+			CoseKeyException::class,
+			'Malformed COSE key',
+			static fn () => CoseKey::fromBytes($withTrailingByte),
 		);
 	}
 

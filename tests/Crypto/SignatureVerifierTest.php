@@ -77,6 +77,11 @@ class SignatureVerifierTest extends CryptoTestCase
 			{
 				return Bytes::fromBinaryString('');
 			}
+
+			public function toBytes(): Bytes
+			{
+				return Bytes::fromBinaryString('');
+			}
 		};
 
 		self::assertException(
@@ -95,6 +100,11 @@ class SignatureVerifierTest extends CryptoTestCase
 			}
 
 			public function toDerSubjectPublicKeyInfo(): Bytes
+			{
+				return Bytes::fromBinaryString("\x00\x01\x02");
+			}
+
+			public function toBytes(): Bytes
 			{
 				return Bytes::fromBinaryString("\x00\x01\x02");
 			}

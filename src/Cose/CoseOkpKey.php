@@ -3,6 +3,7 @@
 namespace WebAuthnX\Cose;
 
 use WebAuthnX\Binary\Bytes;
+use WebAuthnX\Cbor\CborEncoder;
 use WebAuthnX\Cbor\CborMap;
 use WebAuthnX\Cbor\CborMapException;
 use WebAuthnX\Der\DerEncoder;
@@ -71,6 +72,16 @@ final class CoseOkpKey extends CoseKey
 		}
 
 		return new self($alg, $crv, $x);
+	}
+
+	public function toBytes(): Bytes
+	{
+		return Bytes::fromBinaryString(CborEncoder::encodeMap([
+			[CborEncoder::encodeInt(self::LABEL_KTY), CborEncoder::encodeInt(self::KTY)],
+			[CborEncoder::encodeInt(self::LABEL_ALG), CborEncoder::encodeInt($this->alg)],
+			[CborEncoder::encodeInt(self::LABEL_CRV), CborEncoder::encodeInt($this->crv)],
+			[CborEncoder::encodeInt(self::LABEL_X), CborEncoder::encodeByteString($this->x->toBinaryString())],
+		]));
 	}
 
 	public function toDerSubjectPublicKeyInfo(): Bytes
