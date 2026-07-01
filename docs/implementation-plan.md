@@ -148,22 +148,48 @@ full CTAP2-canonical CBOR (key ordering, minimal encodings) is intentionally not
    `require`. _(spec: RFC 9053; WebAuthn §7.2 step 19)_
 9. **Hashing helpers** — thin wrappers for `sha256(rpId)` and `sha256(clientDataJSON)`.
 
-### Phase C — Complete the WebAuthn parsing layer
+### Phase C — Complete the WebAuthn parsing layer — ✅ done 2026-07-01
 Goal: turn raw browser JSON into fully-typed, validated value objects.
+
+Outcome: PHPStan level max stays clean; suite green (2198 tests); every new Phase C class
+is at 100% line coverage (overall `src/` line coverage now 95.8%). Added the top-level
+`PublicKeyCredential` parser and an `AuthenticatorResponse` base class shared by the two
+concrete responses; added `AuthenticatorData` flag accessors; added the missing
+`PublicKeyCredentialRequestOptions` plus `JsonSerializable`/`toJson()` for both options
+models and their nested DTOs; deleted the dead `BytesWriter`. Decisions: (a) `PublicKeyCredential`
+is a generic (`@template T of AuthenticatorResponse`) with two explicit factories —
+`fromRegistrationResponseJson()` / `fromAuthenticationResponseJson()` — because the relying
+party always knows which ceremony it started, so `->response` is statically typed without an
+`instanceof`; (b) binary option members (`challenge`, `user.id`, descriptor `id`) are now
+`Bytes` rather than raw `string`, matching the rest of the library and making the base64url
+serialization boundary explicit; (c) following the existing convention (`AttestationObject`
+doesn't validate `fmt`), the parser does **not** semantically validate the `type` string —
+that's deferred to the ceremony layer; (d) the AT/ED flag-vs-section invariant is already
+enforced structurally (sections are parsed iff the flag is set, and `BytesReader::read()`
+rejects trailing bytes), so item 11 reduced to adding the accessors.
 
 10. **Top-level `PublicKeyCredential`** parser (missing today): `{id, rawId, type,
     response, authenticatorAttachment?, clientExtensionResults?}` → attestation or
-    assertion response. _(spec: WebAuthn §5.1)_
+    assertion response. _(spec: WebAuthn §5.1)_ — ✅ done
 11. **`AuthenticatorData`** — add flag accessors (`isUserPresent`, `isUserVerified`,
     `isBackupEligible`, `isBackupState`) and enforce the flag/section invariants
-    (AT/ED bits vs presence of attested-credential-data/extensions). _(spec: §6.1)_
-12. **`AttestedCredentialData`** — return a parsed `CoseKey` (not a raw `CborMap`).
+    (AT/ED bits vs presence of attested-credential-data/extensions). _(spec: §6.1)_ — ✅ done
+    (also added `hasAttestedCredentialData`/`hasExtensionData`; the invariant is structural).
+12. **`AttestedCredentialData`** — return a parsed `CoseKey` (not a raw `CborMap`). — ✅ done in Phase A/B.
 13. **Options model** — add the missing `PublicKeyCredentialRequestOptions` (login side)
     and **JSON serialization** for both creation and request options (base64url for
     binary members), so the library can produce what the browser consumes without a
-    third-party lib. _(spec: §5.4, §5.5, §5.1.3/§5.1.4)_
+    third-party lib. _(spec: §5.4, §5.5, §5.1.3/§5.1.4)_ — ✅ done
 14. **`BytesWriter`** — either finish it (add `toBytes()`/output) if needed by DER/CBOR
-    encoding, or delete it as dead code. Decide based on whether we add a CBOR encoder.
+    encoding, or delete it as dead code. Decide based on whether we add a CBOR encoder. —
+    ✅ deleted (dead code; no CBOR encoder is needed — options serialize as JSON, DER/SPKI
+    builds plain strings, and signature verification does not re-encode CBOR).
+
+**Deferred to Phase D (fixture/coverage work, not blocking):** the `AuthenticatorData`
+no-attested-data and extensions-present branches, plus several pre-existing untested
+`JsonObject`/`CollectedClientData` accessors, remain uncovered pending real spec test
+vectors; option JSON does not yet model `attestation`/`attestationFormats`/`extensions`
+inputs (add when the ceremony layer needs them).
 
 ### Phase D — Coverage, fixtures, and tooling completion
 Goal: near-100% coverage enforced in CI, backed by real spec vectors.

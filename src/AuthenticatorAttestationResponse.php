@@ -7,12 +7,16 @@ use WebAuthnX\Binary\BytesReader;
 use WebAuthnX\Cbor\CborMap;
 use WebAuthnX\Json\JsonObject;
 
-final readonly class AuthenticatorAttestationResponse
+/**
+ * @see https://w3c.github.io/webauthn/#authenticatorattestationresponse
+ */
+final readonly class AuthenticatorAttestationResponse extends AuthenticatorResponse
 {
 	private function __construct(
-		public Bytes $clientDataJSON,
+		Bytes $clientDataJSON,
 		public Bytes $attestationObject,
 	) {
+		parent::__construct($clientDataJSON);
 	}
 
 	public static function fromJsonObject(JsonObject $jsonObject): self
@@ -21,11 +25,6 @@ final readonly class AuthenticatorAttestationResponse
 			$jsonObject->getBytes('clientDataJSON'),
 			$jsonObject->getBytes('attestationObject'),
 		);
-	}
-
-	public function parseClientData(): CollectedClientData
-	{
-		return new CollectedClientData(JsonObject::fromBytes($this->clientDataJSON));
 	}
 
 	public function parseAttestationObject(): AttestationObject

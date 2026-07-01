@@ -5,17 +5,19 @@ namespace WebAuthnX;
 use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Json\JsonObject;
 
-
-final readonly class AuthenticatorAssertionResponse
+/**
+ * @see https://w3c.github.io/webauthn/#authenticatorassertionresponse
+ */
+final readonly class AuthenticatorAssertionResponse extends AuthenticatorResponse
 {
 	private function __construct(
-		public Bytes $clientDataJSON,
+		Bytes $clientDataJSON,
 		public Bytes $authenticatorData,
 		public Bytes $signature,
 		public ?Bytes $userHandle,
 	) {
+		parent::__construct($clientDataJSON);
 	}
-
 
 	public static function fromJsonObject(JsonObject $jsonObject): self
 	{
@@ -25,11 +27,5 @@ final readonly class AuthenticatorAssertionResponse
 			$jsonObject->getBytes('signature'),
 			$jsonObject->getOptionalBytes('userHandle'),
 		);
-	}
-
-
-	public function parseClientData(): CollectedClientData
-	{
-		return new CollectedClientData(JsonObject::fromBytes($this->clientDataJSON));
 	}
 }

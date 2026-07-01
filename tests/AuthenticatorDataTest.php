@@ -37,6 +37,13 @@ class AuthenticatorDataTest extends WebAuthnTestCase
 		self::assertNotSame(0, $authenticatorData->flags & AuthenticatorData::FLAG_ATTESTED_CREDENTIAL_DATA);
 		self::assertSame(0, $authenticatorData->flags & AuthenticatorData::FLAG_EXTENSION_DATA);
 
+		self::assertTrue($authenticatorData->isUserPresent());
+		self::assertTrue($authenticatorData->isUserVerified());
+		self::assertFalse($authenticatorData->isBackupEligible());
+		self::assertFalse($authenticatorData->isBackupState());
+		self::assertTrue($authenticatorData->hasAttestedCredentialData());
+		self::assertFalse($authenticatorData->hasExtensionData());
+
 		$attestedCredentialData = $authenticatorData->attestedCredentialData;
 		self::assertNotNull($attestedCredentialData);
 		self::assertSame(16, $attestedCredentialData->aaGuid->length);

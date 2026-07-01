@@ -84,6 +84,36 @@ readonly class JsonObject
 	}
 
 
+	/**
+	 * @throws JsonObjectException
+	 */
+	public function getObject(string $key): self
+	{
+		if (!isset($this->object->$key)) {
+			throw new JsonObjectException("Missing key '$key' in JSON object");
+		}
+
+		if (!$this->object->$key instanceof stdClass) {
+			throw new JsonObjectException("Value of key '$key' is not an object");
+		}
+
+		return new self($this->object->$key);
+	}
+
+
+	/**
+	 * @throws JsonObjectException
+	 */
+	public function getOptionalObject(string $key): ?self
+	{
+		if (!isset($this->object->$key)) {
+			return null;
+		}
+
+		return $this->getObject($key);
+	}
+
+
 	public function getOptionalString(string $key): ?string
 	{
 		if (!isset($this->object->$key)) {

@@ -2,10 +2,13 @@
 
 namespace WebAuthnX;
 
+use JsonSerializable;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 
-
-readonly class PublicKeyCredentialParameters
+/**
+ * @see https://w3c.github.io/webauthn/#dictdef-publickeycredentialparameters
+ */
+readonly class PublicKeyCredentialParameters implements JsonSerializable
 {
 	/**
 	 * @param  PublicKeyCredentialType::* $type
@@ -15,5 +18,16 @@ readonly class PublicKeyCredentialParameters
 		public string $type,
 		public int $alg,
 	) {
+	}
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	public function jsonSerialize(): array
+	{
+		return [
+			'type' => $this->type,
+			'alg' => $this->alg,
+		];
 	}
 }

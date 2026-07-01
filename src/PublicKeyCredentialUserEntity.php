@@ -2,13 +2,32 @@
 
 namespace WebAuthnX;
 
-readonly class PublicKeyCredentialUserEntity extends PublicKeyCredentialEntity
+use JsonSerializable;
+use WebAuthnX\Base64\Base64;
+use WebAuthnX\Binary\Bytes;
+
+/**
+ * @see https://w3c.github.io/webauthn/#dictdef-publickeycredentialuserentityjson
+ */
+readonly class PublicKeyCredentialUserEntity extends PublicKeyCredentialEntity implements JsonSerializable
 {
 	public function __construct(
-		public string $id,
+		public Bytes $id,
 		string $name,
 		public string $displayName,
 	) {
 		parent::__construct($name);
+	}
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	public function jsonSerialize(): array
+	{
+		return [
+			'id' => Base64::urlEncode($this->id->toBinaryString()),
+			'name' => $this->name,
+			'displayName' => $this->displayName,
+		];
 	}
 }
