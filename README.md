@@ -4,13 +4,15 @@ A from-scratch, spec-compliant [WebAuthn](https://w3c.github.io/webauthn/) (pass
 for PHP with **no third-party runtime dependencies** — only PHP itself and the bundled
 `ext-openssl`.
 
-> **Status: the low-level plumbing is complete; the ceremony façade is not built yet.**
-> This library parses and validates every WebAuthn/COSE/CBOR structure a browser and
-> authenticator produce, serializes the options a browser consumes, and verifies assertion
-> signatures. It does **not yet** provide a one-call `verifyRegistration()` /
-> `verifyAuthentication()` façade — the relying-party checks in WebAuthn §7.1/§7.2 (challenge,
-> origin, RP ID hash, flags, sign-count) and attestation-statement verification are the planned
-> next layer. See [Scope](#scope) and [`docs/implementation-plan.md`](docs/implementation-plan.md).
+> **Status: usable for passwordless/passkey login with `attestation: "none"`.**
+> This library serializes the options a browser consumes, parses and validates every
+> WebAuthn/COSE/CBOR structure a browser and authenticator produce, and provides a
+> `RelyingParty` façade that runs the full WebAuthn §7.1 (registration) and §7.2
+> (authentication) verification procedures. What it does **not** do yet is verify
+> attestation *statements* (`packed`, `tpm`, `android-key`, `fido-u2f`, `apple`) — it accepts
+> the `none` format and rejects the rest — so it cannot yet prove *which* authenticator model
+> produced a credential. See [Scope](#scope) and
+> [`docs/ceremony-implementation-plan.md`](docs/ceremony-implementation-plan.md).
 
 ## Requirements
 
@@ -69,72 +71,98 @@ $json = $options->toJson();
 `PublicKeyCredentialRequestOptions` is the equivalent for the authentication (login) ceremony
 and serializes the same way via `toJson()`.
 
-### 2. Parse the browser's response
+### 2. Verify a registration
+
+Parse the browser's response, then hand it to the `RelyingParty` façade with your per-ceremony
+expectations. The library owns no state — it reads credentials through a `CredentialStore` you
+implement, and returns the record for you to persist.
 
 ```php
+use WebAuthnX\Ceremony\RegistrationExpectations;
+use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 use WebAuthnX\Credential\PublicKeyCredential;
 use WebAuthnX\Json\JsonObject;
+use WebAuthnX\RelyingParty;
 
-// Registration (navigator.credentials.create):
 $credential = PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString($rawJson));
 
-$response = $credential->response;                       // AuthenticatorAttestationResponse
-$authData = $response->parseAttestationObject()->parseAuthenticatorData();
-$publicKey = $authData->attestedCredentialData?->credentialPublicKey; // a CoseKey — store it
-$transports = $response->transports;                     // persist to seed allowCredentials later
-```
-
-Because the relying party always knows which ceremony it started, `PublicKeyCredential` is
-generic over its response type: `fromRegistrationResponseJson()` returns a credential whose
-`->response` is an `AuthenticatorAttestationResponse`, and `fromAuthenticationResponseJson()`
-one whose `->response` is an `AuthenticatorAssertionResponse` — no `instanceof` needed.
-
-### 3. Verify an assertion signature
-
-For login, reconstruct the signed message (`authenticatorData ‖ SHA-256(clientDataJSON)`,
-WebAuthn §7.2 step 19) and verify it against the `CoseKey` you stored at registration:
-
-```php
-use WebAuthnX\Binary\Bytes;
-use WebAuthnX\Credential\PublicKeyCredential;
-use WebAuthnX\Crypto\Hash;
-use WebAuthnX\Crypto\SignatureVerifier;
-use WebAuthnX\Json\JsonObject;
-
-$credential = PublicKeyCredential::fromAuthenticationResponseJson(JsonObject::fromString($rawJson));
-$response = $credential->response;                       // AuthenticatorAssertionResponse
-
-$message = Bytes::fromBinaryString(
-    $response->authenticatorData->toBinaryString()
-    . Hash::sha256($response->clientDataJSON)->toBinaryString(),
+$result = (new RelyingParty())->verifyRegistration(
+    $credential,
+    new RegistrationExpectations(
+        challenge: $challengeYouIssued,          // the Bytes you generated for this ceremony
+        rpId: 'example.com',
+        origins: ['https://example.com'],
+        allowedAlgorithms: [CoseAlgorithmIdentifier::ES256, CoseAlgorithmIdentifier::RS256],
+        requireUserVerification: true,
+    ),
+    $store,                                       // your WebAuthnX\Ceremony\CredentialStore
 );
 
-$isValid = (new SignatureVerifier())->verify($storedPublicKey, $message, $response->signature);
+// Persist the record against the user you just registered (user.id becomes the user handle):
+$store->save($result->toCredentialRecord($userHandle));   // your own persistence
 ```
 
-`SignatureVerifier::verify()` returns `false` for any signature that does not match (including
-malformed attacker input) and throws only for an unsupported algorithm or an unloadable key.
+### 3. Verify an authentication
 
-> **You still owe the relying-party checks.** This library gives you the parsed, typed data and
-> the signature primitive. Verifying the challenge, `origin`, RP ID hash, the UP/UV flags and the
-> signature counter — and, for registration, the attestation statement — is your responsibility
-> until the ceremony façade lands. Do not treat a `true` from `verify()` as a complete login.
+```php
+use WebAuthnX\Ceremony\AuthenticationExpectations;
+use WebAuthnX\Credential\PublicKeyCredential;
+use WebAuthnX\Json\JsonObject;
+use WebAuthnX\RelyingParty;
+
+$credential = PublicKeyCredential::fromAuthenticationResponseJson(JsonObject::fromString($rawJson));
+
+$result = (new RelyingParty())->verifyAuthentication(
+    $credential,
+    new AuthenticationExpectations(
+        challenge: $challengeYouIssued,
+        rpId: 'example.com',
+        origins: ['https://example.com'],
+        allowedCredentialIds: $idsFromAllowCredentials,  // or null for a usernameless flow
+        requireUserVerification: true,
+        expectedUserHandle: $userHandle,                 // set if you identified the user first
+    ),
+    $store,
+);
+
+// Log the user in as $result->userHandle, then persist the new state:
+$store->updateSignCount($result->credentialId, $result->newSignCount);   // your own persistence
+
+if ($result->possibleClone) {
+    // The signature counter did not increase — a clone signal, not proof. Apply your risk policy.
+}
+```
+
+Both methods are **fail-closed**: on *any* failed check — or a malformed response — they throw a
+`WebAuthnX\Ceremony\VerificationException` carrying a stable, machine-readable `->reason`; you
+either get a trustworthy result or an exception, never a "maybe". You still generate and store the
+challenge yourself and invalidate it after one ceremony — single-use challenges are the anti-replay
+control the library relies on.
+
+The lower-level building blocks used above remain public for advanced use: `PublicKeyCredential`
+(generic over its response type), `parseAttestationObject()` / `parseAuthenticatorData()`, and the
+`SignatureVerifier` primitive.
 
 ## Scope
 
-**Implemented (the plumbing):**
+**Implemented:**
 
-- Binary reader, CBOR decoding, DER (SubjectPublicKeyInfo) encoding, canonical base64url, JSON access
-- COSE key parsing (`EC2`, `RSA`, `OKP`) with validation, and COSE → SPKI conversion
-- `SignatureVerifier` (ES256/384/512, RS256, EdDSA) over `ext-openssl`
+- A `RelyingParty` façade performing the full WebAuthn §7.1 (registration) and §7.2
+  (authentication) verification procedures for the `attestation: "none"` case
+- Caller-owned state abstractions (`CredentialStore`, per-ceremony `*Expectations`) and rich,
+  typed results (`RegistrationResult` / `AuthenticationResult`) with a fail-closed error model
 - Full response parsing: `PublicKeyCredential`, attestation/assertion responses, `AttestationObject`,
   `AuthenticatorData` (with flag accessors) + attested credential data, `CollectedClientData`
 - Options models with JSON serialization for both ceremonies
+- COSE key parsing (`EC2`, `RSA`, `OKP`) with validation, COSE → SPKI conversion, and a
+  `SignatureVerifier` (ES256/384/512, RS256, EdDSA) over `ext-openssl`
+- Primitives: binary reader, CBOR decoding, DER (SubjectPublicKeyInfo) encoding, canonical
+  base64url, JSON access
 
-**Not implemented yet (the porcelain), planned as the next layer:**
+**Not implemented yet, planned as the next layer:**
 
-- A `verifyRegistration()` / `verifyAuthentication()` relying-party façade (WebAuthn §7.1 / §7.2)
 - Attestation-statement format verification (`packed`, `tpm`, `android-key`, `fido-u2f`, `apple`, …)
+  and trust-anchor evaluation
 - FIDO Metadata Service integration
 
 ## Development

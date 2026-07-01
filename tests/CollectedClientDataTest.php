@@ -3,8 +3,9 @@
 namespace WebAuthnXTests;
 
 use WebAuthnX\Base64\Base64;
+use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Credential\CollectedClientData;
-use WebAuthnX\Json\JsonObject;
+use WebAuthnX\Credential\MalformedDataException;
 
 use function json_encode;
 
@@ -14,13 +15,13 @@ class CollectedClientDataTest extends WebAuthnTestCase
 {
 	public function testReadsAllMembers(): void
 	{
-		$clientData = new CollectedClientData(JsonObject::fromString(json_encode([
+		$clientData = CollectedClientData::fromBytes(self::clientDataJson([
 			'type' => 'webauthn.get',
 			'challenge' => Base64::urlEncode('challenge-bytes'),
 			'origin' => 'https://example.com',
 			'topOrigin' => 'https://top.example.com',
 			'crossOrigin' => true,
-		], JSON_THROW_ON_ERROR)));
+		]));
 
 		self::assertSame('webauthn.get', $clientData->getType());
 		self::assertSame('challenge-bytes', $clientData->getChallenge()->toBinaryString());
@@ -31,14 +32,50 @@ class CollectedClientDataTest extends WebAuthnTestCase
 
 	public function testOmitsOptionalMembers(): void
 	{
-		$clientData = new CollectedClientData(JsonObject::fromString(json_encode([
+		$clientData = CollectedClientData::fromBytes(self::clientDataJson([
 			'type' => 'webauthn.create',
 			'challenge' => Base64::urlEncode('challenge-bytes'),
 			'origin' => 'https://example.com',
-		], JSON_THROW_ON_ERROR)));
+		]));
 
 		self::assertSame('webauthn.create', $clientData->getType());
 		self::assertNull($clientData->getTopOrigin());
 		self::assertNull($clientData->getCrossOrigin());
+	}
+
+	public function testRejectsInvalidJson(): void
+	{
+		$this->expectException(MalformedDataException::class);
+
+		CollectedClientData::fromBytes(Bytes::fromBinaryString('not json at all'));
+	}
+
+	public function testRejectsMissingRequiredMember(): void
+	{
+		$this->expectException(MalformedDataException::class);
+
+		CollectedClientData::fromBytes(self::clientDataJson([
+			'challenge' => Base64::urlEncode('challenge-bytes'),
+			'origin' => 'https://example.com',
+		]));
+	}
+
+	public function testRejectsNonCanonicalChallenge(): void
+	{
+		$this->expectException(MalformedDataException::class);
+
+		CollectedClientData::fromBytes(self::clientDataJson([
+			'type' => 'webauthn.get',
+			'challenge' => 'not/valid/base64url',
+			'origin' => 'https://example.com',
+		]));
+	}
+
+	/**
+	 * @param  array<string, mixed> $members
+	 */
+	private static function clientDataJson(array $members): Bytes
+	{
+		return Bytes::fromBinaryString(json_encode($members, JSON_THROW_ON_ERROR));
 	}
 }

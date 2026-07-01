@@ -3,7 +3,6 @@
 namespace WebAuthnX\Credential;
 
 use WebAuthnX\Binary\Bytes;
-use WebAuthnX\Json\JsonObject;
 
 /**
  * Base for the two authenticator responses returned by a credential.
@@ -17,8 +16,11 @@ abstract readonly class AuthenticatorResponse
 	) {
 	}
 
+	/**
+	 * @throws MalformedDataException
+	 */
 	public function parseClientData(): CollectedClientData
 	{
-		return new CollectedClientData(JsonObject::fromBytes($this->clientDataJSON));
+		return CollectedClientData::fromBytes($this->clientDataJSON);
 	}
 }

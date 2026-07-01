@@ -2,10 +2,15 @@
 
 namespace WebAuthnX\Credential;
 
+use WebAuthnX\Base64\InvalidBase64Exception;
 use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Binary\BytesReader;
+use WebAuthnX\Binary\BytesReaderException;
 use WebAuthnX\Cbor\CborMap;
+use WebAuthnX\Cbor\CborMapException;
+use WebAuthnX\Cbor\InvalidCborException;
 use WebAuthnX\Json\JsonObject;
+use WebAuthnX\Json\JsonObjectException;
 
 /**
  * @see https://w3c.github.io/webauthn/#authenticatorattestationresponse
@@ -25,6 +30,10 @@ final readonly class AuthenticatorAttestationResponse extends AuthenticatorRespo
 		parent::__construct($clientDataJSON);
 	}
 
+	/**
+	 * @throws JsonObjectException
+	 * @throws InvalidBase64Exception
+	 */
 	public static function fromJsonObject(JsonObject $jsonObject): self
 	{
 		return new self(
@@ -34,10 +43,18 @@ final readonly class AuthenticatorAttestationResponse extends AuthenticatorRespo
 		);
 	}
 
+	/**
+	 * @throws MalformedDataException
+	 */
 	public function parseAttestationObject(): AttestationObject
 	{
-		return BytesReader::read($this->attestationObject, static function (BytesReader $reader): AttestationObject {
-			return AttestationObject::fromCborMap(CborMap::fromBytesReader($reader));
-		});
+		try {
+			return BytesReader::read($this->attestationObject, static function (BytesReader $reader): AttestationObject {
+				return AttestationObject::fromCborMap(CborMap::fromBytesReader($reader));
+			});
+
+		} catch (BytesReaderException | InvalidCborException | CborMapException $e) {
+			throw new MalformedDataException('Malformed attestation object', $e);
+		}
 	}
 }

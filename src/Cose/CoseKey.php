@@ -4,6 +4,7 @@ namespace WebAuthnX\Cose;
 
 use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cbor\CborMap;
+use WebAuthnX\Cbor\CborMapException;
 
 /**
  * A COSE_Key as used by WebAuthn credential public keys.
@@ -26,6 +27,7 @@ abstract class CoseKey
 
 	/**
 	 * @throws CoseKeyException
+	 * @throws CborMapException
 	 */
 	public static function fromCborMap(CborMap $map): CoseKey
 	{

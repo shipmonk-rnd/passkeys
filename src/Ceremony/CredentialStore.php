@@ -1,0 +1,20 @@
+<?php declare(strict_types = 1);
+
+namespace WebAuthnX\Ceremony;
+
+use WebAuthnX\Binary\Bytes;
+
+/**
+ * The relying party's read access to its stored credentials, keyed by credential id.
+ *
+ * The library owns no persistence: it calls {@see self::findByCredentialId()} to enforce the
+ * "not already registered" check of WebAuthn §7.1 step 26 and to locate the credential record
+ * for an assertion (§7.2 step 6). Because credential ids are globally unique, a single lookup
+ * by id serves both the pre-identified and the discoverable (usernameless) authentication flows.
+ * Persisting new records and updating the sign counter after a successful ceremony is the
+ * caller's responsibility, driven by the returned result objects.
+ */
+interface CredentialStore
+{
+	public function findByCredentialId(Bytes $credentialId): ?CredentialRecord;
+}

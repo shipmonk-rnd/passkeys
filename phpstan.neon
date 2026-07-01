@@ -6,3 +6,18 @@ parameters:
     paths:
         - src
         - tests
+    exceptions:
+        check:
+            missingCheckedExceptionInThrows: true # enforce checked ones in @throws
+            tooWideThrowType: true                # report dead @throws
+            throwTypeCovariance: true             # LSP check
+        implicitThrows: false                     # no @throws = nothing is thrown
+        checkedExceptionClasses:
+            - RuntimeException                    # track our RuntimeException hierarchy
+    ignoreErrors:
+        # The checked-exception contract is enforced on the library (src). Test methods are
+        # consumers that legitimately let exceptions surface to PHPUnit, so annotating every
+        # one with @throws would be pure noise.
+        -
+            identifier: missingType.checkedException
+            path: tests/*

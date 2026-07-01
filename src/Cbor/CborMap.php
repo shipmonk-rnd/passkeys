@@ -34,6 +34,9 @@ readonly class CborMap
 		return new self($data);
 	}
 
+	/**
+	 * @throws CborMapException
+	 */
 	public function getInt(int|string $key): int
 	{
 		$value = $this->getMixed($key);
@@ -45,6 +48,9 @@ readonly class CborMap
 		return $value;
 	}
 
+	/**
+	 * @throws CborMapException
+	 */
 	public function getString(int|string $key): string
 	{
 		$value = $this->getMixed($key);
@@ -56,6 +62,9 @@ readonly class CborMap
 		return $value;
 	}
 
+	/**
+	 * @throws CborMapException
+	 */
 	public function getBytes(int|string $key): Bytes
 	{
 		$value = $this->getMixed($key);
@@ -67,6 +76,9 @@ readonly class CborMap
 		return $value;
 	}
 
+	/**
+	 * @throws CborMapException
+	 */
 	public function getMap(int|string $key): self
 	{
 		$value = $this->getMixed($key);
@@ -83,26 +95,41 @@ readonly class CborMap
 		return array_key_exists($key, $this->map);
 	}
 
+	/**
+	 * @throws CborMapException
+	 */
 	public function getOptionalInt(int|string $key): ?int
 	{
 		return $this->has($key) ? $this->getInt($key) : null;
 	}
 
+	/**
+	 * @throws CborMapException
+	 */
 	public function getOptionalString(int|string $key): ?string
 	{
 		return $this->has($key) ? $this->getString($key) : null;
 	}
 
+	/**
+	 * @throws CborMapException
+	 */
 	public function getOptionalBytes(int|string $key): ?Bytes
 	{
 		return $this->has($key) ? $this->getBytes($key) : null;
 	}
 
+	/**
+	 * @throws CborMapException
+	 */
 	public function getOptionalMap(int|string $key): ?self
 	{
 		return $this->has($key) ? $this->getMap($key) : null;
 	}
 
+	/**
+	 * @throws CborMapException
+	 */
 	private function getMixed(int|string $key): mixed
 	{
 		if (!array_key_exists($key, $this->map)) {

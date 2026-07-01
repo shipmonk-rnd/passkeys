@@ -4,6 +4,7 @@ namespace WebAuthnX\Cose;
 
 use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cbor\CborMap;
+use WebAuthnX\Cbor\CborMapException;
 use WebAuthnX\Der\DerEncoder;
 
 use function in_array;
@@ -49,6 +50,7 @@ final class CoseRsaKey extends CoseKey
 
 	/**
 	 * @throws CoseKeyException
+	 * @throws CborMapException
 	 */
 	public static function fromCborMap(CborMap $map): self
 	{

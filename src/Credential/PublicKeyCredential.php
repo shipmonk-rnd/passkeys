@@ -2,6 +2,7 @@
 
 namespace WebAuthnX\Credential;
 
+use WebAuthnX\Base64\InvalidBase64Exception;
 use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Json\JsonObject;
 use WebAuthnX\Json\JsonObjectException;
@@ -33,28 +34,38 @@ final readonly class PublicKeyCredential
 	 * Parses the JSON returned after a registration ceremony (`navigator.credentials.create()`).
 	 *
 	 * @return self<AuthenticatorAttestationResponse>
-	 * @throws JsonObjectException
+	 * @throws MalformedDataException
 	 */
 	public static function fromRegistrationResponseJson(JsonObject $jsonObject): self
 	{
-		return self::create(
-			$jsonObject,
-			AuthenticatorAttestationResponse::fromJsonObject($jsonObject->getObject('response')),
-		);
+		try {
+			return self::create(
+				$jsonObject,
+				AuthenticatorAttestationResponse::fromJsonObject($jsonObject->getObject('response')),
+			);
+
+		} catch (JsonObjectException | InvalidBase64Exception $e) {
+			throw new MalformedDataException('Malformed registration response', $e);
+		}
 	}
 
 	/**
 	 * Parses the JSON returned after an authentication ceremony (`navigator.credentials.get()`).
 	 *
 	 * @return self<AuthenticatorAssertionResponse>
-	 * @throws JsonObjectException
+	 * @throws MalformedDataException
 	 */
 	public static function fromAuthenticationResponseJson(JsonObject $jsonObject): self
 	{
-		return self::create(
-			$jsonObject,
-			AuthenticatorAssertionResponse::fromJsonObject($jsonObject->getObject('response')),
-		);
+		try {
+			return self::create(
+				$jsonObject,
+				AuthenticatorAssertionResponse::fromJsonObject($jsonObject->getObject('response')),
+			);
+
+		} catch (JsonObjectException | InvalidBase64Exception $e) {
+			throw new MalformedDataException('Malformed authentication response', $e);
+		}
 	}
 
 	/**
@@ -62,6 +73,7 @@ final readonly class PublicKeyCredential
 	 * @param  R $response
 	 * @return self<R>
 	 * @throws JsonObjectException
+	 * @throws InvalidBase64Exception
 	 */
 	private static function create(JsonObject $jsonObject, AuthenticatorResponse $response): self
 	{

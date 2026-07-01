@@ -5,6 +5,7 @@ namespace WebAuthnXTests;
 use WebAuthnX\Credential\AuthenticatorAssertionResponse;
 use WebAuthnX\Credential\AuthenticatorAttestationResponse;
 use WebAuthnX\Base64\Base64;
+use WebAuthnX\Credential\MalformedDataException;
 use WebAuthnX\Json\JsonObject;
 use WebAuthnX\Json\JsonObjectException;
 use WebAuthnX\Credential\PublicKeyCredential;
@@ -19,6 +20,25 @@ class PublicKeyCredentialTest extends WebAuthnTestCase
 	private const ATTESTATION_OBJECT = 'o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikdKbqkhPJnC90siSSsyDPQCYql'
 		. 'MGpUKA5fyklC2CEHvBFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIPicKuaB2QMLvuZJAXn8nWNe4Y2iZKLDmWiYb0qo0l5fpQEC'
 		. 'AyYgASFYICAFU4dQcXT_GH1hZV2JoHHdVUCU_AkgGFd20UpKqAM0IlggJQzogT8UjnN7-tKvzIGk8e5OdWX1xurwC_sffQKh1a0';
+
+	/**
+	 * The parse boundary repacks the underlying decode failure into a single
+	 * {@see MalformedDataException}; the specific cause is preserved as its previous exception.
+	 *
+	 * @param  callable(): mixed $cb
+	 */
+	private static function assertMalformedData(string $previousMessage, callable $cb): void
+	{
+		try {
+			$cb();
+			self::fail('Expected a MalformedDataException');
+
+		} catch (MalformedDataException $e) {
+			$previous = $e->getPrevious();
+			self::assertInstanceOf(JsonObjectException::class, $previous);
+			self::assertStringMatchesFormat($previousMessage, $previous->getMessage());
+		}
+	}
 
 	public function testFromRegistrationResponseJson(): void
 	{
@@ -97,8 +117,7 @@ class PublicKeyCredentialTest extends WebAuthnTestCase
 
 	public function testFromResponseJsonRejectsMissingResponse(): void
 	{
-		self::assertException(
-			JsonObjectException::class,
+		self::assertMalformedData(
 			"Missing key 'response' in JSON object",
 			static fn () => PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromArray([
 				'id' => Base64::urlEncode('credential-id'),
@@ -110,8 +129,7 @@ class PublicKeyCredentialTest extends WebAuthnTestCase
 
 	public function testFromResponseJsonRejectsNonObjectResponse(): void
 	{
-		self::assertException(
-			JsonObjectException::class,
+		self::assertMalformedData(
 			"Value of key 'response' is not an object",
 			static fn () => PublicKeyCredential::fromAuthenticationResponseJson(JsonObject::fromArray([
 				'id' => Base64::urlEncode('credential-id'),
@@ -160,8 +178,7 @@ class PublicKeyCredentialTest extends WebAuthnTestCase
 
 	public function testRejectsMissingTopLevelMember(): void
 	{
-		self::assertException(
-			JsonObjectException::class,
+		self::assertMalformedData(
 			"Missing key 'id' in JSON object",
 			static fn () => PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
 				'rawId' => Base64::urlEncode('credential-id'),
@@ -176,8 +193,7 @@ class PublicKeyCredentialTest extends WebAuthnTestCase
 
 	public function testRejectsMissingClientDataJsonInResponse(): void
 	{
-		self::assertException(
-			JsonObjectException::class,
+		self::assertMalformedData(
 			"Missing key 'clientDataJSON' in JSON object",
 			static fn () => PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
 				'id' => Base64::urlEncode('credential-id'),
@@ -190,8 +206,7 @@ class PublicKeyCredentialTest extends WebAuthnTestCase
 
 	public function testRejectsMissingSignatureInResponse(): void
 	{
-		self::assertException(
-			JsonObjectException::class,
+		self::assertMalformedData(
 			"Missing key 'signature' in JSON object",
 			static fn () => PublicKeyCredential::fromAuthenticationResponseJson(JsonObject::fromString(json_encode([
 				'id' => Base64::urlEncode('credential-id'),
@@ -211,8 +226,7 @@ class PublicKeyCredentialTest extends WebAuthnTestCase
 	 */
 	public function testRejectsNullResponse(): void
 	{
-		self::assertException(
-			JsonObjectException::class,
+		self::assertMalformedData(
 			"Missing key 'response' in JSON object",
 			static fn () => PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
 				'id' => Base64::urlEncode('credential-id'),
@@ -225,8 +239,7 @@ class PublicKeyCredentialTest extends WebAuthnTestCase
 
 	public function testRejectsNonStringAuthenticatorAttachment(): void
 	{
-		self::assertException(
-			JsonObjectException::class,
+		self::assertMalformedData(
 			"Value of key 'authenticatorAttachment' is not a string",
 			static fn () => PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
 				'id' => Base64::urlEncode('credential-id'),
@@ -243,8 +256,7 @@ class PublicKeyCredentialTest extends WebAuthnTestCase
 
 	public function testRejectsNonStringType(): void
 	{
-		self::assertException(
-			JsonObjectException::class,
+		self::assertMalformedData(
 			"Value of key 'type' is not a string",
 			static fn () => PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
 				'id' => Base64::urlEncode('credential-id'),
@@ -260,8 +272,7 @@ class PublicKeyCredentialTest extends WebAuthnTestCase
 
 	public function testRejectsNonArrayTransports(): void
 	{
-		self::assertException(
-			JsonObjectException::class,
+		self::assertMalformedData(
 			"Value of key 'transports' is not an array",
 			static fn () => PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
 				'id' => Base64::urlEncode('credential-id'),
@@ -278,8 +289,7 @@ class PublicKeyCredentialTest extends WebAuthnTestCase
 
 	public function testRejectsNonStringTransport(): void
 	{
-		self::assertException(
-			JsonObjectException::class,
+		self::assertMalformedData(
 			"Value of key 'transports' is not an array of strings",
 			static fn () => PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
 				'id' => Base64::urlEncode('credential-id'),

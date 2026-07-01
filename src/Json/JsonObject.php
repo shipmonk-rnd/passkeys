@@ -57,6 +57,9 @@ readonly class JsonObject
 	}
 
 
+	/**
+	 * @throws JsonObjectException
+	 */
 	public function getOptionalBoolean(string $key): ?bool
 	{
 		if (!isset($this->object->$key)) {
@@ -71,6 +74,9 @@ readonly class JsonObject
 	}
 
 
+	/**
+	 * @throws JsonObjectException
+	 */
 	public function getString(string $key): string
 	{
 		if (!isset($this->object->$key)) {
@@ -143,6 +149,9 @@ readonly class JsonObject
 	}
 
 
+	/**
+	 * @throws JsonObjectException
+	 */
 	public function getOptionalString(string $key): ?string
 	{
 		if (!isset($this->object->$key)) {
@@ -169,6 +178,7 @@ readonly class JsonObject
 
 	/**
 	 * @throws JsonObjectException
+	 * @throws InvalidBase64Exception
 	 */
 	public function getOptionalBytes(string $key): ?Bytes
 	{

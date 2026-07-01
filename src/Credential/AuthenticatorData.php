@@ -4,7 +4,11 @@ namespace WebAuthnX\Credential;
 
 use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Binary\BytesReader;
+use WebAuthnX\Binary\BytesReaderException;
 use WebAuthnX\Cbor\CborMap;
+use WebAuthnX\Cbor\CborMapException;
+use WebAuthnX\Cbor\InvalidCborException;
+use WebAuthnX\Cose\CoseKeyException;
 
 readonly class AuthenticatorData
 {
@@ -24,29 +28,37 @@ readonly class AuthenticatorData
 	) {
 	}
 
+	/**
+	 * @throws MalformedDataException
+	 */
 	public static function fromBytes(Bytes $bytes): AuthenticatorData
 	{
-		return BytesReader::read($bytes, static function (BytesReader $bytesReader): self {
-			$rpIdHash = $bytesReader->bytes(32);
-			$flags = $bytesReader->u8();
-			$signCount = $bytesReader->u32();
+		try {
+			return BytesReader::read($bytes, static function (BytesReader $bytesReader): self {
+				$rpIdHash = $bytesReader->bytes(32);
+				$flags = $bytesReader->u8();
+				$signCount = $bytesReader->u32();
 
-			$attestedCredentialData = $flags & self::FLAG_ATTESTED_CREDENTIAL_DATA
-				? AttestedCredentialData::fromBytesReader($bytesReader)
-				: null;
+				$attestedCredentialData = $flags & self::FLAG_ATTESTED_CREDENTIAL_DATA
+					? AttestedCredentialData::fromBytesReader($bytesReader)
+					: null;
 
-			$extensions = $flags & self::FLAG_EXTENSION_DATA
-				? CborMap::fromBytesReader($bytesReader) // keys are utf-8 strings
-				: null;
+				$extensions = $flags & self::FLAG_EXTENSION_DATA
+					? CborMap::fromBytesReader($bytesReader) // keys are utf-8 strings
+					: null;
 
-			return new self(
-				$rpIdHash,
-				$flags,
-				$signCount,
-				$attestedCredentialData,
-				$extensions,
-			);
-		});
+				return new self(
+					$rpIdHash,
+					$flags,
+					$signCount,
+					$attestedCredentialData,
+					$extensions,
+				);
+			});
+
+		} catch (BytesReaderException | InvalidCborException | CborMapException | CoseKeyException $e) {
+			throw new MalformedDataException('Malformed authenticator data', $e);
+		}
 	}
 
 	/**

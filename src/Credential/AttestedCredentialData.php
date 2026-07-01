@@ -4,8 +4,12 @@ namespace WebAuthnX\Credential;
 
 use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Binary\BytesReader;
+use WebAuthnX\Binary\BytesReaderException;
 use WebAuthnX\Cbor\CborMap;
+use WebAuthnX\Cbor\CborMapException;
+use WebAuthnX\Cbor\InvalidCborException;
 use WebAuthnX\Cose\CoseKey;
+use WebAuthnX\Cose\CoseKeyException;
 
 readonly class AttestedCredentialData
 {
@@ -16,6 +20,12 @@ readonly class AttestedCredentialData
 	) {
 	}
 
+	/**
+	 * @throws BytesReaderException
+	 * @throws InvalidCborException
+	 * @throws CborMapException
+	 * @throws CoseKeyException
+	 */
 	public static function fromBytesReader(BytesReader $bytesReader): AttestedCredentialData
 	{
 		$aaGuid = $bytesReader->bytes(16);

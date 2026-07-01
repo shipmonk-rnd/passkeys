@@ -26,6 +26,7 @@ class BytesReader
 	 * @template T
 	 *
 	 * @param  Closure(self): T $callback
+	 * @param-immediately-invoked-callable $callback
 	 * @return T
 	 * @throws BytesReaderException
 	 */

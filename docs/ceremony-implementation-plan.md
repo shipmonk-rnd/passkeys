@@ -86,9 +86,20 @@ highest-value, lowest-risk piece (making passkey login actually work for the com
 
 ## 4. Phased plan
 
-### Phase P1 — Ceremony core (no attestation trust) — the crux
+### Phase P1 — Ceremony core (no attestation trust) — the crux — ✅ DONE (2026-07-01)
 Goal: a working `RelyingParty` that fully verifies §7.2 authentication and §7.1 registration for
 the `attestation: "none"` case, end-to-end, with no X.509/DER work.
+
+**Delivered:** `WebAuthnX\RelyingParty` façade (root namespace) + `WebAuthnX\Ceremony\`
+(`RegistrationExpectations`, `AuthenticationExpectations`, `CredentialRecord`, `CredentialStore`,
+`RegistrationResult`, `AuthenticationResult`, `VerificationException`). Full §7.1/§7.2 including
+topOrigin (§7.1 s11 / §7.2 s14). Fail-closed: the façade throws only `VerificationException`
+(machine-readable `reason`); decode failures and stored-key faults are repacked into it. Library
+stays stateless (caller owns persistence, challenge single-use, and the signCount/`possibleClone`
+decision). Reviewed by 3 fresh-eyes agents and hardened. During P1 the codebase also adopted
+PHPStan **checked-exception** enforcement (see `implementation-plan.md` tooling notes).
+Deferred within P1 scope, if a need arises: thread `authenticatorAttachment` into
+`RegistrationResult`; enforce a 1–64-byte bound on stored `userHandle`.
 
 - **P1.1 State & expectations API.** `Ceremony\RegistrationExpectations` /
   `AuthenticationExpectations` (challenge `Bytes`, expected origins, RP ID, UV requirement,
