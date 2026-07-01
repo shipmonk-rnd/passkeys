@@ -50,6 +50,9 @@ final class SignatureVerifier
 			throw new SignatureVerificationException("Unsupported algorithm {$key->alg}");
 		}
 
+		// Discard any stale entries so a failure below reports only this call's errors.
+		self::clearOpensslErrors();
+
 		$publicKey = openssl_pkey_get_public(self::toPem($key->toDerSubjectPublicKeyInfo()));
 
 		if ($publicKey === false) {
@@ -63,11 +66,10 @@ final class SignatureVerifier
 			self::OPENSSL_ALGORITHMS[$key->alg],
 		);
 
-		return match ($result) {
-			1 => true,
-			0 => false,
-			default => throw new SignatureVerificationException('Signature verification failed: ' . self::opensslErrors()),
-		};
+		// 1 = verified; 0 = signature does not match; -1 = malformed signature or an
+		// OpenSSL error. A caller cannot tell attacker-supplied garbage apart from a
+		// genuine mismatch, so anything but 1 is a verification failure, not an exception.
+		return $result === 1;
 	}
 
 	private static function toPem(Bytes $der): string
@@ -86,5 +88,12 @@ final class SignatureVerifier
 		}
 
 		return implode('; ', $errors);
+	}
+
+	private static function clearOpensslErrors(): void
+	{
+		while (openssl_error_string() !== false) {
+			// drain the queue
+		}
 	}
 }

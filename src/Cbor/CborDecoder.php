@@ -14,8 +14,12 @@ use function is_string;
  * Implements decoder for subset of {@link https://www.rfc-editor.org/rfc/rfc8949.html CBOR} that is required by
  * WebAuthn specification.
  *
- * Specifically it rejects any CBOR that is not encoded in
- * {@link https://fidoalliance.org/specs/fido-v2.1-ps-20210615/fido-client-to-authenticator-protocol-v2.1-ps-errata-20220621.html#ctap2-canonical-cbor-encoding-form CTAP2 canonical CBOR encoding form}. This most notable means that it does not support indefinite-length values and tagged values.
+ * It targets the {@link https://fidoalliance.org/specs/fido-v2.1-ps-20210615/fido-client-to-authenticator-protocol-v2.1-ps-errata-20220621.html#ctap2-canonical-cbor-encoding-form CTAP2 canonical CBOR encoding form}:
+ * it does not support indefinite-length values or tagged values, and rejects duplicate map keys.
+ * It does not, however, fully enforce canonicalness — it accepts non-minimal integer/length
+ * encodings and out-of-order map keys. That is deliberate: WebAuthn signature verification does
+ * not depend on the exact CBOR byte encoding (COSE keys are re-encoded to DER before use), so
+ * decoding leniently is safe here.
  */
 class CborDecoder
 {

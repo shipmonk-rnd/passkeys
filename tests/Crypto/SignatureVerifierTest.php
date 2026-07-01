@@ -7,13 +7,16 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 use WebAuthnX\Cose\CoseKey;
+use WebAuthnX\Cose\CoseOkpKey;
 use WebAuthnX\Crypto\SignatureVerificationException;
 use WebAuthnX\Crypto\SignatureVerifier;
 use WebAuthnXTests\CryptoTestCase;
 
+use function chr;
 use function is_string;
 use function openssl_error_string;
 use function openssl_sign;
+use function ord;
 use function substr;
 
 use const OPENSSL_ALGO_SHA256;
@@ -112,17 +115,47 @@ class SignatureVerifierTest extends CryptoTestCase
 		);
 	}
 
-	public function testThrowsOnMalformedSignature(): void
+	/**
+	 * A malformed signature is a verification failure (false), never an exception —
+	 * regardless of whether OpenSSL reports it as 0 (RSA/EdDSA) or -1 (ECDSA DER parse).
+	 */
+	#[DataProvider('provideAlgorithms')]
+	public function testRejectsMalformedSignature(int $alg): void
 	{
-		[$coseKey, $privateKey] = self::generateCoseKeyPair(CoseAlgorithmIdentifier::ES256);
-		$signature = self::sign($privateKey, self::MESSAGE, CoseAlgorithmIdentifier::ES256);
+		[$coseKey, $privateKey] = self::generateCoseKeyPair($alg);
+		$signature = self::sign($privateKey, self::MESSAGE, $alg);
 		$malformed = Bytes::fromBinaryString(substr($signature->toBinaryString(), 0, 5));
 
-		self::assertException(
-			SignatureVerificationException::class,
-			'Signature verification failed%A',
-			fn () => (new SignatureVerifier())->verify($coseKey, self::bytes(self::MESSAGE), $malformed),
+		self::assertFalse(
+			(new SignatureVerifier())->verify($coseKey, self::bytes(self::MESSAGE), $malformed),
 		);
+	}
+
+	/**
+	 * Known-answer vector from RFC 8032 §7.1 (Ed25519, Test 1): a fixed public key,
+	 * empty message, and fixed 64-byte signature not produced by our own code path.
+	 */
+	public function testVerifiesEd25519KnownAnswerVector(): void
+	{
+		$publicKey = self::bytesFromHex('d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a');
+		$signature = self::bytesFromHex(
+			'e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e06522490155'
+			. '5fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b',
+		);
+
+		$coseKey = CoseKey::fromCborMap(self::cborMap([
+			1 => CoseOkpKey::KTY,
+			3 => CoseAlgorithmIdentifier::EdDSA,
+			-1 => CoseOkpKey::CRV_ED25519,
+			-2 => $publicKey->toBinaryString(),
+		]));
+
+		$verifier = new SignatureVerifier();
+		self::assertTrue($verifier->verify($coseKey, self::bytes(''), $signature));
+
+		$tampered = $signature->toBinaryString();
+		$tampered[0] = chr(ord($tampered[0]) ^ 0x01);
+		self::assertFalse($verifier->verify($coseKey, self::bytes(''), Bytes::fromBinaryString($tampered)));
 	}
 
 	private static function sign(OpenSSLAsymmetricKey $privateKey, string $message, int $alg): Bytes

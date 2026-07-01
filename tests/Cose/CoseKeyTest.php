@@ -47,6 +47,27 @@ class CoseKeyTest extends CryptoTestCase
 	}
 
 	/**
+	 * Fixed vector (independent of the OpenSSL oracle): the RFC 8032 §7.1 Test 1
+	 * public key must encode to the exact RFC 8410 §4 Ed25519 SubjectPublicKeyInfo.
+	 */
+	public function testEd25519SubjectPublicKeyInfoKnownAnswer(): void
+	{
+		$publicKey = self::bytesFromHex('d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a');
+
+		$coseKey = CoseKey::fromCborMap(self::cborMap([
+			1 => CoseOkpKey::KTY,
+			3 => CoseAlgorithmIdentifier::EdDSA,
+			-1 => CoseOkpKey::CRV_ED25519,
+			-2 => $publicKey->toBinaryString(),
+		]));
+
+		self::assertSame(
+			'302a300506032b6570032100d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a',
+			bin2hex($coseKey->toDerSubjectPublicKeyInfo()->toBinaryString()),
+		);
+	}
+
+	/**
 	 * @param  array<int, int|string> $entries
 	 */
 	#[DataProvider('provideInvalidKeys')]
@@ -82,19 +103,41 @@ class CoseKeyTest extends CryptoTestCase
 			[1 => CoseEc2Key::KTY, 3 => CoseAlgorithmIdentifier::ES256, -1 => CoseEc2Key::CRV_P384, -2 => $x, -3 => $y],
 		];
 
-		yield 'EC2 wrong coordinate length' => [
+		yield 'EC2 wrong x length' => [
 			'EC2 curve 1 requires 32-byte coordinates',
 			[1 => CoseEc2Key::KTY, 3 => CoseAlgorithmIdentifier::ES256, -1 => CoseEc2Key::CRV_P256, -2 => 'short', -3 => $y],
 		];
 
-		yield 'unsupported RSA algorithm' => [
-			'Unsupported RSA algorithm -7',
-			[1 => CoseRsaKey::KTY, 3 => CoseAlgorithmIdentifier::ES256, -1 => str_pad('', 256, "\x01"), -2 => "\x01\x00\x01"],
+		yield 'EC2 wrong y length' => [
+			'EC2 curve 1 requires 32-byte coordinates',
+			[1 => CoseEc2Key::KTY, 3 => CoseAlgorithmIdentifier::ES256, -1 => CoseEc2Key::CRV_P256, -2 => $x, -3 => 'short'],
 		];
 
-		yield 'empty RSA modulus' => [
-			'RSA modulus and exponent must not be empty',
-			[1 => CoseRsaKey::KTY, 3 => CoseAlgorithmIdentifier::RS256, -1 => '', -2 => "\x01\x00\x01"],
+		$rsaModulus = str_pad('', 256, "\x01");
+
+		yield 'unsupported RSA algorithm' => [
+			'Unsupported RSA algorithm -7',
+			[1 => CoseRsaKey::KTY, 3 => CoseAlgorithmIdentifier::ES256, -1 => $rsaModulus, -2 => "\x01\x00\x01"],
+		];
+
+		yield 'RSA modulus too small' => [
+			'RSA modulus must be at least 2048 bits',
+			[1 => CoseRsaKey::KTY, 3 => CoseAlgorithmIdentifier::RS256, -1 => str_pad('', 128, "\x01"), -2 => "\x01\x00\x01"],
+		];
+
+		yield 'RSA exponent of one (forgeable)' => [
+			'RSA public exponent must be an odd integer greater than 1',
+			[1 => CoseRsaKey::KTY, 3 => CoseAlgorithmIdentifier::RS256, -1 => $rsaModulus, -2 => "\x01"],
+		];
+
+		yield 'RSA even exponent' => [
+			'RSA public exponent must be an odd integer greater than 1',
+			[1 => CoseRsaKey::KTY, 3 => CoseAlgorithmIdentifier::RS256, -1 => $rsaModulus, -2 => "\x02"],
+		];
+
+		yield 'RSA empty exponent' => [
+			'RSA public exponent must be an odd integer greater than 1',
+			[1 => CoseRsaKey::KTY, 3 => CoseAlgorithmIdentifier::RS256, -1 => $rsaModulus, -2 => ''],
 		];
 
 		yield 'unsupported OKP algorithm' => [

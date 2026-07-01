@@ -7,6 +7,10 @@ use WebAuthnX\Cbor\CborMap;
 use WebAuthnX\Der\DerEncoder;
 
 use function in_array;
+use function ltrim;
+use function ord;
+use function strlen;
+use function substr;
 
 /**
  * COSE key of type RSA, e.g. RS256.
@@ -32,6 +36,9 @@ final class CoseRsaKey extends CoseKey
 		CoseAlgorithmIdentifier::RS256,
 	];
 
+	/** Minimum accepted modulus size in bytes (2048 bits; RFC 8230 §6.1). */
+	private const MIN_MODULUS_BYTES = 256;
+
 	private function __construct(
 		int $alg,
 		public Bytes $n,
@@ -53,8 +60,19 @@ final class CoseRsaKey extends CoseKey
 			throw new CoseKeyException("Unsupported RSA algorithm {$alg}");
 		}
 
-		if ($n->length === 0 || $e->length === 0) {
-			throw new CoseKeyException('RSA modulus and exponent must not be empty');
+		$modulus = ltrim($n->toBinaryString(), "\x00");
+
+		if (strlen($modulus) < self::MIN_MODULUS_BYTES) {
+			throw new CoseKeyException('RSA modulus must be at least 2048 bits');
+		}
+
+		// A public exponent of 1 makes verification the identity function, so the
+		// PKCS#1 encoded message can be presented as the signature and "verifies"
+		// without the private key. Even exponents are likewise invalid for RSA.
+		$exponent = ltrim($e->toBinaryString(), "\x00");
+
+		if ($exponent === '' || $exponent === "\x01" || (ord(substr($exponent, -1)) & 1) === 0) {
+			throw new CoseKeyException('RSA public exponent must be an odd integer greater than 1');
 		}
 
 		return new self($alg, $n, $e);

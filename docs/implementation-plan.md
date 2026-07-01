@@ -110,6 +110,28 @@ replace OpenSSL); the verifier maps `EdDSA → openssl_verify(..., 0)` (pure sch
 prehash); (c) `Crypto\Hash::sha256()` (task 9) is implemented and exercised by the assertion
 test but has no `src/` caller until the ceremony layer (porcelain) needs it.
 
+**Post-review hardening (2026-07-01).** Four fresh-eyes review agents (spec / security /
+correctness / tests) audited Phase B. Fixes applied:
+- **[was HIGH] RSA degenerate-key forgery.** `CoseRsaKey` accepted `e=1` (→ verification is
+  the identity function, forgeable without the private key) and tiny moduli. Now requires the
+  public exponent to be an odd integer > 1 and the modulus ≥ 2048 bits (RFC 8230 §6.1).
+- **[MEDIUM] Malformed-signature contract.** `SignatureVerifier::verify` now returns `false`
+  for a malformed/garbage signature (OpenSSL `-1`) instead of throwing, so attacker-supplied
+  input yields a clean verification failure, not an exception. It still throws only for an
+  unsupported algorithm or a key that fails to load.
+- **[LOW] Stale OpenSSL error queue** is drained before use so load-failure messages are
+  accurate. **[docs]** `CborDecoder`'s docblock no longer overclaims canonical-CBOR enforcement.
+- **[tests]** Added an RFC 8032 §7.1 Ed25519 known-answer vector (fixed pubkey/sig, verify
+  ±) — the first deterministic, non-self-generated crypto vector — plus a fixed Ed25519 SPKI
+  vector and the missing negative operands (EC `y` length, RSA `e` = 1/even/empty, small modulus).
+
+**Deferred (noted, not blocking the plumbing):** EC point-on-curve validity relies on OpenSSL
+(it rejects off-curve points on load — acceptable); ECDSA low-S malleability is not enforced
+(matters only for replay/sign-count → ceremony); a type-confused COSE field surfaces as
+`CborMapException` rather than `CoseKeyException` (decide whether to normalize); more KAT
+vectors for EC/RSA and a negative case in the assertion test would raise assurance further;
+full CTAP2-canonical CBOR (key ordering, minimal encodings) is intentionally not enforced.
+
 6. **Rework `Cose\CoseKey`** into a proper hierarchy parsed from `CborMap`:
    - `CoseKey::fromCborMap()` dispatches on `kty` (1) → `CoseEc2Key` (kty=2),
      `CoseRsaKey` (kty=3), optionally `CoseOkpKey` (kty=1 / Ed25519).
