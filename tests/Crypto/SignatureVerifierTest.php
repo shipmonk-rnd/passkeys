@@ -2,7 +2,6 @@
 
 namespace WebAuthnXTests\Crypto;
 
-use OpenSSLAsymmetricKey;
 use PHPUnit\Framework\Attributes\DataProvider;
 use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
@@ -13,15 +12,8 @@ use WebAuthnX\Crypto\SignatureVerifier;
 use WebAuthnXTests\CryptoTestCase;
 
 use function chr;
-use function is_string;
-use function openssl_error_string;
-use function openssl_sign;
 use function ord;
 use function substr;
-
-use const OPENSSL_ALGO_SHA256;
-use const OPENSSL_ALGO_SHA384;
-use const OPENSSL_ALGO_SHA512;
 
 class SignatureVerifierTest extends CryptoTestCase
 {
@@ -156,30 +148,5 @@ class SignatureVerifierTest extends CryptoTestCase
 		$tampered = $signature->toBinaryString();
 		$tampered[0] = chr(ord($tampered[0]) ^ 0x01);
 		self::assertFalse($verifier->verify($coseKey, self::bytes(''), Bytes::fromBinaryString($tampered)));
-	}
-
-	private static function sign(OpenSSLAsymmetricKey $privateKey, string $message, int $alg): Bytes
-	{
-		if (!openssl_sign($message, $signature, $privateKey, self::opensslDigest($alg)) || !is_string($signature)) {
-			self::fail('Failed to sign: ' . openssl_error_string());
-		}
-
-		return Bytes::fromBinaryString($signature);
-	}
-
-	private static function opensslDigest(int $alg): int
-	{
-		return match ($alg) {
-			CoseAlgorithmIdentifier::ES256, CoseAlgorithmIdentifier::RS256 => OPENSSL_ALGO_SHA256,
-			CoseAlgorithmIdentifier::ES384 => OPENSSL_ALGO_SHA384,
-			CoseAlgorithmIdentifier::ES512 => OPENSSL_ALGO_SHA512,
-			CoseAlgorithmIdentifier::EdDSA => 0, // EdDSA is a pure signature scheme (no prehash)
-			default => self::fail("Unsupported test algorithm {$alg}"),
-		};
-	}
-
-	private static function bytes(string $data): Bytes
-	{
-		return Bytes::fromBinaryString($data);
 	}
 }

@@ -3,6 +3,7 @@
 namespace WebAuthnXTests;
 
 use OpenSSLAsymmetricKey;
+use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 use WebAuthnX\Cose\CoseEc2Key;
 use WebAuthnX\Cose\CoseKey;
@@ -17,9 +18,13 @@ use function is_string;
 use function openssl_error_string;
 use function openssl_pkey_get_details;
 use function openssl_pkey_new;
+use function openssl_sign;
 use function preg_replace;
 use function str_pad;
 
+use const OPENSSL_ALGO_SHA256;
+use const OPENSSL_ALGO_SHA384;
+use const OPENSSL_ALGO_SHA512;
 use const OPENSSL_KEYTYPE_EC;
 use const OPENSSL_KEYTYPE_ED25519;
 use const OPENSSL_KEYTYPE_RSA;
@@ -39,32 +44,42 @@ abstract class CryptoTestCase extends WebAuthnTestCase
 	 */
 	protected static function generateCoseKeyPair(int $alg): array
 	{
+		[$privateKey, $entries] = self::generateKeyAndCoseEntries($alg);
+
+		return [CoseKey::fromCborMap(self::cborMap($entries)), $privateKey];
+	}
+
+	/**
+	 * Generates a fresh key pair and returns the OpenSSL private key together with the
+	 * integer-keyed COSE map entries describing its public key — the same shape an
+	 * authenticator embeds in attested credential data.
+	 *
+	 * @return array{OpenSSLAsymmetricKey, array<int, int|string>}
+	 */
+	protected static function generateKeyAndCoseEntries(int $alg): array
+	{
 		if ($alg === CoseAlgorithmIdentifier::RS256) {
 			$privateKey = self::generateKey(['private_key_type' => OPENSSL_KEYTYPE_RSA, 'private_key_bits' => 2048]);
 			$details = self::keyDetails($privateKey);
 
-			$coseKey = CoseKey::fromCborMap(self::cborMap([
+			return [$privateKey, [
 				1 => CoseRsaKey::KTY,
 				3 => $alg,
 				-1 => self::stringField($details, 'rsa', 'n'),
 				-2 => self::stringField($details, 'rsa', 'e'),
-			]));
-
-			return [$coseKey, $privateKey];
+			]];
 		}
 
 		if ($alg === CoseAlgorithmIdentifier::EdDSA) {
 			$privateKey = self::generateKey(['private_key_type' => OPENSSL_KEYTYPE_ED25519]);
 			$details = self::keyDetails($privateKey);
 
-			$coseKey = CoseKey::fromCborMap(self::cborMap([
+			return [$privateKey, [
 				1 => CoseOkpKey::KTY,
 				3 => $alg,
 				-1 => CoseOkpKey::CRV_ED25519,
 				-2 => self::stringField($details, 'ed25519', 'pub_key'),
-			]));
-
-			return [$coseKey, $privateKey];
+			]];
 		}
 
 		[$curveName, $crv, $coordinateLength] = self::ec2Spec($alg);
@@ -72,15 +87,43 @@ abstract class CryptoTestCase extends WebAuthnTestCase
 		$privateKey = self::generateKey(['private_key_type' => OPENSSL_KEYTYPE_EC, 'curve_name' => $curveName]);
 		$details = self::keyDetails($privateKey);
 
-		$coseKey = CoseKey::fromCborMap(self::cborMap([
+		return [$privateKey, [
 			1 => CoseEc2Key::KTY,
 			3 => $alg,
 			-1 => $crv,
 			-2 => str_pad(self::stringField($details, 'ec', 'x'), $coordinateLength, "\x00", STR_PAD_LEFT),
 			-3 => str_pad(self::stringField($details, 'ec', 'y'), $coordinateLength, "\x00", STR_PAD_LEFT),
-		]));
+		]];
+	}
 
-		return [$coseKey, $privateKey];
+	/**
+	 * Signs a message with the OpenSSL private key using the digest the given COSE algorithm
+	 * mandates, producing exactly the signature encoding {@see \WebAuthnX\Crypto\SignatureVerifier}
+	 * expects (ASN.1 DER for ECDSA, raw PKCS#1 for RSA, raw 64-byte for Ed25519).
+	 */
+	protected static function sign(OpenSSLAsymmetricKey $privateKey, string $message, int $alg): Bytes
+	{
+		if (!openssl_sign($message, $signature, $privateKey, self::opensslDigest($alg)) || !is_string($signature)) {
+			self::fail('Failed to sign: ' . openssl_error_string());
+		}
+
+		return Bytes::fromBinaryString($signature);
+	}
+
+	protected static function opensslDigest(int $alg): int
+	{
+		return match ($alg) {
+			CoseAlgorithmIdentifier::ES256, CoseAlgorithmIdentifier::RS256 => OPENSSL_ALGO_SHA256,
+			CoseAlgorithmIdentifier::ES384 => OPENSSL_ALGO_SHA384,
+			CoseAlgorithmIdentifier::ES512 => OPENSSL_ALGO_SHA512,
+			CoseAlgorithmIdentifier::EdDSA => 0, // EdDSA is a pure signature scheme (no prehash)
+			default => self::fail("Unsupported test algorithm {$alg}"),
+		};
+	}
+
+	protected static function bytes(string $data): Bytes
+	{
+		return Bytes::fromBinaryString($data);
 	}
 
 	/**

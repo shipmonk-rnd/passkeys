@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   tests:
-    name: Tests (PHP ${{ matrix.php-version }})
+    name: Tests & coverage (PHP ${{ matrix.php-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -26,7 +26,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-version }}
-          coverage: none
+          coverage: pcov
 
       - name: Validate composer.json
         run: composer validate --strict
@@ -34,8 +34,14 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --no-progress
 
-      - name: PHPUnit
-        run: vendor/bin/phpunit
+      - name: Audit runtime dependencies
+        run: composer audit --no-dev
+
+      - name: PHPUnit (with coverage)
+        run: vendor/bin/phpunit --coverage-clover=clover.xml
+
+      - name: Coverage guard
+        run: vendor/bin/coverage-guard check clover.xml
 
   phpstan:
     name: PHPStan

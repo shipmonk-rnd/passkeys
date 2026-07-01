@@ -23,6 +23,11 @@
     },
     "scripts": {
         "test": "phpunit tests",
-        "phpstan": "phpstan analyse"
+        "phpstan": "phpstan analyse",
+        "coverage": [
+            "@putenv XDEBUG_MODE=coverage",
+            "phpunit tests --coverage-clover=clover.xml",
+            "coverage-guard check clover.xml"
+        ]
     }
 }

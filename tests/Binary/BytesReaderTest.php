@@ -3,6 +3,7 @@
 namespace WebAuthnXTests\Binary;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use LogicException;
 use WebAuthnX\Binary\BytesReader;
 use WebAuthnX\Binary\BytesReaderException;
 use WebAuthnX\Binary\Bytes;
@@ -266,6 +267,16 @@ class BytesReaderTest extends WebAuthnTestCase
 			static function (): void {
 				BytesReader::read(Bytes::fromBinaryString('A')->slice(1, 0), static function (BytesReader $reader): void {
 					$reader->bytes(1);
+				});
+			},
+		);
+
+		self::assertException(
+			LogicException::class,
+			'Length must be non-negative',
+			static function (): void {
+				BytesReader::read(Bytes::fromBinaryString('ABC'), static function (BytesReader $reader): void {
+					$reader->bytes(-1);
 				});
 			},
 		);

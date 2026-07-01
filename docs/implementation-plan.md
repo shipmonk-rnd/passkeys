@@ -217,18 +217,44 @@ length) are RP-controlled and left to a later options-validation pass; a decoded
 guard lines await Phase D spec vectors; option JSON does not yet model
 `attestation`/`attestationFormats`/`extensions` inputs (add when the ceremony layer needs them).
 
-### Phase D — Coverage, fixtures, and tooling completion
+### Phase D — Coverage, fixtures, and tooling completion — ✅ done 2026-07-01
 Goal: near-100% coverage enforced in CI, backed by real spec vectors.
 
-15. **Spec test vectors** — build fixtures from the WebAuthn/CTAP2 examples and known
-    authenticator outputs (EC2 + RSA registration and assertion blobs) as snapshot inputs;
-    the `assertSnapshot` harness already exists in `WebAuthnTestCase`.
-16. **Coverage-guard config** — wire `shipmonk/coverage-guard` to require coverage of the
-    core parsing/crypto methods; run it in CI against a clover report.
-17. **CI** — GitHub Actions: `composer test` (with `XDEBUG_MODE=coverage`), `composer
-    phpstan`, `composer audit`, coverage-guard. Target: PHPStan max clean, ~100% line
-    coverage on `src/`.
-18. **README** — document scope, supported algorithms, and the (eventual) public API.
+Outcome: PHPStan level max stays clean; suite green (2227 tests); `src/` line coverage is now
+**99.80% (488/489)** — the single uncovered line is the unreachable defensive branch in
+`BytesReader::unpackFloat` (its `unpack()` cannot fail because `readRaw()` always returns exactly
+the requested byte count; the branch is kept for the type-checker). `composer audit --no-dev` is
+clean (the library has zero third-party runtime deps; the dev-only PHPUnit advisory is still
+tracked in §8). Decisions: (a) end-to-end vectors use **live** crypto driven through the public
+API rather than frozen snapshots, because ECDSA output is non-deterministic — the fixed,
+independent oracle remains the RFC 8032 Ed25519 KAT (item 15); (b) coverage-guard enforces
+*method-level* coverage (two `EnforceCoverageForMethodsRule`s: "no method entirely untested" +
+"≥5-line methods must be fully covered"), which is coverage-guard's idiomatic model and cleanly
+tolerates the one defensive branch, while PHPUnit still reports the ~100% line figure; (c)
+`composer audit` is scoped with `--no-dev` so CI audits what consumers actually install.
+
+15. **Spec test vectors** — ✅ done. Added `CeremonyEndToEndTest`: for **every** supported
+    algorithm (ES256/384/512, RS256, EdDSA) it assembles a spec-shaped `none`-attestation
+    registration + assertion with real key material, feeds both through the public parsers
+    (`PublicKeyCredential`, attestation object, authenticator data, attested credential data →
+    `CoseKey`), reconstructs the §7.2 signed message, and verifies it (plus a tamper-negative).
+    Introduced a `CborTestEncoder` test helper (production only decodes CBOR) and hoisted the
+    signing helpers into `CryptoTestCase`. The real EC2 `none` blob in `AuthenticatorDataTest`
+    and the RFC 8032 Ed25519 KAT remain as independent fixtures.
+16. **Coverage-guard config** — ✅ done. `coverage-guard.php` with the two method rules above;
+    passes on the current suite and actively bites (a stricter variant flagged `unpackFloat`).
+17. **CI** — ✅ done. `.github/workflows/ci.yml`: the `tests` job runs PHPUnit with PCOV
+    coverage → `clover.xml` → `coverage-guard check`, plus `composer validate --strict` and
+    `composer audit --no-dev`; the `phpstan` job runs level max. Added a `composer coverage`
+    script (`@putenv XDEBUG_MODE=coverage`); `clover.xml` is git-ignored.
+18. **README** — ✅ done. Documents scope (plumbing vs the not-yet-built ceremony façade),
+    requirements, supported algorithms, and the current public API (options → `toJson()`,
+    `PublicKeyCredential` parsing, `SignatureVerifier` + the §7.2 message reconstruction), with
+    an explicit warning that the RP-side checks are still the caller's responsibility.
+
+**Coverage-closing tests added:** `CollectedClientDataTest` (all accessors), `Json\JsonObjectTest`
+(`fromString` error paths + `getOptionalBoolean`), and a `BytesReader::bytes()` negative-length
+case — closing every pre-existing reachable gap noted in Phase C.
 
 ## 4. Suggested order & rough sizing
 
