@@ -143,6 +143,18 @@ The lower-level building blocks used above remain public for advanced use: `Publ
 (generic over its response type), `parseAttestationObject()` / `parseAuthenticatorData()`, and the
 `SignatureVerifier` primitive.
 
+## Example
+
+A runnable, single-file relying party lives in [`example/`](example/) — create a passkey and log in
+with it end to end:
+
+```sh
+php -S localhost:8000 example/server.php   # then open http://localhost:8000
+```
+
+It shows both ceremonies driven through `RelyingParty`, plus a file-backed `CredentialStore`. See
+[`example/README.md`](example/README.md).
+
 ## Scope
 
 **Implemented:**
