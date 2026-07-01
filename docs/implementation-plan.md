@@ -274,9 +274,10 @@ architecture. RSA and EdDSA can follow the same seams.
 
 ## 6. Out-of-scope follow-up (the porcelain)
 
-After the plumbing is done: `RelyingParty::verifyRegistration()` / `verifyAuthentication()`
-implementing WebAuthn §7.1 / §7.2, then attestation-statement format verifiers. These reuse
-the Phase B COSE/crypto plumbing directly.
+The plumbing (Phases A–D) is complete. The follow-up — `RelyingParty::verifyRegistration()` /
+`verifyAuthentication()` implementing WebAuthn §7.1 / §7.2, then attestation-statement format
+verifiers, all reusing the Phase B COSE/crypto plumbing directly — is now planned in its own
+document: **[`ceremony-implementation-plan.md`](ceremony-implementation-plan.md)**.
 
 ## 7. Downloaded reference specs (`spec/`)
 
