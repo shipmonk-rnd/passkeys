@@ -1,9 +1,10 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX;
+namespace WebAuthnX\Credential;
 
 use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Json\JsonObject;
+use WebAuthnX\Json\JsonObjectException;
 
 /**
  * The credential returned by the browser's `navigator.credentials` API, in its JSON form
@@ -32,7 +33,7 @@ final readonly class PublicKeyCredential
 	 * Parses the JSON returned after a registration ceremony (`navigator.credentials.create()`).
 	 *
 	 * @return self<AuthenticatorAttestationResponse>
-	 * @throws Json\JsonObjectException
+	 * @throws JsonObjectException
 	 */
 	public static function fromRegistrationResponseJson(JsonObject $jsonObject): self
 	{
@@ -46,7 +47,7 @@ final readonly class PublicKeyCredential
 	 * Parses the JSON returned after an authentication ceremony (`navigator.credentials.get()`).
 	 *
 	 * @return self<AuthenticatorAssertionResponse>
-	 * @throws Json\JsonObjectException
+	 * @throws JsonObjectException
 	 */
 	public static function fromAuthenticationResponseJson(JsonObject $jsonObject): self
 	{
@@ -60,7 +61,7 @@ final readonly class PublicKeyCredential
 	 * @template R of AuthenticatorResponse
 	 * @param  R $response
 	 * @return self<R>
-	 * @throws Json\JsonObjectException
+	 * @throws JsonObjectException
 	 */
 	private static function create(JsonObject $jsonObject, AuthenticatorResponse $response): self
 	{

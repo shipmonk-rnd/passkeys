@@ -3,7 +3,7 @@
 namespace WebAuthnXTests;
 
 use WebAuthnX\Base64\Base64;
-use WebAuthnX\CollectedClientData;
+use WebAuthnX\Credential\CollectedClientData;
 use WebAuthnX\Json\JsonObject;
 
 use function json_encode;

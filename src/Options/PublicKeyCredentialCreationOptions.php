@@ -1,10 +1,11 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX;
+namespace WebAuthnX\Options;
 
 use JsonSerializable;
 use WebAuthnX\Base64\Base64;
 use WebAuthnX\Binary\Bytes;
+use WebAuthnX\Enum\PublicKeyCredentialHints;
 
 use function json_encode;
 

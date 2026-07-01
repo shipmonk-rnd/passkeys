@@ -1,10 +1,12 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX;
+namespace WebAuthnX\Options;
 
 use JsonSerializable;
 use WebAuthnX\Base64\Base64;
 use WebAuthnX\Binary\Bytes;
+use WebAuthnX\Enum\AuthenticatorTransport;
+use WebAuthnX\Enum\PublicKeyCredentialType;
 
 /**
  * @see https://w3c.github.io/webauthn/#dictdef-publickeycredentialdescriptorjson

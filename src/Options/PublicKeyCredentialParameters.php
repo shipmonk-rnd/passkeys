@@ -1,9 +1,10 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX;
+namespace WebAuthnX\Options;
 
 use JsonSerializable;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
+use WebAuthnX\Enum\PublicKeyCredentialType;
 
 /**
  * @see https://w3c.github.io/webauthn/#dictdef-publickeycredentialparameters

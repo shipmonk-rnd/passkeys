@@ -2,21 +2,21 @@
 
 namespace WebAuthnXTests;
 
-use WebAuthnX\AuthenticatorAttachment;
-use WebAuthnX\AuthenticatorSelectionCriteria;
-use WebAuthnX\AuthenticatorTransport;
+use WebAuthnX\Enum\AuthenticatorAttachment;
+use WebAuthnX\Options\AuthenticatorSelectionCriteria;
+use WebAuthnX\Enum\AuthenticatorTransport;
 use WebAuthnX\Base64\Base64;
 use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
-use WebAuthnX\PublicKeyCredentialCreationOptions;
-use WebAuthnX\PublicKeyCredentialDescriptor;
-use WebAuthnX\PublicKeyCredentialHints;
-use WebAuthnX\PublicKeyCredentialParameters;
-use WebAuthnX\PublicKeyCredentialRpEntity;
-use WebAuthnX\PublicKeyCredentialType;
-use WebAuthnX\PublicKeyCredentialUserEntity;
-use WebAuthnX\ResidentKeyRequirement;
-use WebAuthnX\UserVerificationRequirement;
+use WebAuthnX\Options\PublicKeyCredentialCreationOptions;
+use WebAuthnX\Options\PublicKeyCredentialDescriptor;
+use WebAuthnX\Enum\PublicKeyCredentialHints;
+use WebAuthnX\Options\PublicKeyCredentialParameters;
+use WebAuthnX\Options\PublicKeyCredentialRpEntity;
+use WebAuthnX\Enum\PublicKeyCredentialType;
+use WebAuthnX\Options\PublicKeyCredentialUserEntity;
+use WebAuthnX\Enum\ResidentKeyRequirement;
+use WebAuthnX\Enum\UserVerificationRequirement;
 
 use function json_decode;
 

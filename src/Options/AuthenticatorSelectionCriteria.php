@@ -1,8 +1,11 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX;
+namespace WebAuthnX\Options;
 
 use JsonSerializable;
+use WebAuthnX\Enum\AuthenticatorAttachment;
+use WebAuthnX\Enum\ResidentKeyRequirement;
+use WebAuthnX\Enum\UserVerificationRequirement;
 
 /**
  * @see https://w3c.github.io/webauthn/#dictdef-authenticatorselectioncriteria

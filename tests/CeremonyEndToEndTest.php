@@ -3,15 +3,15 @@
 namespace WebAuthnXTests;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use WebAuthnX\AuthenticatorAttestationResponse;
-use WebAuthnX\AuthenticatorData;
+use WebAuthnX\Credential\AuthenticatorAttestationResponse;
+use WebAuthnX\Credential\AuthenticatorData;
 use WebAuthnX\Base64\Base64;
 use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 use WebAuthnX\Crypto\Hash;
 use WebAuthnX\Crypto\SignatureVerifier;
 use WebAuthnX\Json\JsonObject;
-use WebAuthnX\PublicKeyCredential;
+use WebAuthnX\Credential\PublicKeyCredential;
 
 use function chr;
 use function hash;

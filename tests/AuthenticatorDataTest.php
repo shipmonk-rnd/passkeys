@@ -2,8 +2,8 @@
 
 namespace WebAuthnXTests;
 
-use WebAuthnX\AttestationObject;
-use WebAuthnX\AuthenticatorData;
+use WebAuthnX\Credential\AttestationObject;
+use WebAuthnX\Credential\AuthenticatorData;
 use WebAuthnX\Base64\Base64;
 use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Binary\BytesReader;

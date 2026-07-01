@@ -2,7 +2,7 @@
 
 namespace WebAuthnXTests;
 
-use WebAuthnX\AuthenticatorAssertionResponse;
+use WebAuthnX\Credential\AuthenticatorAssertionResponse;
 use WebAuthnX\Base64\Base64;
 use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;

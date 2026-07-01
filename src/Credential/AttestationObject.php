@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX;
+namespace WebAuthnX\Credential;
 
 use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cbor\CborMap;

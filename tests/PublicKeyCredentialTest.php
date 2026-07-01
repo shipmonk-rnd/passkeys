@@ -2,13 +2,13 @@
 
 namespace WebAuthnXTests;
 
-use WebAuthnX\AuthenticatorAssertionResponse;
-use WebAuthnX\AuthenticatorAttestationResponse;
+use WebAuthnX\Credential\AuthenticatorAssertionResponse;
+use WebAuthnX\Credential\AuthenticatorAttestationResponse;
 use WebAuthnX\Base64\Base64;
 use WebAuthnX\Json\JsonObject;
 use WebAuthnX\Json\JsonObjectException;
-use WebAuthnX\PublicKeyCredential;
-use WebAuthnX\PublicKeyCredentialType;
+use WebAuthnX\Credential\PublicKeyCredential;
+use WebAuthnX\Enum\PublicKeyCredentialType;
 
 use function json_encode;
 

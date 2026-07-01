@@ -46,11 +46,11 @@ JSON boundary for you.
 ```php
 use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
-use WebAuthnX\PublicKeyCredentialCreationOptions;
-use WebAuthnX\PublicKeyCredentialParameters;
-use WebAuthnX\PublicKeyCredentialRpEntity;
-use WebAuthnX\PublicKeyCredentialType;
-use WebAuthnX\PublicKeyCredentialUserEntity;
+use WebAuthnX\Enum\PublicKeyCredentialType;
+use WebAuthnX\Options\PublicKeyCredentialCreationOptions;
+use WebAuthnX\Options\PublicKeyCredentialParameters;
+use WebAuthnX\Options\PublicKeyCredentialRpEntity;
+use WebAuthnX\Options\PublicKeyCredentialUserEntity;
 
 $options = new PublicKeyCredentialCreationOptions(
     rp: new PublicKeyCredentialRpEntity(name: 'Example RP', id: 'example.com'),
@@ -72,8 +72,8 @@ and serializes the same way via `toJson()`.
 ### 2. Parse the browser's response
 
 ```php
+use WebAuthnX\Credential\PublicKeyCredential;
 use WebAuthnX\Json\JsonObject;
-use WebAuthnX\PublicKeyCredential;
 
 // Registration (navigator.credentials.create):
 $credential = PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString($rawJson));
@@ -96,10 +96,10 @@ WebAuthn §7.2 step 19) and verify it against the `CoseKey` you stored at regist
 
 ```php
 use WebAuthnX\Binary\Bytes;
+use WebAuthnX\Credential\PublicKeyCredential;
 use WebAuthnX\Crypto\Hash;
 use WebAuthnX\Crypto\SignatureVerifier;
 use WebAuthnX\Json\JsonObject;
-use WebAuthnX\PublicKeyCredential;
 
 $credential = PublicKeyCredential::fromAuthenticationResponseJson(JsonObject::fromString($rawJson));
 $response = $credential->response;                       // AuthenticatorAssertionResponse

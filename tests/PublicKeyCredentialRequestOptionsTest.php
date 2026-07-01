@@ -2,14 +2,14 @@
 
 namespace WebAuthnXTests;
 
-use WebAuthnX\AuthenticatorTransport;
+use WebAuthnX\Enum\AuthenticatorTransport;
 use WebAuthnX\Base64\Base64;
 use WebAuthnX\Binary\Bytes;
-use WebAuthnX\PublicKeyCredentialDescriptor;
-use WebAuthnX\PublicKeyCredentialHints;
-use WebAuthnX\PublicKeyCredentialRequestOptions;
-use WebAuthnX\PublicKeyCredentialType;
-use WebAuthnX\UserVerificationRequirement;
+use WebAuthnX\Options\PublicKeyCredentialDescriptor;
+use WebAuthnX\Enum\PublicKeyCredentialHints;
+use WebAuthnX\Options\PublicKeyCredentialRequestOptions;
+use WebAuthnX\Enum\PublicKeyCredentialType;
+use WebAuthnX\Enum\UserVerificationRequirement;
 
 use function json_decode;
 
