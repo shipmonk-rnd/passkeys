@@ -27,15 +27,16 @@ Touch ID / Windows Hello / a security key), then click **Log in**.
   `Options\*` models (`->toJson()`), and verifies the browser's responses with
   `RelyingParty::verifyRegistration()` / `verifyAuthentication()`. Failures surface as a
   `VerificationException` whose `->reason` is returned to the page.
-- **`PasskeyStore.php`** — a file-backed `CredentialStore`. It shows the one non-obvious part of
-  persisting a credential: a `CredentialRecord` carries a live `CoseKey`, and the library has no
-  way to serialise that key by itself, so the store keeps the raw `attestationObject` from
-  registration and re-parses it into a `CoseKey` on each login.
+- **`PasskeyStore.php`** — a `CredentialStore` shaped like the database tables a real app would use
+  (`users`, `credentials`), one row = one associative array of scalar columns. The credential's
+  public key is stored in a single `public_key` column via `CoseKey::toBytes()` and rehydrated with
+  `CoseKey::fromBytes()` — so persistence is just INSERT/SELECT over plain columns.
 
 ## Not production code
 
-One demo user, state in a JSON file under `example/.data/` (git-ignored), and user verification is
-relaxed for authenticator compatibility. A real service would use a database (one row per
-credential), per-session challenge storage, and its own user/account model. Login here is
-*usernameless* (discoverable passkey): the assertion's `userHandle` identifies the account, so
-there's no username field.
+One demo user, and user verification is relaxed for authenticator compatibility. The store is
+in-memory, kept in `$_SESSION` only because PHP's built-in server runs each request in a fresh
+process (so plain memory can't span the register and login requests) — there's no file or database
+of our own. A real service would run INSERT/SELECT/UPDATE against those same columns, with a proper
+user/account model and per-session challenge storage. Login here is *usernameless* (discoverable
+passkey): the assertion's `userHandle` identifies the account, so there's no username field.

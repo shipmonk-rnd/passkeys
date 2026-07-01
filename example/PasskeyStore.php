@@ -2,175 +2,135 @@
 
 namespace WebAuthnXDemo;
 
-use RuntimeException;
 use WebAuthnX\Binary\Bytes;
-use WebAuthnX\Binary\BytesReader;
-use WebAuthnX\Cbor\CborMap;
 use WebAuthnX\Ceremony\CredentialRecord;
 use WebAuthnX\Ceremony\CredentialStore;
 use WebAuthnX\Cose\CoseKey;
-use WebAuthnX\Credential\AttestationObject;
 
+use function array_key_exists;
 use function base64_decode;
 use function base64_encode;
-use function file_get_contents;
-use function file_put_contents;
-use function is_dir;
-use function json_decode;
-use function json_encode;
-use function mkdir;
-use function rtrim;
-use function strtr;
-
-use const JSON_PRETTY_PRINT;
-use const JSON_THROW_ON_ERROR;
 
 /**
- * A tiny file-backed store for the demo. NOT production code — a real relying party would use a
- * database, one row per credential, and proper session handling for the pending challenge.
+ * Credential store for the demo, deliberately shaped like the database a real relying party would
+ * use: two "tables" of rows, each row an associative array of "columns" holding only portable
+ * scalar values — exactly what you would map to SQL columns.
  *
- * It illustrates one non-obvious point about integrating the library: {@see CredentialRecord}
- * carries a live {@see \WebAuthnX\Cose\CoseKey}, and the library ships no way to serialise that key
- * on its own. So to persist a credential we keep the raw `attestationObject` the browser sent at
- * registration (base64url) and re-parse it back into a CoseKey whenever the record is loaded.
+ *   table `users`        — user_handle (PK), name
+ *   table `credentials`  — credential_id (PK), user_handle (FK), public_key, sign_count,
+ *                          uv_initialized, backup_eligible, backup_state, transports
+ *
+ * The `public_key` column is the credential's key serialised with {@see CoseKey::toBytes()} — a
+ * single BLOB/TEXT column — and rehydrated on read with {@see CoseKey::fromBytes()}. Binary ids and
+ * keys are base64-encoded so every column is a plain string/int/bool.
+ *
+ * The rows live in $_SESSION only because PHP's built-in server runs each request in a fresh
+ * process, so plain in-process memory cannot survive between the register and login requests. There
+ * is no file or database of our own here; in production you would run INSERT / SELECT / UPDATE
+ * against these same columns instead.
  */
 final class PasskeyStore implements CredentialStore
 {
-	private string $file;
-
-	/** @var array{challenge?: string, user?: array{handle: string, name: string}, credentials: array<string, array{attestationObject: string, signCount: int, userHandle: string, uvInitialized: bool, backupEligible: bool, backupState: bool, transports: list<string>|null}>} */
-	private array $data;
-
-	public function __construct(string $dir)
+	public function __construct()
 	{
-		if (!is_dir($dir)) {
-			mkdir($dir, 0777, recursive: true);
-		}
-
-		$this->file = $dir . '/store.json';
-		$raw = @file_get_contents($this->file);
-		$this->data = $raw === false
-			? ['credentials' => []]
-			: json_decode($raw, associative: true, flags: JSON_THROW_ON_ERROR);
+		$_SESSION['users'] ??= [];
+		$_SESSION['credentials'] ??= [];
 	}
+
+	// -- credentials table --------------------------------------------------------------------
 
 	public function findByCredentialId(Bytes $credentialId): ?CredentialRecord
 	{
-		$key = self::b64UrlEncode($credentialId->toBinaryString());
-		$record = $this->data['credentials'][$key] ?? null;
+		// SELECT * FROM credentials WHERE credential_id = ?
+		$row = $_SESSION['credentials'][base64_encode($credentialId->toBinaryString())] ?? null;
 
-		if ($record === null) {
+		if ($row === null) {
 			return null;
 		}
 
 		return new CredentialRecord(
 			credentialId: $credentialId,
-			publicKey: $this->rehydratePublicKey($record['attestationObject']),
-			signCount: $record['signCount'],
-			userHandle: Bytes::fromBinaryString(self::b64UrlDecode($record['userHandle'])),
-			uvInitialized: $record['uvInitialized'],
-			backupEligible: $record['backupEligible'],
-			backupState: $record['backupState'],
-			transports: $record['transports'],
+			publicKey: CoseKey::fromBytes(Bytes::fromBinaryString(base64_decode($row['public_key']))),
+			signCount: $row['sign_count'],
+			userHandle: Bytes::fromBinaryString(base64_decode($row['user_handle'])),
+			uvInitialized: $row['uv_initialized'],
+			backupEligible: $row['backup_eligible'],
+			backupState: $row['backup_state'],
+			transports: $row['transports'],
 		);
 	}
 
-	/**
-	 * Persists a freshly registered credential. The library-supplied {@see CredentialRecord} holds
-	 * everything except a serialisable public key, so we additionally keep the raw attestation
-	 * object the browser sent and re-derive the key from it on later logins.
-	 */
-	public function save(CredentialRecord $record, Bytes $attestationObject): void
+	public function insertCredential(CredentialRecord $record): void
 	{
-		$this->data['credentials'][self::b64UrlEncode($record->credentialId->toBinaryString())] = [
-			'attestationObject' => self::b64UrlEncode($attestationObject->toBinaryString()),
-			'signCount' => $record->signCount,
-			'userHandle' => self::b64UrlEncode($record->userHandle->toBinaryString()),
-			'uvInitialized' => $record->uvInitialized,
-			'backupEligible' => $record->backupEligible,
-			'backupState' => $record->backupState,
-			'transports' => $record->transports,
+		// INSERT INTO credentials (...) VALUES (...)
+		$credentialId = base64_encode($record->credentialId->toBinaryString());
+
+		$_SESSION['credentials'][$credentialId] = [
+			'credential_id' => $credentialId,
+			'user_handle' => base64_encode($record->userHandle->toBinaryString()),
+			'public_key' => base64_encode($record->publicKey->toBytes()->toBinaryString()),
+			'sign_count' => $record->signCount,
+			'uv_initialized' => $record->uvInitialized,
+			'backup_eligible' => $record->backupEligible,
+			'backup_state' => $record->backupState,
+			'transports' => $record->transports, // list<string>|null — a DB would hold this as JSON
 		];
-		$this->flush();
 	}
 
 	public function updateSignCount(Bytes $credentialId, int $newSignCount): void
 	{
-		$key = self::b64UrlEncode($credentialId->toBinaryString());
+		// UPDATE credentials SET sign_count = ? WHERE credential_id = ?
+		$key = base64_encode($credentialId->toBinaryString());
 
-		if (isset($this->data['credentials'][$key])) {
-			$this->data['credentials'][$key]['signCount'] = $newSignCount;
-			$this->flush();
+		if (array_key_exists($key, $_SESSION['credentials'])) {
+			$_SESSION['credentials'][$key]['sign_count'] = $newSignCount;
 		}
 	}
 
-	/** The single demo user; created on first registration. */
-	public function user(): ?array
+	// -- users table --------------------------------------------------------------------------
+
+	public function insertUser(Bytes $handle, string $name): void
 	{
-		return $this->data['user'] ?? null;
+		// INSERT INTO users (user_handle, name) VALUES (?, ?)
+		$userHandle = base64_encode($handle->toBinaryString());
+		$_SESSION['users'][$userHandle] = ['user_handle' => $userHandle, 'name' => $name];
 	}
 
-	public function setUser(Bytes $handle, string $name): void
+	/**
+	 * The single demo account, or null before the first registration.
+	 *
+	 * @return array{user_handle: string, name: string}|null
+	 */
+	public function user(): ?array
 	{
-		$this->data['user'] = ['handle' => self::b64UrlEncode($handle->toBinaryString()), 'name' => $name];
-		$this->flush();
+		// SELECT * FROM users LIMIT 1
+		foreach ($_SESSION['users'] as $row) {
+			return $row;
+		}
+
+		return null;
 	}
 
 	public function userNameForHandle(Bytes $handle): ?string
 	{
-		$user = $this->data['user'] ?? null;
-
-		return $user !== null && $user['handle'] === self::b64UrlEncode($handle->toBinaryString())
-			? $user['name']
-			: null;
+		// SELECT name FROM users WHERE user_handle = ?
+		return $_SESSION['users'][base64_encode($handle->toBinaryString())]['name'] ?? null;
 	}
 
-	/** Stores the pending ceremony challenge server-side (a real RP would key this per session). */
+	// -- pending ceremony challenge -----------------------------------------------------------
+	// Not a table: transient per-user state that belongs in the session (or a short-lived cache).
+
 	public function rememberChallenge(Bytes $challenge): void
 	{
-		$this->data['challenge'] = self::b64UrlEncode($challenge->toBinaryString());
-		$this->flush();
+		$_SESSION['pending_challenge'] = base64_encode($challenge->toBinaryString());
 	}
 
-	/** Returns and clears the pending challenge, so each challenge is single-use. */
+	/** Returns and clears the pending challenge, keeping each challenge single-use. */
 	public function consumeChallenge(): ?Bytes
 	{
-		$challenge = $this->data['challenge'] ?? null;
-		unset($this->data['challenge']);
-		$this->flush();
+		$challenge = $_SESSION['pending_challenge'] ?? null;
+		unset($_SESSION['pending_challenge']);
 
-		return $challenge === null ? null : Bytes::fromBinaryString(self::b64UrlDecode($challenge));
-	}
-
-	private function rehydratePublicKey(string $attestationObjectB64): CoseKey
-	{
-		$attestationObject = Bytes::fromBinaryString(self::b64UrlDecode($attestationObjectB64));
-		$parsed = BytesReader::read(
-			$attestationObject,
-			static fn (BytesReader $reader): AttestationObject => AttestationObject::fromCborMap(CborMap::fromBytesReader($reader)),
-		);
-
-		$attestedCredentialData = $parsed->parseAuthenticatorData()->attestedCredentialData;
-
-		if ($attestedCredentialData === null) {
-			throw new RuntimeException('Stored attestation object has no attested credential data');
-		}
-
-		return $attestedCredentialData->credentialPublicKey;
-	}
-
-	private function flush(): void
-	{
-		file_put_contents($this->file, json_encode($this->data, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR));
-	}
-
-	public static function b64UrlEncode(string $binary): string
-	{
-		return rtrim(strtr(base64_encode($binary), '+/', '-_'), '=');
-	}
-
-	public static function b64UrlDecode(string $text): string
-	{
-		return base64_decode(strtr($text, '-_', '+/'));
+		return $challenge === null ? null : Bytes::fromBinaryString(base64_decode($challenge));
 	}
 }

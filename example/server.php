@@ -36,12 +36,14 @@ use WebAuthnX\Options\PublicKeyCredentialRpEntity;
 use WebAuthnX\Options\PublicKeyCredentialUserEntity;
 use WebAuthnX\RelyingParty;
 
+use function base64_decode;
 use function file_get_contents;
 use function header;
 use function http_response_code;
 use function json_encode;
 use function parse_url;
 use function random_bytes;
+use function session_start;
 
 use const JSON_THROW_ON_ERROR;
 use const PHP_URL_PATH;
@@ -60,7 +62,8 @@ const ALLOWED_ALGORITHMS = [
 	CoseAlgorithmIdentifier::EdDSA,
 ];
 
-$store = new PasskeyStore(__DIR__ . '/.data');
+session_start();
+$store = new PasskeyStore();
 $rp = new RelyingParty();
 
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
@@ -91,9 +94,9 @@ match ($path) {
 
 		if ($user === null) {
 			$handle = Bytes::fromBinaryString(random_bytes(16));
-			$store->setUser($handle, 'demo@example.com');
+			$store->insertUser($handle, 'demo@example.com');
 		} else {
-			$handle = Bytes::fromBinaryString(PasskeyStore::b64UrlDecode($user['handle']));
+			$handle = Bytes::fromBinaryString(base64_decode($user['user_handle']));
 		}
 
 		$challenge = Bytes::fromBinaryString(random_bytes(32));
@@ -145,7 +148,7 @@ match ($path) {
 				VerificationException::UNKNOWN_CREDENTIAL,
 				'User vanished mid-ceremony',
 			);
-			$store->save($result->toCredentialRecord(Bytes::fromBinaryString(PasskeyStore::b64UrlDecode($user['handle']))), $credential->response->attestationObject);
+			$store->insertCredential($result->toCredentialRecord(Bytes::fromBinaryString(base64_decode($user['user_handle']))));
 
 			respond(200, ['ok' => true, 'message' => 'Passkey registered. You can now log in.']);
 
