@@ -34,8 +34,16 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --no-progress
 
+      # Audit third-party runtime dependencies only. This library has none today, and an empty
+      # audit set is an error on some composer versions, so gate on there being something to audit
+      # (the dev-only PHPUnit advisory is tracked separately in docs/implementation-plan.md §8).
       - name: Audit runtime dependencies
-        run: composer audit --no-dev --locked
+        run: |
+          if [ -n "$(composer show --locked --no-dev --name-only)" ]; then
+            composer audit --no-dev --locked
+          else
+            echo "No third-party runtime dependencies to audit."
+          fi
 
       - name: PHPUnit (with coverage)
         run: vendor/bin/phpunit --coverage-clover=clover.xml
