@@ -4,7 +4,10 @@ namespace WebAuthnX\Der;
 
 use LogicException;
 
+use function array_map;
 use function chr;
+use function count;
+use function explode;
 use function ltrim;
 use function ord;
 use function pack;
@@ -33,9 +36,28 @@ class DerEncoder
 		return "\x05\x00";
 	}
 
-	public static function encodeObjectIdentifier(string $bytes): string
+	/**
+	 * Encodes an OBJECT IDENTIFIER given in dotted-decimal notation (e.g. "1.2.840.10045.2.1").
+	 */
+	public static function encodeObjectIdentifier(string $oid): string
 	{
-		return "\x06" . self::encodeLength(strlen($bytes)) . $bytes;
+		$arcs = array_map(static fn (string $arc): int => (int) $arc, explode('.', $oid));
+
+		if (count($arcs) < 2 || $arcs[0] < 0 || $arcs[0] > 2 || $arcs[1] < 0) {
+			throw new LogicException("Invalid object identifier '{$oid}'");
+		}
+
+		$content = self::encodeBase128($arcs[0] * 40 + $arcs[1]);
+
+		for ($i = 2; $i < count($arcs); $i++) {
+			if ($arcs[$i] < 0) {
+				throw new LogicException("Invalid object identifier '{$oid}'");
+			}
+
+			$content .= self::encodeBase128($arcs[$i]);
+		}
+
+		return "\x06" . self::encodeLength(strlen($content)) . $content;
 	}
 
 	public static function encodeSequence(string $bytes): string
@@ -55,5 +77,22 @@ class DerEncoder
 
 		$lengthBytes = ltrim(pack('J', $length), "\x00");
 		return chr(0x80 | strlen($lengthBytes)) . $lengthBytes;
+	}
+
+	/**
+	 * Encodes a non-negative integer as a base-128 value with continuation bits,
+	 * as used for the arcs of an OBJECT IDENTIFIER.
+	 */
+	private static function encodeBase128(int $value): string
+	{
+		$bytes = chr($value & 0x7F);
+		$value >>= 7;
+
+		while ($value > 0) {
+			$bytes = chr(0x80 | ($value & 0x7F)) . $bytes;
+			$value >>= 7;
+		}
+
+		return $bytes;
 	}
 }

@@ -90,8 +90,22 @@ Decision: `BytesReader` now assumes 64-bit PHP (manual byte arithmetic replaced 
 5. **De-risk stub tests** — give `AuthenticatorDataTest` real assertions; either implement
    or remove the empty `CborMapTest::testGetInt`. Keep `failOnRisky=true`.
 
-### Phase B — COSE keys, DER wiring, and signature verification (the crux)
+### Phase B — COSE keys, DER wiring, and signature verification (the crux) — ✅ done 2026-07-01
 Goal: given a COSE key and signed bytes, verify a signature with `ext-openssl`.
+
+Outcome: PHPStan level max stays clean; suite green (2172 tests); line coverage 74% → 86%,
+with the whole `Der`/`Cose`/`Crypto` layer at 100%. COSE keys now validate `alg`/`crv`/
+coordinate lengths on parse and expose `toDerSubjectPublicKeyInfo()`; the previously
+orphaned `DerEncoder` is now used to build SubjectPublicKeyInfo, and its
+`encodeObjectIdentifier()` was reworked to encode a dotted-decimal OID string.
+`Crypto\SignatureVerifier` verifies ES256/384/512 and RS256 via `openssl_verify`, proven
+against OpenSSL-generated key material (our SPKI DER is asserted byte-for-byte identical to
+OpenSSL's) and by a full end-to-end ES256 assertion-signature check. `ext-openssl` added to
+composer `require`. Decisions: (a) OID constants live on the COSE key classes that use them
+rather than a generic `Der` OID bag; (b) EdDSA/OKP (`CoseOkpKey`) is **not** supported yet —
+PHP's `openssl_verify` has no clean Ed25519 path; the alg→verifier map is the extension seam;
+(c) `Crypto\Hash::sha256()` (task 9) is implemented and exercised by the assertion test but
+has no `src/` caller until the ceremony layer (porcelain) needs it.
 
 6. **Rework `Cose\CoseKey`** into a proper hierarchy parsed from `CborMap`:
    - `CoseKey::fromCborMap()` dispatches on `kty` (1) → `CoseEc2Key` (kty=2),

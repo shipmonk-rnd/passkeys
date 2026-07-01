@@ -2,6 +2,7 @@
 
 namespace WebAuthnX\Cose;
 
+use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cbor\CborMap;
 
 /**
@@ -36,4 +37,10 @@ abstract class CoseKey
 			default => throw new CoseKeyException("Unsupported COSE key type {$kty}"),
 		};
 	}
+
+	/**
+	 * Encodes this key as a DER-encoded SubjectPublicKeyInfo (RFC 5280 §4.1.2.7),
+	 * the form consumed by {@see \openssl_pkey_get_public()}.
+	 */
+	abstract public function toDerSubjectPublicKeyInfo(): Bytes;
 }

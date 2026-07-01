@@ -31,6 +31,48 @@ class DerEncoderTest extends TestCase
 		}
 	}
 
+	#[DataProvider('provideEncodeObjectIdentifierData')]
+	public function testEncodeObjectIdentifier(string $oid, string $expectedHex): void
+	{
+		self::assertSame($expectedHex, \bin2hex(DerEncoder::encodeObjectIdentifier($oid)));
+	}
+
+	/**
+	 * @return iterable<array{string, string}>
+	 */
+	public static function provideEncodeObjectIdentifierData(): iterable
+	{
+		yield 'id-ecPublicKey' => ['1.2.840.10045.2.1', '06072a8648ce3d0201'];
+		yield 'prime256v1 (P-256)' => ['1.2.840.10045.3.1.7', '06082a8648ce3d030107'];
+		yield 'secp384r1 (P-384)' => ['1.3.132.0.34', '06052b81040022'];
+		yield 'secp521r1 (P-521)' => ['1.3.132.0.35', '06052b81040023'];
+		yield 'rsaEncryption' => ['1.2.840.113549.1.1.1', '06092a864886f70d010101'];
+	}
+
+	#[DataProvider('provideInvalidObjectIdentifierData')]
+	public function testEncodeInvalidObjectIdentifier(string $oid): void
+	{
+		$this->expectException(\LogicException::class);
+		DerEncoder::encodeObjectIdentifier($oid);
+	}
+
+	/**
+	 * @return iterable<array{string}>
+	 */
+	public static function provideInvalidObjectIdentifierData(): iterable
+	{
+		yield 'single arc' => ['1'];
+		yield 'first arc too large' => ['3.0'];
+		yield 'negative second arc' => ['1.-2.3'];
+		yield 'negative later arc' => ['1.2.-3'];
+	}
+
+	public function testEncodeLengthRejectsNegative(): void
+	{
+		$this->expectException(\LogicException::class);
+		DerEncoder::encodeLength(-1);
+	}
+
 	#[DataProvider('provideEncodeLengthData')]
 	public function testEncodeLength(int $length, string $expected): void
 	{

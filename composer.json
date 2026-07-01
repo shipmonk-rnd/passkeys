@@ -3,7 +3,8 @@
     "description": "Spec-compliant WebAuthn (passkeys) library for PHP with minimal dependencies",
     "license": "MIT",
     "require": {
-        "php": ">=8.2"
+        "php": ">=8.2",
+        "ext-openssl": "*"
     },
     "require-dev": {
         "phpunit/phpunit": "^10.0",
