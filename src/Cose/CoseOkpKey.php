@@ -12,6 +12,7 @@ use WebAuthnX\Der\DerEncoder;
  *
  * @see https://www.rfc-editor.org/rfc/rfc9053.html#section-2.2 EdDSA
  * @see https://www.rfc-editor.org/rfc/rfc9053.html#section-7.2 OKP key parameters
+ * @api
  */
 final class CoseOkpKey extends CoseKey
 {

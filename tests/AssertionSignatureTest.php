@@ -8,7 +8,6 @@ use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 use WebAuthnX\Crypto\Hash;
 use WebAuthnX\Crypto\SignatureVerifier;
-use WebAuthnX\Json\JsonObject;
 
 use function hash;
 use function is_string;
@@ -46,7 +45,7 @@ class AssertionSignatureTest extends CryptoTestCase
 			self::fail('Failed to sign');
 		}
 
-		$response = AuthenticatorAssertionResponse::fromJsonObject(JsonObject::fromArray([
+		$response = AuthenticatorAssertionResponse::fromJsonObject(self::jsonObject([
 			'clientDataJSON' => Base64::urlEncode($clientDataJson),
 			'authenticatorData' => Base64::urlEncode($authenticatorData),
 			'signature' => Base64::urlEncode($signature),

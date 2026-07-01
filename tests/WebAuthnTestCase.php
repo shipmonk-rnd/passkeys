@@ -9,14 +9,13 @@ use Throwable;
 use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Binary\BytesReader;
 use WebAuthnX\Cbor\CborMap;
+use WebAuthnX\Json\JsonObject;
 
-use function file_get_contents;
-use function file_put_contents;
-use function getenv;
 use function hex2bin;
-use function is_file;
+use function json_encode;
 use function str_replace;
-use function strlen;
+
+use const JSON_THROW_ON_ERROR;
 
 abstract class WebAuthnTestCase extends TestCase
 {
@@ -48,25 +47,16 @@ abstract class WebAuthnTestCase extends TestCase
 		);
 	}
 
-	protected static function assertSnapshot(string $snapshotPath, string $actual): void
+	/**
+	 * Builds a {@see JsonObject} from a PHP array, the way the browser-supplied response JSON
+	 * parses. The array is cast to an object first so an empty array still encodes as `{}`
+	 * (a JSON object) rather than `[]`.
+	 *
+	 * @param  array<string, mixed> $data
+	 */
+	protected static function jsonObject(array $data): JsonObject
 	{
-		if (is_file($snapshotPath) && getenv('UPDATE_SNAPSHOTS') === false) {
-			$expected = file_get_contents($snapshotPath);
-
-			if ($expected === false) {
-				self::fail("Failed to read snapshot file {$snapshotPath}");
-			}
-
-			self::assertSame($expected, $actual);
-
-		} elseif (getenv('CI') === false) {
-			if (file_put_contents($snapshotPath, $actual) !== strlen($actual)) {
-				self::fail("Failed to write snapshot file {$snapshotPath}");
-			}
-
-		} else {
-			self::fail("Snapshot file {$snapshotPath} does not exist. Run tests locally to generate it.");
-		}
+		return JsonObject::fromString(json_encode((object) $data, JSON_THROW_ON_ERROR));
 	}
 
 	/**

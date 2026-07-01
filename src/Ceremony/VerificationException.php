@@ -18,6 +18,8 @@ use Throwable;
  * The reason codes are diagnostic: a relying party should not echo them verbatim to end users,
  * as the distinction between e.g. {@see self::USER_HANDLE_MISMATCH} and
  * {@see self::INVALID_SIGNATURE} can leak whether a credential belongs to a given account.
+ *
+ * @api
  */
 final class VerificationException extends RuntimeException
 {

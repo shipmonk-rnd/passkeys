@@ -7,6 +7,9 @@ use LogicException;
 use function strlen;
 use function substr;
 
+/**
+ * @api
+ */
 readonly class Bytes
 {
 	/**

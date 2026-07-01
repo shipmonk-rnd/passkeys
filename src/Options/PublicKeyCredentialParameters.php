@@ -8,6 +8,7 @@ use WebAuthnX\Enum\PublicKeyCredentialType;
 
 /**
  * @see https://w3c.github.io/webauthn/#dictdef-publickeycredentialparameters
+ * @api
  */
 readonly class PublicKeyCredentialParameters implements JsonSerializable
 {

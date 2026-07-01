@@ -9,6 +9,8 @@ use WebAuthnX\Binary\Bytes;
  * The relying-party state a registration ceremony is verified against (WebAuthn §7.1): the
  * challenge that was issued, the RP ID and the origins the RP will accept, the algorithms it
  * offered in `pubKeyCredParams`, and its user-verification / cross-origin / mediation policy.
+ *
+ * @api
  */
 final readonly class RegistrationExpectations
 {

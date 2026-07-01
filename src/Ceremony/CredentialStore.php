@@ -13,6 +13,8 @@ use WebAuthnX\Binary\Bytes;
  * by id serves both the pre-identified and the discoverable (usernameless) authentication flows.
  * Persisting new records and updating the sign counter after a successful ceremony is the
  * caller's responsibility, driven by the returned result objects.
+ *
+ * @api
  */
 interface CredentialStore
 {

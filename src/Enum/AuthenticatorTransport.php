@@ -2,6 +2,9 @@
 
 namespace WebAuthnX\Enum;
 
+/**
+ * @api
+ */
 class AuthenticatorTransport
 {
 	final public const USB = 'usb';

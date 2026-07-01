@@ -10,6 +10,9 @@ use WebAuthnX\Cbor\CborMapException;
 use WebAuthnX\Cbor\InvalidCborException;
 use WebAuthnX\Cose\CoseKeyException;
 
+/**
+ * @api
+ */
 readonly class AuthenticatorData
 {
 	public const FLAG_USER_PRESENT = 1 << 0;

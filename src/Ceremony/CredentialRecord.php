@@ -11,6 +11,8 @@ use WebAuthnX\Cose\CoseKey;
  * step 27. The library never persists this itself — the caller stores it after a successful
  * registration (see {@see RegistrationResult::toCredentialRecord()}) and hands it back, looked
  * up via a {@see CredentialStore}, on each authentication.
+ *
+ * @api
  */
 final readonly class CredentialRecord
 {

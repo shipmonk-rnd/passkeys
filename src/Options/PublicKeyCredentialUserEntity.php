@@ -8,6 +8,7 @@ use WebAuthnX\Binary\Bytes;
 
 /**
  * @see https://w3c.github.io/webauthn/#dictdef-publickeycredentialuserentityjson
+ * @api
  */
 readonly class PublicKeyCredentialUserEntity extends PublicKeyCredentialEntity implements JsonSerializable
 {

@@ -5,6 +5,9 @@ namespace WebAuthnX\Crypto;
 use RuntimeException;
 
 
+/**
+ * @api
+ */
 class SignatureVerificationException extends RuntimeException
 {
 }

@@ -2,6 +2,9 @@
 
 namespace WebAuthnX\Cose;
 
+/**
+ * @api
+ */
 class CoseAlgorithmIdentifier
 {
 	/** ECDSA w/ SHA-256 */

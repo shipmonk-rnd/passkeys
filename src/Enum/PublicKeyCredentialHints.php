@@ -2,6 +2,9 @@
 
 namespace WebAuthnX\Enum;
 
+/**
+ * @api
+ */
 class PublicKeyCredentialHints
 {
 	final public const SECURITY_KEY = 'security-key';

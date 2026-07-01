@@ -2,6 +2,9 @@
 
 namespace WebAuthnX\Enum;
 
+/**
+ * @api
+ */
 class ResidentKeyRequirement
 {
 	final public const DISCOURAGED = 'discouraged';

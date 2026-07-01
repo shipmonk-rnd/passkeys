@@ -11,6 +11,7 @@ use WebAuthnX\Der\DerEncoder;
  * COSE key of type EC2 (two-coordinate elliptic curve), e.g. ES256.
  *
  * @see https://www.rfc-editor.org/rfc/rfc9053.html#section-7.1 EC2 key parameters
+ * @api
  */
 final class CoseEc2Key extends CoseKey
 {

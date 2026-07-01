@@ -28,7 +28,7 @@ class JsonObjectTest extends WebAuthnTestCase
 
 	public function testGetOptionalBooleanReturnsValue(): void
 	{
-		$object = JsonObject::fromArray(['yes' => true, 'no' => false]);
+		$object = self::jsonObject(['yes' => true, 'no' => false]);
 
 		self::assertTrue($object->getOptionalBoolean('yes'));
 		self::assertFalse($object->getOptionalBoolean('no'));
@@ -36,7 +36,7 @@ class JsonObjectTest extends WebAuthnTestCase
 
 	public function testGetOptionalBooleanReturnsNullWhenAbsent(): void
 	{
-		self::assertNull(JsonObject::fromArray([])->getOptionalBoolean('missing'));
+		self::assertNull(self::jsonObject([])->getOptionalBoolean('missing'));
 	}
 
 	public function testGetOptionalBooleanRejectsNonBoolean(): void
@@ -44,7 +44,7 @@ class JsonObjectTest extends WebAuthnTestCase
 		self::assertException(
 			JsonObjectException::class,
 			"Value of key 'flag' is not a boolean",
-			static fn () => JsonObject::fromArray(['flag' => 'true'])->getOptionalBoolean('flag'),
+			static fn () => self::jsonObject(['flag' => 'true'])->getOptionalBoolean('flag'),
 		);
 	}
 }

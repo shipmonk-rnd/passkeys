@@ -10,6 +10,8 @@ use WebAuthnX\Binary\Bytes;
  * challenge that was issued, the RP ID and accepted origins, the `allowCredentials` list (if any),
  * the user-verification / cross-origin policy, and — when the user was identified before the
  * ceremony — the user handle their account is expected to carry.
+ *
+ * @api
  */
 final readonly class AuthenticationExpectations
 {

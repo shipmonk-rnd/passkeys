@@ -13,6 +13,8 @@ use Throwable;
  * repacking the specific low-level decode exceptions (which stay internal to the primitive
  * `Base64` / `Binary` / `Cbor` / `Cose` / `Json` layers) so callers of the parse methods have
  * one exception to handle rather than six. The original cause is retained as {@see getPrevious()}.
+ *
+ * @api
  */
 final class MalformedDataException extends RuntimeException
 {

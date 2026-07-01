@@ -9,6 +9,7 @@ use WebAuthnX\Json\JsonObjectException;
 
 /**
  * @see https://w3c.github.io/webauthn/#authenticatorassertionresponse
+ * @api
  */
 final readonly class AuthenticatorAssertionResponse extends AuthenticatorResponse
 {

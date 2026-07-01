@@ -11,20 +11,14 @@ use function is_array;
 use function is_string;
 
 
+/**
+ * @api
+ */
 readonly class JsonObject
 {
 	private function __construct(
 		private stdClass $object,
 	) {
-	}
-
-
-	/**
-	 * @param  array<string, mixed> $data
-	 */
-	public static function fromArray(array $data): self
-	{
-		return new self((object) $data);
 	}
 
 

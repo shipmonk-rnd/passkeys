@@ -11,6 +11,7 @@ use WebAuthnX\Cbor\CborMapException;
  *
  * @see https://www.rfc-editor.org/rfc/rfc9052.html#section-7 COSE key structure
  * @see https://www.rfc-editor.org/rfc/rfc9053.html key type / algorithm parameters
+ * @api
  */
 abstract class CoseKey
 {

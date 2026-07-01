@@ -8,6 +8,7 @@ use WebAuthnX\Binary\Bytes;
  * Base for the two authenticator responses returned by a credential.
  *
  * @see https://w3c.github.io/webauthn/#authenticatorresponse
+ * @api
  */
 abstract readonly class AuthenticatorResponse
 {

@@ -38,30 +38,6 @@ class CborMapTest extends WebAuthnTestCase
 		self::assertSame(2, $map->getMap(5)->getInt(1));
 	}
 
-	public function testHas(): void
-	{
-		$map = self::sampleMap();
-
-		self::assertTrue($map->has(1));
-		self::assertTrue($map->has('neg'));
-		self::assertFalse($map->has(99));
-	}
-
-	public function testOptionalGetters(): void
-	{
-		$map = self::sampleMap();
-
-		self::assertSame(2, $map->getOptionalInt(1));
-		self::assertSame('abc', $map->getOptionalString(3));
-		self::assertSame("\x01\x02\x03\x04", $map->getOptionalBytes(4)?->toBinaryString());
-		self::assertSame(2, $map->getOptionalMap(5)?->getInt(1));
-
-		self::assertNull($map->getOptionalInt(99));
-		self::assertNull($map->getOptionalString(99));
-		self::assertNull($map->getOptionalBytes(99));
-		self::assertNull($map->getOptionalMap(99));
-	}
-
 	public function testMissingKeyThrows(): void
 	{
 		self::assertException(

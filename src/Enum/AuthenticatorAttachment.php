@@ -2,6 +2,9 @@
 
 namespace WebAuthnX\Enum;
 
+/**
+ * @api
+ */
 class AuthenticatorAttachment
 {
 	final public const PLATFORM = 'platform';

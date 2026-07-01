@@ -2,6 +2,9 @@
 
 namespace WebAuthnX\Enum;
 
+/**
+ * @api
+ */
 class PublicKeyCredentialType
 {
 	final public const PUBLIC_KEY = 'public-key';

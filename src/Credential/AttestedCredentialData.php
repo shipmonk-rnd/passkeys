@@ -11,6 +11,9 @@ use WebAuthnX\Cbor\InvalidCborException;
 use WebAuthnX\Cose\CoseKey;
 use WebAuthnX\Cose\CoseKeyException;
 
+/**
+ * @api
+ */
 readonly class AttestedCredentialData
 {
 	private function __construct(

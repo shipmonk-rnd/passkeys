@@ -9,6 +9,8 @@ use WebAuthnX\Binary\Bytes;
  * the assertion signature verified and every mandated check passed; the caller should now persist
  * the new state on the credential record: set `signCount` to {@see $newSignCount}, `backupState`
  * to {@see $backupState}, and — if it was not already — `uvInitialized` to {@see $userVerified}.
+ *
+ * @api
  */
 final readonly class AuthenticationResult
 {

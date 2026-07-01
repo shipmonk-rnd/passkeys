@@ -2,6 +2,9 @@
 
 namespace WebAuthnX\Enum;
 
+/**
+ * @api
+ */
 class UserVerificationRequirement
 {
 	final public const DISCOURAGED = 'discouraged';

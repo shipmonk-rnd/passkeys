@@ -43,6 +43,7 @@ use function strlen;
  *
  * @see https://w3c.github.io/webauthn/#sctn-registering-a-new-credential §7.1
  * @see https://w3c.github.io/webauthn/#sctn-verifying-assertion §7.2
+ * @api
  */
 final class RelyingParty
 {

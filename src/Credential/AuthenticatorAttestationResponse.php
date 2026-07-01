@@ -14,6 +14,7 @@ use WebAuthnX\Json\JsonObjectException;
 
 /**
  * @see https://w3c.github.io/webauthn/#authenticatorattestationresponse
+ * @api
  */
 final readonly class AuthenticatorAttestationResponse extends AuthenticatorResponse
 {

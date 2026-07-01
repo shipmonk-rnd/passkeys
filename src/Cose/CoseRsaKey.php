@@ -17,6 +17,7 @@ use function substr;
  * COSE key of type RSA, e.g. RS256.
  *
  * @see https://www.rfc-editor.org/rfc/rfc8230.html#section-4 RSA key parameters
+ * @api
  */
 final class CoseRsaKey extends CoseKey
 {

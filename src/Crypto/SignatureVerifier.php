@@ -26,6 +26,7 @@ use const OPENSSL_ALGO_SHA512;
  * {@see \openssl_verify()} consumes directly (EdDSA requires OpenSSL 3.0 / PHP 8.4).
  *
  * @see https://www.rfc-editor.org/rfc/rfc9053.html signature algorithms
+ * @api
  */
 final class SignatureVerifier
 {

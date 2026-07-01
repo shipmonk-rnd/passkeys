@@ -14,6 +14,7 @@ use WebAuthnX\Json\JsonObjectException;
  *
  * @template T of AuthenticatorResponse
  * @see https://w3c.github.io/webauthn/#iface-pkcredential
+ * @api
  */
 final readonly class PublicKeyCredential
 {

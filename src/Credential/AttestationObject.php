@@ -6,6 +6,9 @@ use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cbor\CborMap;
 use WebAuthnX\Cbor\CborMapException;
 
+/**
+ * @api
+ */
 readonly class AttestationObject
 {
 	private function __construct(

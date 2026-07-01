@@ -11,6 +11,7 @@ use WebAuthnX\Json\JsonObjectException;
  * The client data collected by the browser, parsed from `clientDataJSON`.
  *
  * @see https://w3c.github.io/webauthn/#dictionary-client-data
+ * @api
  */
 readonly class CollectedClientData
 {

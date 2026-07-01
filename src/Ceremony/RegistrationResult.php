@@ -9,6 +9,8 @@ use WebAuthnX\Cose\CoseKey;
  * The outcome of a successful registration ceremony — the data a relying party persists as a
  * {@see CredentialRecord} (WebAuthn §7.1 step 27). Reaching this object at all means every §7.1
  * check passed; failures are signalled by {@see VerificationException} instead.
+ *
+ * @api
  */
 final readonly class RegistrationResult
 {

@@ -90,43 +90,6 @@ readonly class CborMap
 		return new self($value);
 	}
 
-	public function has(int|string $key): bool
-	{
-		return array_key_exists($key, $this->map);
-	}
-
-	/**
-	 * @throws CborMapException
-	 */
-	public function getOptionalInt(int|string $key): ?int
-	{
-		return $this->has($key) ? $this->getInt($key) : null;
-	}
-
-	/**
-	 * @throws CborMapException
-	 */
-	public function getOptionalString(int|string $key): ?string
-	{
-		return $this->has($key) ? $this->getString($key) : null;
-	}
-
-	/**
-	 * @throws CborMapException
-	 */
-	public function getOptionalBytes(int|string $key): ?Bytes
-	{
-		return $this->has($key) ? $this->getBytes($key) : null;
-	}
-
-	/**
-	 * @throws CborMapException
-	 */
-	public function getOptionalMap(int|string $key): ?self
-	{
-		return $this->has($key) ? $this->getMap($key) : null;
-	}
-
 	/**
 	 * @throws CborMapException
 	 */

@@ -119,7 +119,7 @@ class PublicKeyCredentialTest extends WebAuthnTestCase
 	{
 		self::assertMalformedData(
 			"Missing key 'response' in JSON object",
-			static fn () => PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromArray([
+			static fn () => PublicKeyCredential::fromRegistrationResponseJson(self::jsonObject([
 				'id' => Base64::urlEncode('credential-id'),
 				'rawId' => Base64::urlEncode('credential-id'),
 				'type' => 'public-key',
@@ -131,7 +131,7 @@ class PublicKeyCredentialTest extends WebAuthnTestCase
 	{
 		self::assertMalformedData(
 			"Value of key 'response' is not an object",
-			static fn () => PublicKeyCredential::fromAuthenticationResponseJson(JsonObject::fromArray([
+			static fn () => PublicKeyCredential::fromAuthenticationResponseJson(self::jsonObject([
 				'id' => Base64::urlEncode('credential-id'),
 				'rawId' => Base64::urlEncode('credential-id'),
 				'type' => 'public-key',
