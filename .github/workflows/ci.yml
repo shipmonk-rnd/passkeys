@@ -35,7 +35,7 @@ jobs:
         run: composer install --no-interaction --no-progress
 
       - name: Audit runtime dependencies
-        run: composer audit --no-dev
+        run: composer audit --no-dev --locked
 
       - name: PHPUnit (with coverage)
         run: vendor/bin/phpunit --coverage-clover=clover.xml
