@@ -8,26 +8,26 @@ use WebAuthnX\Ceremony\CredentialStore;
 use WebAuthnX\Cose\CoseKey;
 
 use function array_key_exists;
+use function array_values;
 use function base64_decode;
 use function base64_encode;
+use function date;
 
 /**
- * Credential store for the demo, deliberately shaped like the database a real relying party would
- * use: two "tables" of rows, each row an associative array of "columns" holding only portable
- * scalar values — exactly what you would map to SQL columns.
+ * The demo's "database", deliberately shaped like the SQL tables a real relying party would use.
+ * Each array is a table, each row an associative array of scalar columns — exactly what you would
+ * map to SQL. One user (identified by email) has many credentials (a user_handle foreign key):
  *
- *   table `users`        — user_handle (PK), name
- *   table `credentials`  — credential_id (PK), user_handle (FK), public_key, sign_count,
- *                          uv_initialized, backup_eligible, backup_state, transports
+ *   table `users`        — user_handle (PK, base64), email (unique)
+ *   table `credentials`  — credential_id (PK, base64), user_handle (FK, base64),
+ *                          public_key (base64 of CoseKey::toBytes()), sign_count,
+ *                          uv_initialized, backup_eligible, backup_state, transports,
+ *                          authenticator_attachment, created_at
  *
- * The `public_key` column is the credential's key serialised with {@see CoseKey::toBytes()} — a
- * single BLOB/TEXT column — and rehydrated on read with {@see CoseKey::fromBytes()}. Binary ids and
- * keys are base64-encoded so every column is a plain string/int/bool.
- *
- * The rows live in $_SESSION only because PHP's built-in server runs each request in a fresh
- * process, so plain in-process memory cannot survive between the register and login requests. There
- * is no file or database of our own here; in production you would run INSERT / SELECT / UPDATE
- * against these same columns instead.
+ * The public key is a single column via {@see CoseKey::toBytes()}, rehydrated on read with
+ * {@see CoseKey::fromBytes()}. Rows live in $_SESSION only because PHP's built-in server runs each
+ * request in a fresh process; there is no file/database of our own — in production you would run
+ * INSERT / SELECT / UPDATE against these same columns.
  */
 final class PasskeyStore implements CredentialStore
 {
@@ -35,6 +35,39 @@ final class PasskeyStore implements CredentialStore
 	{
 		$_SESSION['users'] ??= [];
 		$_SESSION['credentials'] ??= [];
+	}
+
+	// -- users table --------------------------------------------------------------------------
+
+	public function insertUser(Bytes $handle, string $email): void
+	{
+		// INSERT INTO users (user_handle, email) VALUES (?, ?)
+		$userHandle = base64_encode($handle->toBinaryString());
+		$_SESSION['users'][$userHandle] = ['user_handle' => $userHandle, 'email' => $email];
+	}
+
+	/**
+	 * @return array{user_handle: string, email: string}|null
+	 */
+	public function findUserByEmail(string $email): ?array
+	{
+		// SELECT * FROM users WHERE email = ?
+		foreach ($_SESSION['users'] as $row) {
+			if ($row['email'] === $email) {
+				return $row;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * @return array{user_handle: string, email: string}|null
+	 */
+	public function findUserByHandle(Bytes $handle): ?array
+	{
+		// SELECT * FROM users WHERE user_handle = ?
+		return $_SESSION['users'][base64_encode($handle->toBinaryString())] ?? null;
 	}
 
 	// -- credentials table --------------------------------------------------------------------
@@ -60,7 +93,7 @@ final class PasskeyStore implements CredentialStore
 		);
 	}
 
-	public function insertCredential(CredentialRecord $record): void
+	public function insertCredential(CredentialRecord $record, ?string $authenticatorAttachment): void
 	{
 		// INSERT INTO credentials (...) VALUES (...)
 		$credentialId = base64_encode($record->credentialId->toBinaryString());
@@ -74,6 +107,8 @@ final class PasskeyStore implements CredentialStore
 			'backup_eligible' => $record->backupEligible,
 			'backup_state' => $record->backupState,
 			'transports' => $record->transports, // list<string>|null — a DB would hold this as JSON
+			'authenticator_attachment' => $authenticatorAttachment,
+			'created_at' => date('c'),
 		];
 	}
 
@@ -87,50 +122,24 @@ final class PasskeyStore implements CredentialStore
 		}
 	}
 
-	// -- users table --------------------------------------------------------------------------
-
-	public function insertUser(Bytes $handle, string $name): void
-	{
-		// INSERT INTO users (user_handle, name) VALUES (?, ?)
-		$userHandle = base64_encode($handle->toBinaryString());
-		$_SESSION['users'][$userHandle] = ['user_handle' => $userHandle, 'name' => $name];
-	}
-
 	/**
-	 * The single demo account, or null before the first registration.
+	 * Every credential registered to a user — for excluding already-registered authenticators at
+	 * registration and for listing a user's passkeys.
 	 *
-	 * @return array{user_handle: string, name: string}|null
+	 * @return list<array<string, mixed>>
 	 */
-	public function user(): ?array
+	public function credentialsForUser(Bytes $handle): array
 	{
-		// SELECT * FROM users LIMIT 1
-		foreach ($_SESSION['users'] as $row) {
-			return $row;
+		// SELECT * FROM credentials WHERE user_handle = ?
+		$userHandle = base64_encode($handle->toBinaryString());
+		$rows = [];
+
+		foreach ($_SESSION['credentials'] as $row) {
+			if ($row['user_handle'] === $userHandle) {
+				$rows[] = $row;
+			}
 		}
 
-		return null;
-	}
-
-	public function userNameForHandle(Bytes $handle): ?string
-	{
-		// SELECT name FROM users WHERE user_handle = ?
-		return $_SESSION['users'][base64_encode($handle->toBinaryString())]['name'] ?? null;
-	}
-
-	// -- pending ceremony challenge -----------------------------------------------------------
-	// Not a table: transient per-user state that belongs in the session (or a short-lived cache).
-
-	public function rememberChallenge(Bytes $challenge): void
-	{
-		$_SESSION['pending_challenge'] = base64_encode($challenge->toBinaryString());
-	}
-
-	/** Returns and clears the pending challenge, keeping each challenge single-use. */
-	public function consumeChallenge(): ?Bytes
-	{
-		$challenge = $_SESSION['pending_challenge'] ?? null;
-		unset($_SESSION['pending_challenge']);
-
-		return $challenge === null ? null : Bytes::fromBinaryString(base64_decode($challenge));
+		return array_values($rows);
 	}
 }

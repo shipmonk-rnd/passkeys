@@ -5,74 +5,131 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>WebAuthnX passkey demo</title>
 	<style>
-		body { font: 16px/1.5 system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1rem; color: #1a1a1a; }
+		body { font: 16px/1.5 system-ui, sans-serif; max-width: 42rem; margin: 3rem auto; padding: 0 1rem; color: #1a1a1a; }
 		h1 { font-size: 1.4rem; }
 		p.lead { color: #555; }
+		input { font-size: 1rem; padding: 0.55rem 0.6rem; border: 1px solid #ccc; border-radius: 0.5rem; width: 16rem; }
 		button { font-size: 1rem; padding: 0.6rem 1.1rem; margin: 0.3rem 0.3rem 0.3rem 0; border: 0; border-radius: 0.5rem; background: #2563eb; color: #fff; cursor: pointer; }
-		button:hover { background: #1d4ed8; }
-		#log { margin-top: 1.5rem; padding: 1rem; background: #f5f5f5; border-radius: 0.5rem; white-space: pre-wrap; word-break: break-word; font: 13px/1.5 ui-monospace, monospace; min-height: 3rem; }
-		.ok { color: #15803d; }
-		.err { color: #b91c1c; }
+		button.secondary { background: #e5e7eb; color: #1a1a1a; }
+		button:hover { filter: brightness(0.95); }
+		#passkeys { list-style: none; padding: 0; }
+		#passkeys li { padding: 0.6rem 0.8rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; margin-bottom: 0.4rem; font-size: 0.9rem; }
+		#passkeys .meta { color: #666; font-size: 0.8rem; }
+		code { font: 13px ui-monospace, monospace; }
+		#log { margin-top: 1.5rem; padding: 0.9rem; background: #f5f5f5; border-radius: 0.5rem; white-space: pre-wrap; word-break: break-word; font: 13px/1.5 ui-monospace, monospace; }
+		.ok { color: #15803d; } .err { color: #b91c1c; }
+		.hidden { display: none; }
 	</style>
 </head>
 <body>
 	<h1>🔑 WebAuthnX passkey demo</h1>
-	<p class="lead">Register a passkey, then log in with it. Everything is verified server-side by the
-		<code>WebAuthnX\RelyingParty</code> façade.</p>
+	<p class="lead">Multiple accounts, each identified by an email, each able to hold several passkeys.
+		Everything is verified server-side by <code>WebAuthnX\RelyingParty</code>.</p>
 
-	<button id="register">Register a passkey</button>
-	<button id="login">Log in</button>
+	<section id="signed-out" class="hidden">
+		<p><input id="email" type="email" placeholder="you@example.com" autocomplete="username webauthn"></p>
+		<button id="register-btn">Register a passkey</button>
+		<button id="login-btn" class="secondary">Sign in with a passkey</button>
+	</section>
 
-	<div id="log">Ready.</div>
+	<section id="signed-in" class="hidden">
+		<p>Signed in as <strong id="whoami"></strong>.</p>
+		<p>Your passkeys:</p>
+		<ul id="passkeys"></ul>
+		<button id="add-btn">Add another passkey</button>
+		<button id="logout-btn" class="secondary">Sign out</button>
+	</section>
+
+	<div id="log">Loading…</div>
 
 	<script>
 		const logEl = document.getElementById('log');
 		const log = (msg, cls = '') => { logEl.textContent = msg; logEl.className = cls; };
+		const supported = window.PublicKeyCredential && PublicKeyCredential.parseCreationOptionsFromJSON;
 
-		if (!window.PublicKeyCredential || !PublicKeyCredential.parseCreationOptionsFromJSON) {
-			log('This browser is too old: it lacks PublicKeyCredential JSON helpers. Use a recent Chrome, Safari, or Firefox.', 'err');
-		}
-
-		async function post(url, json) {
+		async function post(url, obj) {
 			const res = await fetch(url, {
 				method: 'POST',
-				headers: json ? { 'Content-Type': 'application/json' } : {},
-				body: json ? JSON.stringify(json) : undefined,
+				headers: obj ? { 'Content-Type': 'application/json' } : {},
+				body: obj ? JSON.stringify(obj) : undefined,
 			});
 			return { ok: res.ok, data: await res.json() };
 		}
 
-		document.getElementById('register').addEventListener('click', async () => {
-			try {
-				log('Requesting registration options…');
-				const { data: optionsJSON } = await post('/register/options');
-				const options = PublicKeyCredential.parseCreationOptionsFromJSON(optionsJSON);
+		function describe(cred) {
+			const kind = cred.attachment === 'platform' ? 'This device'
+				: cred.attachment === 'cross-platform' ? 'Security key / phone'
+				: 'Passkey';
+			const when = cred.createdAt ? new Date(cred.createdAt).toLocaleString() : 'unknown';
+			return `<strong>${kind}</strong> · sign count ${cred.signCount}`
+				+ `<div class="meta">added ${when} · <code>${cred.id.slice(0, 16)}…</code></div>`;
+		}
 
-				log('Waiting for your authenticator…');
-				const credential = await navigator.credentials.create({ publicKey: options });
+		async function refresh() {
+			const me = await (await fetch('/me')).json();
+			const out = document.getElementById('signed-out');
+			const inn = document.getElementById('signed-in');
 
-				const { ok, data } = await post('/register/verify', credential.toJSON());
-				log(JSON.stringify(data, null, 2), ok ? 'ok' : 'err');
-			} catch (e) {
-				log('Registration failed: ' + e, 'err');
+			if (me.authenticated) {
+				out.classList.add('hidden');
+				inn.classList.remove('hidden');
+				document.getElementById('whoami').textContent = me.email;
+				document.getElementById('passkeys').innerHTML =
+					me.credentials.map(c => `<li>${describe(c)}</li>`).join('');
+			} else {
+				inn.classList.add('hidden');
+				out.classList.remove('hidden');
 			}
-		});
+		}
 
-		document.getElementById('login').addEventListener('click', async () => {
-			try {
-				log('Requesting login options…');
-				const { data: optionsJSON } = await post('/login/options');
-				const options = PublicKeyCredential.parseRequestOptionsFromJSON(optionsJSON);
+		// `email` is undefined when adding a passkey to the already-signed-in account.
+		async function register(email) {
+			log('Requesting registration options…');
+			const opt = await post('/register/options', email !== undefined ? { email } : {});
+			if (!opt.ok) return log(opt.data.message || 'Could not start registration', 'err');
 
-				log('Waiting for your authenticator…');
-				const credential = await navigator.credentials.get({ publicKey: options });
+			log('Waiting for your authenticator…');
+			const credential = await navigator.credentials.create({
+				publicKey: PublicKeyCredential.parseCreationOptionsFromJSON(opt.data),
+			});
 
-				const { ok, data } = await post('/login/verify', credential.toJSON());
-				log(JSON.stringify(data, null, 2), ok ? 'ok' : 'err');
-			} catch (e) {
-				log('Login failed: ' + e, 'err');
-			}
-		});
+			const res = await post('/register/verify', credential.toJSON());
+			log(JSON.stringify(res.data, null, 2), res.ok ? 'ok' : 'err');
+			await refresh();
+		}
+
+		async function login() {
+			log('Requesting login options…');
+			const opt = await post('/login/options');
+			if (!opt.ok) return log(opt.data.message || 'Could not start login', 'err');
+
+			log('Waiting for your authenticator…');
+			const credential = await navigator.credentials.get({
+				publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(opt.data),
+			});
+
+			const res = await post('/login/verify', credential.toJSON());
+			log(JSON.stringify(res.data, null, 2), res.ok ? 'ok' : 'err');
+			await refresh();
+		}
+
+		const guard = (fn) => async () => { try { await fn(); } catch (e) { log(String(e), 'err'); } };
+
+		document.getElementById('register-btn').addEventListener('click', guard(() =>
+			register(document.getElementById('email').value.trim())));
+		document.getElementById('login-btn').addEventListener('click', guard(login));
+		document.getElementById('add-btn').addEventListener('click', guard(() => register()));
+		document.getElementById('logout-btn').addEventListener('click', guard(async () => {
+			await post('/logout');
+			log('Signed out.');
+			await refresh();
+		}));
+
+		if (!supported) {
+			log('This browser lacks the PublicKeyCredential JSON helpers. Use a recent Chrome, Safari, or Firefox.', 'err');
+		} else {
+			refresh().then(() => log('Ready.'));
+		}
 	</script>
 </body>
 </html>

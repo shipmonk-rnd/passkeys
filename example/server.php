@@ -1,18 +1,21 @@
 <?php declare(strict_types = 1);
 
 /**
- * A minimal, single-file relying party demonstrating the full WebAuthnX passkey flow end to end.
+ * A small but realistic relying party built on WebAuthnX: multiple users (each identified by an
+ * email), each able to register several passkeys.
  *
  * Run it with PHP's built-in server from the project root:
  *
  *     php -S localhost:8000 example/server.php
  *
- * then open http://localhost:8000 and register + log in with a passkey. The RP id / origin below
- * assume exactly that host and port; change them together if you serve it elsewhere.
+ * then open http://localhost:8000. The RP id / origin below assume exactly that host and port;
+ * change them together if you serve it elsewhere.
  *
- * This is intentionally tiny and NOT production code: it has one demo user, keeps state in a JSON
- * file (example/.data/), and relaxes user-verification. It exists to show how the library's pieces
- * fit together, not how to run a real service.
+ * Deliberately NOT production code: state lives in $_SESSION (see PasskeyStore), user verification
+ * is relaxed for authenticator compatibility, and — importantly — the very first registration for
+ * an email is allowed without proving ownership. A real service would verify the email (or require
+ * an already-authenticated session) before enrolling the first passkey; adding *further* passkeys
+ * here does require being signed in, which is the correct pattern.
  */
 
 namespace WebAuthnXDemo;
@@ -30,6 +33,7 @@ use WebAuthnX\Enum\UserVerificationRequirement;
 use WebAuthnX\Json\JsonObject;
 use WebAuthnX\Options\AuthenticatorSelectionCriteria;
 use WebAuthnX\Options\PublicKeyCredentialCreationOptions;
+use WebAuthnX\Options\PublicKeyCredentialDescriptor;
 use WebAuthnX\Options\PublicKeyCredentialParameters;
 use WebAuthnX\Options\PublicKeyCredentialRequestOptions;
 use WebAuthnX\Options\PublicKeyCredentialRpEntity;
@@ -37,14 +41,18 @@ use WebAuthnX\Options\PublicKeyCredentialUserEntity;
 use WebAuthnX\RelyingParty;
 
 use function base64_decode;
+use function base64_encode;
 use function file_get_contents;
+use function filter_var;
 use function header;
 use function http_response_code;
 use function json_encode;
 use function parse_url;
 use function random_bytes;
 use function session_start;
+use function trim;
 
+use const FILTER_VALIDATE_EMAIL;
 use const JSON_THROW_ON_ERROR;
 use const PHP_URL_PATH;
 
@@ -81,52 +89,169 @@ function body(): JsonObject
 	return JsonObject::fromString((string) file_get_contents('php://input'));
 }
 
+// --- Session state: the pending ceremony challenge + who is signed in --------------------------
+// Transient per-browser state (not database tables); a real app keeps these in the session/cache.
+
+function rememberChallenge(Bytes $challenge): void
+{
+	$_SESSION['pending_challenge'] = base64_encode($challenge->toBinaryString());
+}
+
+/** Returns and clears the pending challenge, keeping each challenge single-use. */
+function consumeChallenge(): ?Bytes
+{
+	$challenge = $_SESSION['pending_challenge'] ?? null;
+	unset($_SESSION['pending_challenge']);
+
+	return $challenge === null ? null : Bytes::fromBinaryString(base64_decode($challenge));
+}
+
+/** The user a pending registration ceremony is enrolling a passkey for. */
+function rememberPendingUser(Bytes $handle): void
+{
+	$_SESSION['pending_user_handle'] = base64_encode($handle->toBinaryString());
+}
+
+function consumePendingUser(): ?Bytes
+{
+	$handle = $_SESSION['pending_user_handle'] ?? null;
+	unset($_SESSION['pending_user_handle']);
+
+	return $handle === null ? null : Bytes::fromBinaryString(base64_decode($handle));
+}
+
+function signIn(Bytes $handle): void
+{
+	$_SESSION['auth_user_handle'] = base64_encode($handle->toBinaryString());
+}
+
+function currentUserHandle(): ?Bytes
+{
+	$handle = $_SESSION['auth_user_handle'] ?? null;
+
+	return $handle === null ? null : Bytes::fromBinaryString(base64_decode($handle));
+}
+
 match ($path) {
 	'/' => (static function (): void {
 		header('Content-Type: text/html; charset=utf-8');
 		echo file_get_contents(__DIR__ . '/index.html');
 	})(),
 
+	// Who is signed in, and their registered passkeys.
+	'/me' => (static function () use ($store): void {
+		$handle = currentUserHandle();
+		$user = $handle === null ? null : $store->findUserByHandle($handle);
+
+		if ($handle === null || $user === null) {
+			respond(200, ['authenticated' => false]);
+
+			return;
+		}
+
+		$credentials = [];
+
+		foreach ($store->credentialsForUser($handle) as $row) {
+			$credentials[] = [
+				'id' => $row['credential_id'],
+				'attachment' => $row['authenticator_attachment'],
+				'createdAt' => $row['created_at'],
+				'signCount' => $row['sign_count'],
+			];
+		}
+
+		respond(200, ['authenticated' => true, 'email' => $user['email'], 'credentials' => $credentials]);
+	})(),
+
+	'/logout' => (static function (): void {
+		unset($_SESSION['auth_user_handle']);
+		respond(200, ['ok' => true]);
+	})(),
+
 	// ---- Registration (navigator.credentials.create) ---------------------------------------
 
 	'/register/options' => (static function () use ($store): void {
-		$user = $store->user();
+		try {
+			$current = currentUserHandle();
 
-		if ($user === null) {
-			$handle = Bytes::fromBinaryString(random_bytes(16));
-			$store->insertUser($handle, 'demo@example.com');
-		} else {
-			$handle = Bytes::fromBinaryString(base64_decode($user['user_handle']));
+			if ($current !== null) {
+				// Signed in: enrol an additional passkey for the current account.
+				$user = $store->findUserByHandle($current);
+
+				if ($user === null) {
+					respond(400, ['ok' => false, 'message' => 'Signed-in user no longer exists']);
+
+					return;
+				}
+
+				$handle = $current;
+				$email = $user['email'];
+			} else {
+				// Not signed in: register a new (or returning) account by email.
+				$email = trim(body()->getOptionalString('email') ?? '');
+
+				if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+					respond(400, ['ok' => false, 'message' => 'A valid email is required to register.']);
+
+					return;
+				}
+
+				$existing = $store->findUserByEmail($email);
+				$handle = $existing !== null
+					? Bytes::fromBinaryString(base64_decode($existing['user_handle']))
+					: Bytes::fromBinaryString(random_bytes(16));
+
+				if ($existing === null) {
+					$store->insertUser($handle, $email);
+				}
+			}
+
+			// Don't let the same authenticator enrol twice for this user.
+			$excludeCredentials = [];
+
+			foreach ($store->credentialsForUser($handle) as $row) {
+				$excludeCredentials[] = new PublicKeyCredentialDescriptor(
+					PublicKeyCredentialType::PUBLIC_KEY,
+					Bytes::fromBinaryString(base64_decode($row['credential_id'])),
+					$row['transports'],
+				);
+			}
+
+			$challenge = Bytes::fromBinaryString(random_bytes(32));
+			rememberChallenge($challenge);
+			rememberPendingUser($handle);
+
+			$options = new PublicKeyCredentialCreationOptions(
+				rp: new PublicKeyCredentialRpEntity(name: RP_NAME, id: RP_ID),
+				user: new PublicKeyCredentialUserEntity($handle, $email, $email),
+				challenge: $challenge,
+				pubKeyCredParams: [
+					new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::ES256),
+					new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::RS256),
+					new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::EdDSA),
+				],
+				excludeCredentials: $excludeCredentials === [] ? null : $excludeCredentials,
+				authenticatorSelection: new AuthenticatorSelectionCriteria(
+					residentKey: ResidentKeyRequirement::PREFERRED,
+					userVerification: UserVerificationRequirement::PREFERRED,
+				),
+			);
+
+			respond(200, $options->toJson());
+
+		} catch (Throwable $e) {
+			respond(400, ['ok' => false, 'message' => $e->getMessage()]);
 		}
-
-		$challenge = Bytes::fromBinaryString(random_bytes(32));
-		$store->rememberChallenge($challenge);
-
-		$options = new PublicKeyCredentialCreationOptions(
-			rp: new PublicKeyCredentialRpEntity(name: RP_NAME, id: RP_ID),
-			user: new PublicKeyCredentialUserEntity($handle, 'demo@example.com', 'Demo User'),
-			challenge: $challenge,
-			pubKeyCredParams: [
-				new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::ES256),
-				new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::RS256),
-				new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::EdDSA),
-			],
-			authenticatorSelection: new AuthenticatorSelectionCriteria(
-				residentKey: ResidentKeyRequirement::PREFERRED,
-				userVerification: UserVerificationRequirement::PREFERRED,
-			),
-		);
-
-		respond(200, $options->toJson());
 	})(),
 
 	'/register/verify' => (static function () use ($store, $rp): void {
 		try {
 			$credential = PublicKeyCredential::fromRegistrationResponseJson(body());
-			$challenge = $store->consumeChallenge();
+			$challenge = consumeChallenge();
+			$handle = consumePendingUser();
 
-			if ($challenge === null) {
-				respond(400, ['ok' => false, 'message' => 'No pending challenge — request options first']);
+			if ($challenge === null || $handle === null) {
+				respond(400, ['ok' => false, 'message' => 'No registration in progress — request options first']);
 
 				return;
 			}
@@ -138,19 +263,16 @@ match ($path) {
 					rpId: RP_ID,
 					origins: [ORIGIN],
 					allowedAlgorithms: ALLOWED_ALGORITHMS,
-					// A real RP handling sensitive data should require UV; relaxed here for compatibility.
 					requireUserVerification: false,
 				),
 				$store,
 			);
 
-			$user = $store->user() ?? throw new VerificationException(
-				VerificationException::UNKNOWN_CREDENTIAL,
-				'User vanished mid-ceremony',
-			);
-			$store->insertCredential($result->toCredentialRecord(Bytes::fromBinaryString(base64_decode($user['user_handle']))));
+			$store->insertCredential($result->toCredentialRecord($handle), $credential->authenticatorAttachment);
+			signIn($handle);
 
-			respond(200, ['ok' => true, 'message' => 'Passkey registered. You can now log in.']);
+			$user = $store->findUserByHandle($handle);
+			respond(200, ['ok' => true, 'email' => $user['email'] ?? 'unknown']);
 
 		} catch (VerificationException $e) {
 			respond(400, ['ok' => false, 'reason' => $e->reason, 'message' => $e->getMessage()]);
@@ -161,9 +283,9 @@ match ($path) {
 
 	// ---- Authentication (navigator.credentials.get) ----------------------------------------
 
-	'/login/options' => (static function () use ($store): void {
+	'/login/options' => (static function (): void {
 		$challenge = Bytes::fromBinaryString(random_bytes(32));
-		$store->rememberChallenge($challenge);
+		rememberChallenge($challenge);
 
 		// No allowCredentials: a discoverable passkey identifies the user by its returned userHandle.
 		$options = new PublicKeyCredentialRequestOptions(
@@ -178,10 +300,10 @@ match ($path) {
 	'/login/verify' => (static function () use ($store, $rp): void {
 		try {
 			$credential = PublicKeyCredential::fromAuthenticationResponseJson(body());
-			$challenge = $store->consumeChallenge();
+			$challenge = consumeChallenge();
 
 			if ($challenge === null) {
-				respond(400, ['ok' => false, 'message' => 'No pending challenge — request options first']);
+				respond(400, ['ok' => false, 'message' => 'No login in progress — request options first']);
 
 				return;
 			}
@@ -200,12 +322,13 @@ match ($path) {
 			);
 
 			$store->updateSignCount($result->credentialId, $result->newSignCount);
+			signIn($result->userHandle);
 
+			$user = $store->findUserByHandle($result->userHandle);
 			respond(200, [
 				'ok' => true,
-				'user' => $store->userNameForHandle($result->userHandle) ?? 'unknown',
+				'email' => $user['email'] ?? 'unknown',
 				'signCount' => $result->newSignCount,
-				'userVerified' => $result->userVerified,
 				'possibleClone' => $result->possibleClone,
 			]);
 
