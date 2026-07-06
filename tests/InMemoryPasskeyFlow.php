@@ -39,13 +39,12 @@ final class InMemoryPasskeyFlow extends PasskeyFlow
 	public array $savedPasskeys = [];
 
 	/**
-	 * @param list<string>                             $origins
-	 * @param UserVerificationRequirement::*|null      $userVerification
+	 * @param list<string> $origins
 	 */
 	public function __construct(
 		private readonly string $rpId = 'example.com',
 		private readonly array $origins = ['https://example.com'],
-		private readonly ?string $userVerification = null,
+		private readonly ?UserVerificationRequirement $userVerification = null,
 		private readonly bool $crossOriginAllowed = false,
 	) {
 		parent::__construct();
@@ -138,7 +137,7 @@ final class InMemoryPasskeyFlow extends PasskeyFlow
 		$this->updatedCredentials[] = $result;
 	}
 
-	protected function getUserVerificationRequirement(): string
+	protected function getUserVerificationRequirement(): UserVerificationRequirement
 	{
 		return $this->userVerification ?? parent::getUserVerificationRequirement();
 	}

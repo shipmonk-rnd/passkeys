@@ -5,6 +5,7 @@ namespace WebAuthnXDemo;
 use WebAuthnX\Ceremony\CredentialRecord;
 use WebAuthnX\Ceremony\CredentialStore;
 use WebAuthnX\Cose\CoseKey;
+use WebAuthnX\Enum\AuthenticatorAttachment;
 
 use function array_key_exists;
 use function array_values;
@@ -92,7 +93,7 @@ final class PasskeyStore implements CredentialStore
 		);
 	}
 
-	public function insertCredential(CredentialRecord $record, ?string $authenticatorAttachment): void
+	public function insertCredential(CredentialRecord $record, ?AuthenticatorAttachment $authenticatorAttachment): void
 	{
 		// INSERT INTO credentials (...) VALUES (...)
 		$credentialId = base64_encode($record->credentialId);
@@ -106,7 +107,7 @@ final class PasskeyStore implements CredentialStore
 			'backup_eligible' => $record->backupEligible,
 			'backup_state' => $record->backupState,
 			'transports' => $record->transports, // list<string>|null — a DB would hold this as JSON
-			'authenticator_attachment' => $authenticatorAttachment,
+			'authenticator_attachment' => $authenticatorAttachment?->value,
 			'created_at' => date('c'),
 		];
 	}

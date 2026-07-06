@@ -5,9 +5,9 @@ namespace WebAuthnX\Enum;
 /**
  * @api
  */
-class ResidentKeyRequirement
+enum ResidentKeyRequirement: string
 {
-	final public const string DISCOURAGED = 'discouraged';
-	final public const string PREFERRED = 'preferred';
-	final public const string REQUIRED = 'required';
+	case DISCOURAGED = 'discouraged';
+	case PREFERRED = 'preferred';
+	case REQUIRED = 'required';
 }

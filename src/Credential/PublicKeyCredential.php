@@ -3,6 +3,7 @@
 namespace WebAuthnX\Credential;
 
 use WebAuthnX\Base64\InvalidBase64Exception;
+use WebAuthnX\Enum\AuthenticatorAttachment;
 use WebAuthnX\Json\JsonObject;
 use WebAuthnX\Json\JsonObjectException;
 
@@ -20,13 +21,15 @@ final readonly class PublicKeyCredential
 	/**
 	 * @param  T      $response
 	 * @param  string $rawId raw credential id bytes ({@see $id} is its base64url form)
+	 * @param  AuthenticatorAttachment|null $authenticatorAttachment null when the client sent none
+	 *     or an unknown value (the spec instructs relying parties to treat unknown values as null)
 	 */
 	private function __construct(
 		public string $id,
 		public string $rawId,
 		public string $type,
 		public AuthenticatorResponse $response,
-		public ?string $authenticatorAttachment,
+		public ?AuthenticatorAttachment $authenticatorAttachment,
 		public ?JsonObject $clientExtensionResults,
 	) {
 	}
@@ -78,12 +81,14 @@ final readonly class PublicKeyCredential
 	 */
 	private static function create(JsonObject $jsonObject, AuthenticatorResponse $response): self
 	{
+		$attachment = $jsonObject->getOptionalString('authenticatorAttachment');
+
 		return new self(
 			$jsonObject->getString('id'),
 			$jsonObject->getBytes('rawId'),
 			$jsonObject->getString('type'),
 			$response,
-			$jsonObject->getOptionalString('authenticatorAttachment'),
+			$attachment === null ? null : AuthenticatorAttachment::tryFrom($attachment),
 			$jsonObject->getOptionalObject('clientExtensionResults'),
 		);
 	}

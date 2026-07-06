@@ -4,7 +4,7 @@ namespace WebAuthnX\Options;
 
 use JsonSerializable;
 use WebAuthnX\Base64\Base64;
-use WebAuthnX\Enum\PublicKeyCredentialHints;
+use WebAuthnX\Enum\PublicKeyCredentialHint;
 
 use function json_encode;
 
@@ -38,7 +38,7 @@ readonly class PublicKeyCredentialCreationOptions implements JsonSerializable
 	 *     {@see \random_bytes()}); base64url encoding happens on serialization
 	 * @param  list<PublicKeyCredentialParameters>      $pubKeyCredParams
 	 * @param  list<PublicKeyCredentialDescriptor>|null $excludeCredentials
-	 * @param  list<PublicKeyCredentialHints::*>|null   $hints
+	 * @param  list<PublicKeyCredentialHint>|null       $hints
 	 * @param  array<string, mixed>|null                $extensions
 	 */
 	public function __construct(

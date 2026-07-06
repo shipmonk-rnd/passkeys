@@ -9,6 +9,7 @@ use WebAuthnX\Ceremony\VerificationException;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 use WebAuthnX\Cose\CoseKey;
 use WebAuthnX\Credential\AuthenticatorData;
+use WebAuthnX\Enum\AuthenticatorAttachment;
 use WebAuthnX\Enum\ResidentKeyRequirement;
 use WebAuthnX\Enum\UserVerificationRequirement;
 use WebAuthnX\Options\PublicKeyCredentialRequestOptions;
@@ -214,7 +215,7 @@ class PasskeyFlowTest extends CryptoTestCase
 		$registered = $flow->register($this->registrationBody($options->challenge));
 
 		self::assertSame(self::DAVE_HANDLE, $registered->userHandle);
-		self::assertSame('platform', $registered->authenticatorAttachment);
+		self::assertSame(AuthenticatorAttachment::PLATFORM, $registered->authenticatorAttachment);
 		self::assertSame(self::NEW_CREDENTIAL_ID, $registered->result->credentialId);
 		self::assertSame(['internal'], $registered->toCredentialRecord()->transports);
 		self::assertSame([$registered], $flow->savedPasskeys);
@@ -410,10 +411,7 @@ class PasskeyFlowTest extends CryptoTestCase
 
 	// --- Fixture builders -------------------------------------------------------------------------
 
-	/**
-	 * @param UserVerificationRequirement::*|null $userVerification
-	 */
-	private function flowWithAlice(?string $userVerification = null, bool $crossOriginAllowed = false): InMemoryPasskeyFlow
+	private function flowWithAlice(?UserVerificationRequirement $userVerification = null, bool $crossOriginAllowed = false): InMemoryPasskeyFlow
 	{
 		$flow = new InMemoryPasskeyFlow(
 			rpId: self::RP_ID,

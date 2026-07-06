@@ -10,7 +10,7 @@ use WebAuthnX\Base64\Base64;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 use WebAuthnX\Options\PublicKeyCredentialCreationOptions;
 use WebAuthnX\Options\PublicKeyCredentialDescriptor;
-use WebAuthnX\Enum\PublicKeyCredentialHints;
+use WebAuthnX\Enum\PublicKeyCredentialHint;
 use WebAuthnX\Options\PublicKeyCredentialParameters;
 use WebAuthnX\Options\PublicKeyCredentialRpEntity;
 use WebAuthnX\Enum\PublicKeyCredentialType;
@@ -50,7 +50,7 @@ class PublicKeyCredentialCreationOptionsTest extends WebAuthnTestCase
 				requireResidentKey: true,
 				userVerification: UserVerificationRequirement::REQUIRED,
 			),
-			hints: [PublicKeyCredentialHints::CLIENT_DEVICE],
+			hints: [PublicKeyCredentialHint::CLIENT_DEVICE],
 			extensions: ['credProps' => true],
 		);
 

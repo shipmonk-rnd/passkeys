@@ -4,7 +4,7 @@ namespace WebAuthnX\Options;
 
 use JsonSerializable;
 use WebAuthnX\Base64\Base64;
-use WebAuthnX\Enum\PublicKeyCredentialHints;
+use WebAuthnX\Enum\PublicKeyCredentialHint;
 use WebAuthnX\Enum\UserVerificationRequirement;
 
 use function json_encode;
@@ -38,8 +38,7 @@ readonly class PublicKeyCredentialRequestOptions implements JsonSerializable
 	 * @param  string                                   $challenge raw challenge bytes (e.g. from
 	 *     {@see \random_bytes()}); base64url encoding happens on serialization
 	 * @param  list<PublicKeyCredentialDescriptor>|null $allowCredentials
-	 * @param  UserVerificationRequirement::*|null      $userVerification
-	 * @param  list<PublicKeyCredentialHints::*>|null   $hints
+	 * @param  list<PublicKeyCredentialHint>|null       $hints
 	 * @param  array<string, mixed>|null                $extensions
 	 */
 	public function __construct(
@@ -47,7 +46,7 @@ readonly class PublicKeyCredentialRequestOptions implements JsonSerializable
 		public ?int $timeout = self::RECOMMENDED_TIMEOUT,
 		public ?string $rpId = null,
 		public ?array $allowCredentials = null,
-		public ?string $userVerification = null,
+		public ?UserVerificationRequirement $userVerification = null,
 		public ?array $hints = null,
 		public ?array $extensions = null,
 	) {

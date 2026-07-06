@@ -5,7 +5,7 @@ namespace WebAuthnXTests;
 use WebAuthnX\Enum\AuthenticatorTransport;
 use WebAuthnX\Base64\Base64;
 use WebAuthnX\Options\PublicKeyCredentialDescriptor;
-use WebAuthnX\Enum\PublicKeyCredentialHints;
+use WebAuthnX\Enum\PublicKeyCredentialHint;
 use WebAuthnX\Options\PublicKeyCredentialRequestOptions;
 use WebAuthnX\Enum\PublicKeyCredentialType;
 use WebAuthnX\Enum\UserVerificationRequirement;
@@ -30,7 +30,7 @@ class PublicKeyCredentialRequestOptionsTest extends WebAuthnTestCase
 				),
 			],
 			userVerification: UserVerificationRequirement::PREFERRED,
-			hints: [PublicKeyCredentialHints::SECURITY_KEY],
+			hints: [PublicKeyCredentialHint::SECURITY_KEY],
 			extensions: ['appid' => 'https://example.com/appid.json'],
 		);
 

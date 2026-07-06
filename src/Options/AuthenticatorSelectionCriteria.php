@@ -13,17 +13,11 @@ use WebAuthnX\Enum\UserVerificationRequirement;
  */
 readonly class AuthenticatorSelectionCriteria implements JsonSerializable
 {
-	/**
-	 * @param  AuthenticatorAttachment::*|null     $authenticatorAttachment
-	 * @param  ResidentKeyRequirement::*|null      $residentKey
-	 * @param  bool|null                           $requireResidentKey
-	 * @param  UserVerificationRequirement::*|null $userVerification
-	 */
 	public function __construct(
-		public ?string $authenticatorAttachment = null,
-		public ?string $residentKey = null,
+		public ?AuthenticatorAttachment $authenticatorAttachment = null,
+		public ?ResidentKeyRequirement $residentKey = null,
 		public ?bool $requireResidentKey = null,
-		public ?string $userVerification = null,
+		public ?UserVerificationRequirement $userVerification = null,
 	) {
 	}
 

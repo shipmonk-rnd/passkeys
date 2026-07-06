@@ -4,6 +4,7 @@ namespace WebAuthnX\Passkey;
 
 use WebAuthnX\Ceremony\CredentialRecord;
 use WebAuthnX\Ceremony\RegistrationResult;
+use WebAuthnX\Enum\AuthenticatorAttachment;
 
 /**
  * The outcome of a successful {@see PasskeyFlow::register()}: the verified ceremony result
@@ -20,14 +21,13 @@ use WebAuthnX\Ceremony\RegistrationResult;
 final readonly class RegisteredPasskey
 {
 	/**
-	 * @param string      $userHandle              raw user handle bytes of the account the passkey was registered to
-	 * @param string|null $authenticatorAttachment the client-asserted attachment, passed through
-	 *     unvalidated (well-behaved clients send `platform` / `cross-platform`, see
-	 *     {@see \WebAuthnX\Enum\AuthenticatorAttachment}) — a display hint, not a trusted value
+	 * @param string $userHandle raw user handle bytes of the account the passkey was registered to
+	 * @param AuthenticatorAttachment|null $authenticatorAttachment the client-asserted attachment,
+	 *     null when the client sent none or an unknown value — a display hint, not a trusted value
 	 */
 	public function __construct(
 		public string $userHandle,
-		public ?string $authenticatorAttachment,
+		public ?AuthenticatorAttachment $authenticatorAttachment,
 		public RegistrationResult $result,
 	) {
 	}

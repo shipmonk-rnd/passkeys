@@ -9,6 +9,7 @@ use WebAuthnX\Credential\MalformedDataException;
 use WebAuthnX\Json\JsonObject;
 use WebAuthnX\Json\JsonObjectException;
 use WebAuthnX\Credential\PublicKeyCredential;
+use WebAuthnX\Enum\AuthenticatorAttachment;
 use WebAuthnX\Enum\PublicKeyCredentialType;
 
 use function json_encode;
@@ -60,7 +61,7 @@ class PublicKeyCredentialTest extends WebAuthnTestCase
 		self::assertSame(PublicKeyCredentialType::PUBLIC_KEY, $credential->type);
 		self::assertSame(Base64::urlEncode('credential-id'), $credential->id);
 		self::assertSame('credential-id', $credential->rawId);
-		self::assertSame('platform', $credential->authenticatorAttachment);
+		self::assertSame(AuthenticatorAttachment::PLATFORM, $credential->authenticatorAttachment);
 		self::assertNotNull($credential->clientExtensionResults);
 
 		$response = $credential->response;
@@ -235,6 +236,26 @@ class PublicKeyCredentialTest extends WebAuthnTestCase
 				'response' => null,
 			], JSON_THROW_ON_ERROR))),
 		);
+	}
+
+	/**
+	 * §5.1: relying parties SHOULD treat unknown `authenticatorAttachment` values as if the value
+	 * were null — a client reporting a future attachment modality must not break parsing.
+	 */
+	public function testTreatsUnknownAuthenticatorAttachmentAsNull(): void
+	{
+		$credential = PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
+			'id' => Base64::urlEncode('credential-id'),
+			'rawId' => Base64::urlEncode('credential-id'),
+			'type' => 'public-key',
+			'authenticatorAttachment' => 'telepathy',
+			'response' => [
+				'clientDataJSON' => Base64::urlEncode('{}'),
+				'attestationObject' => self::ATTESTATION_OBJECT,
+			],
+		], JSON_THROW_ON_ERROR)));
+
+		self::assertNull($credential->authenticatorAttachment);
 	}
 
 	public function testRejectsNonStringAuthenticatorAttachment(): void

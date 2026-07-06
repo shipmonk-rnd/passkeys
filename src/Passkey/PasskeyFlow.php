@@ -372,10 +372,8 @@ abstract class PasskeyFlow implements CredentialStore
 	 * Defaults to `required` — a passkey then carries both factors (possession + PIN/biometric).
 	 * Override to `preferred` for maximal authenticator compatibility (e.g. security keys without
 	 * a PIN), trading away the second factor.
-	 *
-	 * @return UserVerificationRequirement::*
 	 */
-	protected function getUserVerificationRequirement(): string
+	protected function getUserVerificationRequirement(): UserVerificationRequirement
 	{
 		return UserVerificationRequirement::REQUIRED;
 	}
@@ -398,10 +396,8 @@ abstract class PasskeyFlow implements CredentialStore
 	/**
 	 * Whether new credentials must be discoverable (client-side). Defaults to `required` — that
 	 * is what makes the credential a passkey, and what the usernameless flow depends on.
-	 *
-	 * @return ResidentKeyRequirement::*
 	 */
-	protected function getResidentKeyRequirement(): string
+	protected function getResidentKeyRequirement(): ResidentKeyRequirement
 	{
 		return ResidentKeyRequirement::REQUIRED;
 	}
