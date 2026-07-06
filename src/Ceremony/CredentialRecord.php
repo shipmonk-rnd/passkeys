@@ -15,21 +15,21 @@ use WebAuthnX\Cose\CoseKey;
  */
 final readonly class CredentialRecord
 {
-	/**
-	 * @param  string            $credentialId raw credential id bytes (binary-safe storage or an
-	 *     encoding such as base64url is the caller's choice — decode back to raw bytes when loading)
-	 * @param  string            $userHandle   raw user handle bytes
-	 * @param  list<string>|null $transports   as reported by the client at registration
-	 */
-	public function __construct(
-		public string $credentialId,
-		public CoseKey $publicKey,
-		public int $signCount,
-		public string $userHandle,
-		public bool $uvInitialized,
-		public bool $backupEligible,
-		public bool $backupState,
-		public ?array $transports = null,
-	) {
-	}
+    /**
+     * @param  string            $credentialId raw credential id bytes (binary-safe storage or an
+     *     encoding such as base64url is the caller's choice — decode back to raw bytes when loading)
+     * @param  string            $userHandle   raw user handle bytes
+     * @param  list<string>|null $transports   as reported by the client at registration
+     */
+    public function __construct(
+        public string $credentialId,
+        public CoseKey $publicKey,
+        public int $signCount,
+        public string $userHandle,
+        public bool $uvInitialized,
+        public bool $backupEligible,
+        public bool $backupState,
+        public ?array $transports = null,
+    ) {
+    }
 }

@@ -16,34 +16,34 @@ use function strlen;
  */
 final readonly class RegistrationExpectations
 {
-	/** WebAuthn §13.4.3 recommends challenges carry at least 16 bytes of entropy. */
-	private const int MIN_CHALLENGE_LENGTH = 16;
+    /** WebAuthn §13.4.3 recommends challenges carry at least 16 bytes of entropy. */
+    private const int MIN_CHALLENGE_LENGTH = 16;
 
-	/**
-	 * @param  string             $challenge         the raw challenge bytes issued for this ceremony (not base64url-encoded)
-	 * @param  string             $rpId              the RP ID whose SHA-256 must equal `authData.rpIdHash`
-	 * @param  list<string>       $origins           exact, expected client-data origins (scheme+host+port)
-	 * @param  list<CoseAlgorithmIdentifier::*> $allowedAlgorithms COSE algorithm identifiers offered in `pubKeyCredParams`
-	 * @param  bool               $requireUserVerification whether the UV flag must be set (§7.1 step 16)
-	 * @param  bool               $allowCrossOrigin  whether a cross-origin (iframe) creation is acceptable
-	 * @param  list<string>       $allowedTopOrigins exact top origins accepted when the RP is sub-framed
-	 *     (only consulted when `allowCrossOrigin` is true and the client reports a `topOrigin`)
-	 * @param  bool               $conditionalMediation set when `mediation: "conditional"` was used, which
-	 *     relaxes the User Present requirement of §7.1 step 15
-	 * @throws InvalidArgumentException if the challenge is shorter than 16 bytes
-	 */
-	public function __construct(
-		public string $challenge,
-		public string $rpId,
-		public array $origins,
-		public array $allowedAlgorithms,
-		public bool $requireUserVerification = false,
-		public bool $allowCrossOrigin = false,
-		public array $allowedTopOrigins = [],
-		public bool $conditionalMediation = false,
-	) {
-		if (strlen($challenge) < self::MIN_CHALLENGE_LENGTH) {
-			throw new InvalidArgumentException('Challenge must be at least ' . self::MIN_CHALLENGE_LENGTH . ' bytes');
-		}
-	}
+    /**
+     * @param  string             $challenge         the raw challenge bytes issued for this ceremony (not base64url-encoded)
+     * @param  string             $rpId              the RP ID whose SHA-256 must equal `authData.rpIdHash`
+     * @param  list<string>       $origins           exact, expected client-data origins (scheme+host+port)
+     * @param  list<CoseAlgorithmIdentifier::*> $allowedAlgorithms COSE algorithm identifiers offered in `pubKeyCredParams`
+     * @param  bool               $requireUserVerification whether the UV flag must be set (§7.1 step 16)
+     * @param  bool               $allowCrossOrigin  whether a cross-origin (iframe) creation is acceptable
+     * @param  list<string>       $allowedTopOrigins exact top origins accepted when the RP is sub-framed
+     *     (only consulted when `allowCrossOrigin` is true and the client reports a `topOrigin`)
+     * @param  bool               $conditionalMediation set when `mediation: "conditional"` was used, which
+     *     relaxes the User Present requirement of §7.1 step 15
+     * @throws InvalidArgumentException if the challenge is shorter than 16 bytes
+     */
+    public function __construct(
+        public string $challenge,
+        public string $rpId,
+        public array $origins,
+        public array $allowedAlgorithms,
+        public bool $requireUserVerification = false,
+        public bool $allowCrossOrigin = false,
+        public array $allowedTopOrigins = [],
+        public bool $conditionalMediation = false,
+    ) {
+        if (strlen($challenge) < self::MIN_CHALLENGE_LENGTH) {
+            throw new InvalidArgumentException('Challenge must be at least ' . self::MIN_CHALLENGE_LENGTH . ' bytes');
+        }
+    }
 }

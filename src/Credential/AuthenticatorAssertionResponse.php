@@ -12,31 +12,31 @@ use WebAuthnX\Json\JsonObjectException;
  */
 final readonly class AuthenticatorAssertionResponse extends AuthenticatorResponse
 {
-	/**
-	 * @param string      $authenticatorData raw authenticator data bytes; parse with {@see AuthenticatorData::fromBytes()}
-	 * @param string      $signature         raw assertion signature bytes
-	 * @param string|null $userHandle        raw user handle bytes, if the authenticator returned one
-	 */
-	private function __construct(
-		string $clientDataJSON,
-		public string $authenticatorData,
-		public string $signature,
-		public ?string $userHandle,
-	) {
-		parent::__construct($clientDataJSON);
-	}
+    /**
+     * @param string      $authenticatorData raw authenticator data bytes; parse with {@see AuthenticatorData::fromBytes()}
+     * @param string      $signature         raw assertion signature bytes
+     * @param string|null $userHandle        raw user handle bytes, if the authenticator returned one
+     */
+    private function __construct(
+        string $clientDataJSON,
+        public string $authenticatorData,
+        public string $signature,
+        public ?string $userHandle,
+    ) {
+        parent::__construct($clientDataJSON);
+    }
 
-	/**
-	 * @throws JsonObjectException
-	 * @throws InvalidBase64Exception
-	 */
-	public static function fromJsonObject(JsonObject $jsonObject): self
-	{
-		return new self(
-			$jsonObject->getBytes('clientDataJSON'),
-			$jsonObject->getBytes('authenticatorData'),
-			$jsonObject->getBytes('signature'),
-			$jsonObject->getOptionalBytes('userHandle'),
-		);
-	}
+    /**
+     * @throws JsonObjectException
+     * @throws InvalidBase64Exception
+     */
+    public static function fromJsonObject(JsonObject $jsonObject): self
+    {
+        return new self(
+            $jsonObject->getBytes('clientDataJSON'),
+            $jsonObject->getBytes('authenticatorData'),
+            $jsonObject->getBytes('signature'),
+            $jsonObject->getOptionalBytes('userHandle'),
+        );
+    }
 }

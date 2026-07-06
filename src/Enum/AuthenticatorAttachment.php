@@ -7,6 +7,6 @@ namespace WebAuthnX\Enum;
  */
 enum AuthenticatorAttachment: string
 {
-	case PLATFORM = 'platform';
-	case CROSS_PLATFORM = 'cross-platform';
+    case PLATFORM = 'platform';
+    case CROSS_PLATFORM = 'cross-platform';
 }

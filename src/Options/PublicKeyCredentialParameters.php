@@ -12,24 +12,24 @@ use WebAuthnX\Enum\PublicKeyCredentialType;
  */
 readonly class PublicKeyCredentialParameters implements JsonSerializable
 {
-	/**
-	 * @param  PublicKeyCredentialType::* $type
-	 * @param  CoseAlgorithmIdentifier::* $alg
-	 */
-	public function __construct(
-		public string $type,
-		public int $alg,
-	) {
-	}
+    /**
+     * @param  PublicKeyCredentialType::* $type
+     * @param  CoseAlgorithmIdentifier::* $alg
+     */
+    public function __construct(
+        public string $type,
+        public int $alg,
+    ) {
+    }
 
-	/**
-	 * @return array<string, mixed>
-	 */
-	public function jsonSerialize(): array
-	{
-		return [
-			'type' => $this->type,
-			'alg' => $this->alg,
-		];
-	}
+    /**
+     * @return array<string, mixed>
+     */
+    public function jsonSerialize(): array
+    {
+        return [
+            'type' => $this->type,
+            'alg' => $this->alg,
+        ];
+    }
 }

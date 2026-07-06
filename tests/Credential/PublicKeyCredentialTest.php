@@ -19,311 +19,311 @@ use const JSON_THROW_ON_ERROR;
 
 class PublicKeyCredentialTest extends WebAuthnTestCase
 {
-	private const string ATTESTATION_OBJECT = 'o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikdKbqkhPJnC90siSSsyDPQCYql'
-		. 'MGpUKA5fyklC2CEHvBFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIPicKuaB2QMLvuZJAXn8nWNe4Y2iZKLDmWiYb0qo0l5fpQEC'
-		. 'AyYgASFYICAFU4dQcXT_GH1hZV2JoHHdVUCU_AkgGFd20UpKqAM0IlggJQzogT8UjnN7-tKvzIGk8e5OdWX1xurwC_sffQKh1a0';
+    private const string ATTESTATION_OBJECT = 'o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikdKbqkhPJnC90siSSsyDPQCYql'
+        . 'MGpUKA5fyklC2CEHvBFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIPicKuaB2QMLvuZJAXn8nWNe4Y2iZKLDmWiYb0qo0l5fpQEC'
+        . 'AyYgASFYICAFU4dQcXT_GH1hZV2JoHHdVUCU_AkgGFd20UpKqAM0IlggJQzogT8UjnN7-tKvzIGk8e5OdWX1xurwC_sffQKh1a0';
 
-	/**
-	 * The parse boundary repacks the underlying decode failure into a single
-	 * {@see MalformedDataException}; the specific cause is preserved as its previous exception.
-	 *
-	 * @param  callable(): mixed $cb
-	 * @param-immediately-invoked-callable $cb
-	 */
-	private static function assertMalformedData(string $previousMessage, callable $cb): void
-	{
-		try {
-			$cb();
-			self::fail('Expected a MalformedDataException');
+    /**
+     * The parse boundary repacks the underlying decode failure into a single
+     * {@see MalformedDataException}; the specific cause is preserved as its previous exception.
+     *
+     * @param  callable(): mixed $cb
+     * @param-immediately-invoked-callable $cb
+     */
+    private static function assertMalformedData(string $previousMessage, callable $cb): void
+    {
+        try {
+            $cb();
+            self::fail('Expected a MalformedDataException');
 
-		} catch (MalformedDataException $e) {
-			$previous = $e->getPrevious();
-			self::assertInstanceOf(JsonObjectException::class, $previous);
-			self::assertStringMatchesFormat($previousMessage, $previous->getMessage());
-		}
-	}
+        } catch (MalformedDataException $e) {
+            $previous = $e->getPrevious();
+            self::assertInstanceOf(JsonObjectException::class, $previous);
+            self::assertStringMatchesFormat($previousMessage, $previous->getMessage());
+        }
+    }
 
-	public function testFromRegistrationResponseJson(): void
-	{
-		$clientDataJson = '{"type":"webauthn.create","challenge":"Y2hhbGxlbmdl","origin":"https://example.com"}';
+    public function testFromRegistrationResponseJson(): void
+    {
+        $clientDataJson = '{"type":"webauthn.create","challenge":"Y2hhbGxlbmdl","origin":"https://example.com"}';
 
-		$credential = PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
-			'id' => Base64::urlEncode('credential-id'),
-			'rawId' => Base64::urlEncode('credential-id'),
-			'type' => 'public-key',
-			'authenticatorAttachment' => 'platform',
-			'clientExtensionResults' => (object) [],
-			'response' => [
-				'clientDataJSON' => Base64::urlEncode($clientDataJson),
-				'attestationObject' => self::ATTESTATION_OBJECT,
-				'transports' => ['internal', 'hybrid'],
-			],
-		], JSON_THROW_ON_ERROR)));
+        $credential = PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
+            'id' => Base64::urlEncode('credential-id'),
+            'rawId' => Base64::urlEncode('credential-id'),
+            'type' => 'public-key',
+            'authenticatorAttachment' => 'platform',
+            'clientExtensionResults' => (object) [],
+            'response' => [
+                'clientDataJSON' => Base64::urlEncode($clientDataJson),
+                'attestationObject' => self::ATTESTATION_OBJECT,
+                'transports' => ['internal', 'hybrid'],
+            ],
+        ], JSON_THROW_ON_ERROR)));
 
-		self::assertSame(PublicKeyCredentialType::PUBLIC_KEY, $credential->type);
-		self::assertSame(Base64::urlEncode('credential-id'), $credential->id);
-		self::assertSame('credential-id', $credential->rawId);
-		self::assertSame(AuthenticatorAttachment::PLATFORM, $credential->authenticatorAttachment);
-		self::assertNotNull($credential->clientExtensionResults);
+        self::assertSame(PublicKeyCredentialType::PUBLIC_KEY, $credential->type);
+        self::assertSame(Base64::urlEncode('credential-id'), $credential->id);
+        self::assertSame('credential-id', $credential->rawId);
+        self::assertSame(AuthenticatorAttachment::PLATFORM, $credential->authenticatorAttachment);
+        self::assertNotNull($credential->clientExtensionResults);
 
-		$response = $credential->response;
-		self::assertInstanceOf(AuthenticatorAttestationResponse::class, $response);
-		self::assertSame(['internal', 'hybrid'], $response->transports);
-		self::assertSame('none', $response->parseAttestationObject()->fmt);
-		self::assertSame('webauthn.create', $response->parseClientData()->getType());
-	}
+        $response = $credential->response;
+        self::assertInstanceOf(AuthenticatorAttestationResponse::class, $response);
+        self::assertSame(['internal', 'hybrid'], $response->transports);
+        self::assertSame('none', $response->parseAttestationObject()->fmt);
+        self::assertSame('webauthn.create', $response->parseClientData()->getType());
+    }
 
-	public function testRegistrationResponseWithoutTransports(): void
-	{
-		$credential = PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
-			'id' => Base64::urlEncode('credential-id'),
-			'rawId' => Base64::urlEncode('credential-id'),
-			'type' => 'public-key',
-			'response' => [
-				'clientDataJSON' => Base64::urlEncode('{"type":"webauthn.create"}'),
-				'attestationObject' => self::ATTESTATION_OBJECT,
-			],
-		], JSON_THROW_ON_ERROR)));
+    public function testRegistrationResponseWithoutTransports(): void
+    {
+        $credential = PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
+            'id' => Base64::urlEncode('credential-id'),
+            'rawId' => Base64::urlEncode('credential-id'),
+            'type' => 'public-key',
+            'response' => [
+                'clientDataJSON' => Base64::urlEncode('{"type":"webauthn.create"}'),
+                'attestationObject' => self::ATTESTATION_OBJECT,
+            ],
+        ], JSON_THROW_ON_ERROR)));
 
-		self::assertInstanceOf(AuthenticatorAttestationResponse::class, $credential->response);
-		self::assertNull($credential->response->transports);
-	}
+        self::assertInstanceOf(AuthenticatorAttestationResponse::class, $credential->response);
+        self::assertNull($credential->response->transports);
+    }
 
-	public function testFromAuthenticationResponseJson(): void
-	{
-		$clientDataJson = '{"type":"webauthn.get","challenge":"Y2hhbGxlbmdl","origin":"https://example.com"}';
+    public function testFromAuthenticationResponseJson(): void
+    {
+        $clientDataJson = '{"type":"webauthn.get","challenge":"Y2hhbGxlbmdl","origin":"https://example.com"}';
 
-		$credential = PublicKeyCredential::fromAuthenticationResponseJson(JsonObject::fromString(json_encode([
-			'id' => Base64::urlEncode('credential-id'),
-			'rawId' => Base64::urlEncode('credential-id'),
-			'type' => 'public-key',
-			'response' => [
-				'clientDataJSON' => Base64::urlEncode($clientDataJson),
-				'authenticatorData' => Base64::urlEncode('authenticator-data'),
-				'signature' => Base64::urlEncode('signature-bytes'),
-				'userHandle' => Base64::urlEncode('user-handle'),
-			],
-		], JSON_THROW_ON_ERROR)));
+        $credential = PublicKeyCredential::fromAuthenticationResponseJson(JsonObject::fromString(json_encode([
+            'id' => Base64::urlEncode('credential-id'),
+            'rawId' => Base64::urlEncode('credential-id'),
+            'type' => 'public-key',
+            'response' => [
+                'clientDataJSON' => Base64::urlEncode($clientDataJson),
+                'authenticatorData' => Base64::urlEncode('authenticator-data'),
+                'signature' => Base64::urlEncode('signature-bytes'),
+                'userHandle' => Base64::urlEncode('user-handle'),
+            ],
+        ], JSON_THROW_ON_ERROR)));
 
-		self::assertSame(PublicKeyCredentialType::PUBLIC_KEY, $credential->type);
-		self::assertNull($credential->authenticatorAttachment);
-		self::assertNull($credential->clientExtensionResults);
+        self::assertSame(PublicKeyCredentialType::PUBLIC_KEY, $credential->type);
+        self::assertNull($credential->authenticatorAttachment);
+        self::assertNull($credential->clientExtensionResults);
 
-		$response = $credential->response;
-		self::assertInstanceOf(AuthenticatorAssertionResponse::class, $response);
-		self::assertSame('signature-bytes', $response->signature);
-		self::assertSame('authenticator-data', $response->authenticatorData);
-		self::assertNotNull($response->userHandle);
-		self::assertSame('user-handle', $response->userHandle);
-		self::assertSame('webauthn.get', $response->parseClientData()->getType());
-	}
+        $response = $credential->response;
+        self::assertInstanceOf(AuthenticatorAssertionResponse::class, $response);
+        self::assertSame('signature-bytes', $response->signature);
+        self::assertSame('authenticator-data', $response->authenticatorData);
+        self::assertNotNull($response->userHandle);
+        self::assertSame('user-handle', $response->userHandle);
+        self::assertSame('webauthn.get', $response->parseClientData()->getType());
+    }
 
-	public function testFromResponseJsonRejectsMissingResponse(): void
-	{
-		self::assertMalformedData(
-			"Missing key 'response' in JSON object",
-			static fn () => PublicKeyCredential::fromRegistrationResponseJson(self::jsonObject([
-				'id' => Base64::urlEncode('credential-id'),
-				'rawId' => Base64::urlEncode('credential-id'),
-				'type' => 'public-key',
-			])),
-		);
-	}
+    public function testFromResponseJsonRejectsMissingResponse(): void
+    {
+        self::assertMalformedData(
+            "Missing key 'response' in JSON object",
+            static fn () => PublicKeyCredential::fromRegistrationResponseJson(self::jsonObject([
+                'id' => Base64::urlEncode('credential-id'),
+                'rawId' => Base64::urlEncode('credential-id'),
+                'type' => 'public-key',
+            ])),
+        );
+    }
 
-	public function testFromResponseJsonRejectsNonObjectResponse(): void
-	{
-		self::assertMalformedData(
-			"Value of key 'response' is not an object",
-			static fn () => PublicKeyCredential::fromAuthenticationResponseJson(self::jsonObject([
-				'id' => Base64::urlEncode('credential-id'),
-				'rawId' => Base64::urlEncode('credential-id'),
-				'type' => 'public-key',
-				'response' => 'not-an-object',
-			])),
-		);
-	}
+    public function testFromResponseJsonRejectsNonObjectResponse(): void
+    {
+        self::assertMalformedData(
+            "Value of key 'response' is not an object",
+            static fn () => PublicKeyCredential::fromAuthenticationResponseJson(self::jsonObject([
+                'id' => Base64::urlEncode('credential-id'),
+                'rawId' => Base64::urlEncode('credential-id'),
+                'type' => 'public-key',
+                'response' => 'not-an-object',
+            ])),
+        );
+    }
 
-	public function testFromAuthenticationResponseJsonWithoutUserHandle(): void
-	{
-		$credential = PublicKeyCredential::fromAuthenticationResponseJson(JsonObject::fromString(json_encode([
-			'id' => Base64::urlEncode('credential-id'),
-			'rawId' => Base64::urlEncode('credential-id'),
-			'type' => 'public-key',
-			'response' => [
-				'clientDataJSON' => Base64::urlEncode('{"type":"webauthn.get"}'),
-				'authenticatorData' => Base64::urlEncode('authenticator-data'),
-				'signature' => Base64::urlEncode('signature-bytes'),
-			],
-		], JSON_THROW_ON_ERROR)));
+    public function testFromAuthenticationResponseJsonWithoutUserHandle(): void
+    {
+        $credential = PublicKeyCredential::fromAuthenticationResponseJson(JsonObject::fromString(json_encode([
+            'id' => Base64::urlEncode('credential-id'),
+            'rawId' => Base64::urlEncode('credential-id'),
+            'type' => 'public-key',
+            'response' => [
+                'clientDataJSON' => Base64::urlEncode('{"type":"webauthn.get"}'),
+                'authenticatorData' => Base64::urlEncode('authenticator-data'),
+                'signature' => Base64::urlEncode('signature-bytes'),
+            ],
+        ], JSON_THROW_ON_ERROR)));
 
-		self::assertInstanceOf(AuthenticatorAssertionResponse::class, $credential->response);
-		self::assertNull($credential->response->userHandle);
-	}
+        self::assertInstanceOf(AuthenticatorAssertionResponse::class, $credential->response);
+        self::assertNull($credential->response->userHandle);
+    }
 
-	/**
-	 * The parser does not validate the `type` string (consistent with how `AttestationObject`
-	 * leaves `fmt` unchecked); the ceremony layer is responsible for rejecting an unexpected type.
-	 */
-	public function testAcceptsArbitraryType(): void
-	{
-		$credential = PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
-			'id' => Base64::urlEncode('credential-id'),
-			'rawId' => Base64::urlEncode('credential-id'),
-			'type' => 'not-public-key',
-			'response' => [
-				'clientDataJSON' => Base64::urlEncode('{}'),
-				'attestationObject' => Base64::urlEncode('x'),
-			],
-		], JSON_THROW_ON_ERROR)));
+    /**
+     * The parser does not validate the `type` string (consistent with how `AttestationObject`
+     * leaves `fmt` unchecked); the ceremony layer is responsible for rejecting an unexpected type.
+     */
+    public function testAcceptsArbitraryType(): void
+    {
+        $credential = PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
+            'id' => Base64::urlEncode('credential-id'),
+            'rawId' => Base64::urlEncode('credential-id'),
+            'type' => 'not-public-key',
+            'response' => [
+                'clientDataJSON' => Base64::urlEncode('{}'),
+                'attestationObject' => Base64::urlEncode('x'),
+            ],
+        ], JSON_THROW_ON_ERROR)));
 
-		self::assertSame('not-public-key', $credential->type);
-	}
+        self::assertSame('not-public-key', $credential->type);
+    }
 
-	public function testRejectsMissingTopLevelMember(): void
-	{
-		self::assertMalformedData(
-			"Missing key 'id' in JSON object",
-			static fn () => PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
-				'rawId' => Base64::urlEncode('credential-id'),
-				'type' => 'public-key',
-				'response' => [
-					'clientDataJSON' => Base64::urlEncode('{}'),
-					'attestationObject' => Base64::urlEncode('x'),
-				],
-			], JSON_THROW_ON_ERROR))),
-		);
-	}
+    public function testRejectsMissingTopLevelMember(): void
+    {
+        self::assertMalformedData(
+            "Missing key 'id' in JSON object",
+            static fn () => PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
+                'rawId' => Base64::urlEncode('credential-id'),
+                'type' => 'public-key',
+                'response' => [
+                    'clientDataJSON' => Base64::urlEncode('{}'),
+                    'attestationObject' => Base64::urlEncode('x'),
+                ],
+            ], JSON_THROW_ON_ERROR))),
+        );
+    }
 
-	public function testRejectsMissingClientDataJsonInResponse(): void
-	{
-		self::assertMalformedData(
-			"Missing key 'clientDataJSON' in JSON object",
-			static fn () => PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
-				'id' => Base64::urlEncode('credential-id'),
-				'rawId' => Base64::urlEncode('credential-id'),
-				'type' => 'public-key',
-				'response' => ['attestationObject' => Base64::urlEncode('x')],
-			], JSON_THROW_ON_ERROR))),
-		);
-	}
+    public function testRejectsMissingClientDataJsonInResponse(): void
+    {
+        self::assertMalformedData(
+            "Missing key 'clientDataJSON' in JSON object",
+            static fn () => PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
+                'id' => Base64::urlEncode('credential-id'),
+                'rawId' => Base64::urlEncode('credential-id'),
+                'type' => 'public-key',
+                'response' => ['attestationObject' => Base64::urlEncode('x')],
+            ], JSON_THROW_ON_ERROR))),
+        );
+    }
 
-	public function testRejectsMissingSignatureInResponse(): void
-	{
-		self::assertMalformedData(
-			"Missing key 'signature' in JSON object",
-			static fn () => PublicKeyCredential::fromAuthenticationResponseJson(JsonObject::fromString(json_encode([
-				'id' => Base64::urlEncode('credential-id'),
-				'rawId' => Base64::urlEncode('credential-id'),
-				'type' => 'public-key',
-				'response' => [
-					'clientDataJSON' => Base64::urlEncode('{}'),
-					'authenticatorData' => Base64::urlEncode('authenticator-data'),
-				],
-			], JSON_THROW_ON_ERROR))),
-		);
-	}
+    public function testRejectsMissingSignatureInResponse(): void
+    {
+        self::assertMalformedData(
+            "Missing key 'signature' in JSON object",
+            static fn () => PublicKeyCredential::fromAuthenticationResponseJson(JsonObject::fromString(json_encode([
+                'id' => Base64::urlEncode('credential-id'),
+                'rawId' => Base64::urlEncode('credential-id'),
+                'type' => 'public-key',
+                'response' => [
+                    'clientDataJSON' => Base64::urlEncode('{}'),
+                    'authenticatorData' => Base64::urlEncode('authenticator-data'),
+                ],
+            ], JSON_THROW_ON_ERROR))),
+        );
+    }
 
-	/**
-	 * An explicit JSON null for a required object member is reported as missing (getObject uses
-	 * isset semantics, for which JSON null is absent) — a null response is invalid either way.
-	 */
-	public function testRejectsNullResponse(): void
-	{
-		self::assertMalformedData(
-			"Missing key 'response' in JSON object",
-			static fn () => PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
-				'id' => Base64::urlEncode('credential-id'),
-				'rawId' => Base64::urlEncode('credential-id'),
-				'type' => 'public-key',
-				'response' => null,
-			], JSON_THROW_ON_ERROR))),
-		);
-	}
+    /**
+     * An explicit JSON null for a required object member is reported as missing (getObject uses
+     * isset semantics, for which JSON null is absent) — a null response is invalid either way.
+     */
+    public function testRejectsNullResponse(): void
+    {
+        self::assertMalformedData(
+            "Missing key 'response' in JSON object",
+            static fn () => PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
+                'id' => Base64::urlEncode('credential-id'),
+                'rawId' => Base64::urlEncode('credential-id'),
+                'type' => 'public-key',
+                'response' => null,
+            ], JSON_THROW_ON_ERROR))),
+        );
+    }
 
-	/**
-	 * §5.1: relying parties SHOULD treat unknown `authenticatorAttachment` values as if the value
-	 * were null — a client reporting a future attachment modality must not break parsing.
-	 */
-	public function testTreatsUnknownAuthenticatorAttachmentAsNull(): void
-	{
-		$credential = PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
-			'id' => Base64::urlEncode('credential-id'),
-			'rawId' => Base64::urlEncode('credential-id'),
-			'type' => 'public-key',
-			'authenticatorAttachment' => 'telepathy',
-			'response' => [
-				'clientDataJSON' => Base64::urlEncode('{}'),
-				'attestationObject' => self::ATTESTATION_OBJECT,
-			],
-		], JSON_THROW_ON_ERROR)));
+    /**
+     * §5.1: relying parties SHOULD treat unknown `authenticatorAttachment` values as if the value
+     * were null — a client reporting a future attachment modality must not break parsing.
+     */
+    public function testTreatsUnknownAuthenticatorAttachmentAsNull(): void
+    {
+        $credential = PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
+            'id' => Base64::urlEncode('credential-id'),
+            'rawId' => Base64::urlEncode('credential-id'),
+            'type' => 'public-key',
+            'authenticatorAttachment' => 'telepathy',
+            'response' => [
+                'clientDataJSON' => Base64::urlEncode('{}'),
+                'attestationObject' => self::ATTESTATION_OBJECT,
+            ],
+        ], JSON_THROW_ON_ERROR)));
 
-		self::assertNull($credential->authenticatorAttachment);
-	}
+        self::assertNull($credential->authenticatorAttachment);
+    }
 
-	public function testRejectsNonStringAuthenticatorAttachment(): void
-	{
-		self::assertMalformedData(
-			"Value of key 'authenticatorAttachment' is not a string",
-			static fn () => PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
-				'id' => Base64::urlEncode('credential-id'),
-				'rawId' => Base64::urlEncode('credential-id'),
-				'type' => 'public-key',
-				'authenticatorAttachment' => 123,
-				'response' => [
-					'clientDataJSON' => Base64::urlEncode('{}'),
-					'attestationObject' => Base64::urlEncode('x'),
-				],
-			], JSON_THROW_ON_ERROR))),
-		);
-	}
+    public function testRejectsNonStringAuthenticatorAttachment(): void
+    {
+        self::assertMalformedData(
+            "Value of key 'authenticatorAttachment' is not a string",
+            static fn () => PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
+                'id' => Base64::urlEncode('credential-id'),
+                'rawId' => Base64::urlEncode('credential-id'),
+                'type' => 'public-key',
+                'authenticatorAttachment' => 123,
+                'response' => [
+                    'clientDataJSON' => Base64::urlEncode('{}'),
+                    'attestationObject' => Base64::urlEncode('x'),
+                ],
+            ], JSON_THROW_ON_ERROR))),
+        );
+    }
 
-	public function testRejectsNonStringType(): void
-	{
-		self::assertMalformedData(
-			"Value of key 'type' is not a string",
-			static fn () => PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
-				'id' => Base64::urlEncode('credential-id'),
-				'rawId' => Base64::urlEncode('credential-id'),
-				'type' => 123,
-				'response' => [
-					'clientDataJSON' => Base64::urlEncode('{}'),
-					'attestationObject' => Base64::urlEncode('x'),
-				],
-			], JSON_THROW_ON_ERROR))),
-		);
-	}
+    public function testRejectsNonStringType(): void
+    {
+        self::assertMalformedData(
+            "Value of key 'type' is not a string",
+            static fn () => PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
+                'id' => Base64::urlEncode('credential-id'),
+                'rawId' => Base64::urlEncode('credential-id'),
+                'type' => 123,
+                'response' => [
+                    'clientDataJSON' => Base64::urlEncode('{}'),
+                    'attestationObject' => Base64::urlEncode('x'),
+                ],
+            ], JSON_THROW_ON_ERROR))),
+        );
+    }
 
-	public function testRejectsNonArrayTransports(): void
-	{
-		self::assertMalformedData(
-			"Value of key 'transports' is not an array",
-			static fn () => PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
-				'id' => Base64::urlEncode('credential-id'),
-				'rawId' => Base64::urlEncode('credential-id'),
-				'type' => 'public-key',
-				'response' => [
-					'clientDataJSON' => Base64::urlEncode('{}'),
-					'attestationObject' => Base64::urlEncode('x'),
-					'transports' => 'usb',
-				],
-			], JSON_THROW_ON_ERROR))),
-		);
-	}
+    public function testRejectsNonArrayTransports(): void
+    {
+        self::assertMalformedData(
+            "Value of key 'transports' is not an array",
+            static fn () => PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
+                'id' => Base64::urlEncode('credential-id'),
+                'rawId' => Base64::urlEncode('credential-id'),
+                'type' => 'public-key',
+                'response' => [
+                    'clientDataJSON' => Base64::urlEncode('{}'),
+                    'attestationObject' => Base64::urlEncode('x'),
+                    'transports' => 'usb',
+                ],
+            ], JSON_THROW_ON_ERROR))),
+        );
+    }
 
-	public function testRejectsNonStringTransport(): void
-	{
-		self::assertMalformedData(
-			"Value of key 'transports' is not an array of strings",
-			static fn () => PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
-				'id' => Base64::urlEncode('credential-id'),
-				'rawId' => Base64::urlEncode('credential-id'),
-				'type' => 'public-key',
-				'response' => [
-					'clientDataJSON' => Base64::urlEncode('{}'),
-					'attestationObject' => Base64::urlEncode('x'),
-					'transports' => [1, 2],
-				],
-			], JSON_THROW_ON_ERROR))),
-		);
-	}
+    public function testRejectsNonStringTransport(): void
+    {
+        self::assertMalformedData(
+            "Value of key 'transports' is not an array of strings",
+            static fn () => PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
+                'id' => Base64::urlEncode('credential-id'),
+                'rawId' => Base64::urlEncode('credential-id'),
+                'type' => 'public-key',
+                'response' => [
+                    'clientDataJSON' => Base64::urlEncode('{}'),
+                    'attestationObject' => Base64::urlEncode('x'),
+                    'transports' => [1, 2],
+                ],
+            ], JSON_THROW_ON_ERROR))),
+        );
+    }
 }

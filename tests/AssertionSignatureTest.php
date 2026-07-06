@@ -21,37 +21,37 @@ use const OPENSSL_ALGO_SHA256;
  */
 class AssertionSignatureTest extends CryptoTestCase
 {
-	public function testVerifiesAssertionSignature(): void
-	{
-		[$coseKey, $privateKey] = self::generateCoseKeyPair(CoseAlgorithmIdentifier::ES256);
+    public function testVerifiesAssertionSignature(): void
+    {
+        [$coseKey, $privateKey] = self::generateCoseKeyPair(CoseAlgorithmIdentifier::ES256);
 
-		$rpIdHash = hash('sha256', 'example.com', binary: true);
-		$authenticatorData = $rpIdHash . "\x05" . pack('N', 1); // flags = UP | UV, signCount = 1
+        $rpIdHash = hash('sha256', 'example.com', binary: true);
+        $authenticatorData = $rpIdHash . "\x05" . pack('N', 1); // flags = UP | UV, signCount = 1
 
-		$clientDataJson = json_encode([
-			'type' => 'webauthn.get',
-			'challenge' => Base64::urlEncode('random-challenge'),
-			'origin' => 'https://example.com',
-		]);
-		if (!is_string($clientDataJson)) {
-			self::fail('Failed to encode client data JSON');
-		}
+        $clientDataJson = json_encode([
+            'type' => 'webauthn.get',
+            'challenge' => Base64::urlEncode('random-challenge'),
+            'origin' => 'https://example.com',
+        ]);
+        if (!is_string($clientDataJson)) {
+            self::fail('Failed to encode client data JSON');
+        }
 
-		$signedData = $authenticatorData . hash('sha256', $clientDataJson, binary: true);
-		if (!openssl_sign($signedData, $signature, $privateKey, OPENSSL_ALGO_SHA256) || !is_string($signature)) {
-			self::fail('Failed to sign');
-		}
+        $signedData = $authenticatorData . hash('sha256', $clientDataJson, binary: true);
+        if (!openssl_sign($signedData, $signature, $privateKey, OPENSSL_ALGO_SHA256) || !is_string($signature)) {
+            self::fail('Failed to sign');
+        }
 
-		$response = AuthenticatorAssertionResponse::fromJsonObject(self::jsonObject([
-			'clientDataJSON' => Base64::urlEncode($clientDataJson),
-			'authenticatorData' => Base64::urlEncode($authenticatorData),
-			'signature' => Base64::urlEncode($signature),
-		]));
+        $response = AuthenticatorAssertionResponse::fromJsonObject(self::jsonObject([
+            'clientDataJSON' => Base64::urlEncode($clientDataJson),
+            'authenticatorData' => Base64::urlEncode($authenticatorData),
+            'signature' => Base64::urlEncode($signature),
+        ]));
 
-		// Reconstruct the signed message the way a relying party would.
-		$message = $response->authenticatorData
-			. hash('sha256', $response->clientDataJSON, binary: true);
+        // Reconstruct the signed message the way a relying party would.
+        $message = $response->authenticatorData
+            . hash('sha256', $response->clientDataJSON, binary: true);
 
-		self::assertTrue($coseKey->verify($message, $response->signature));
-	}
+        self::assertTrue($coseKey->verify($message, $response->signature));
+    }
 }

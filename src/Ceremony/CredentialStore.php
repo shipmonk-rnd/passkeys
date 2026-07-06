@@ -16,8 +16,8 @@ namespace WebAuthnX\Ceremony;
  */
 interface CredentialStore
 {
-	/**
-	 * @param string $credentialId raw credential id bytes (not base64url-encoded)
-	 */
-	public function findCredentialByCredentialId(string $credentialId): ?CredentialRecord;
+    /**
+     * @param string $credentialId raw credential id bytes (not base64url-encoded)
+     */
+    public function findCredentialByCredentialId(string $credentialId): ?CredentialRecord;
 }

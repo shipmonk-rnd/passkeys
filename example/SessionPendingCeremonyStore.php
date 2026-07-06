@@ -18,48 +18,48 @@ use function count;
  */
 final class SessionPendingCeremonyStore implements PendingCeremonyStore
 {
-	/** How many unfinished ceremonies to keep per browser session (oldest dropped first). */
-	private const int MAX_PENDING = 8;
+    /** How many unfinished ceremonies to keep per browser session (oldest dropped first). */
+    private const int MAX_PENDING = 8;
 
-	public function rememberPendingAuthentication(PendingAuthentication $pending): void
-	{
-		$_SESSION['pending_authentications'][$pending->challenge] = $pending->userHandle;
+    public function rememberPendingAuthentication(PendingAuthentication $pending): void
+    {
+        $_SESSION['pending_authentications'][$pending->challenge] = $pending->userHandle;
 
-		while (count($_SESSION['pending_authentications']) > self::MAX_PENDING) {
-			array_shift($_SESSION['pending_authentications']);
-		}
-	}
+        while (count($_SESSION['pending_authentications']) > self::MAX_PENDING) {
+            array_shift($_SESSION['pending_authentications']);
+        }
+    }
 
-	public function consumePendingAuthentication(string $challenge): ?PendingAuthentication
-	{
-		if (!array_key_exists($challenge, $_SESSION['pending_authentications'] ?? [])) {
-			return null;
-		}
+    public function consumePendingAuthentication(string $challenge): ?PendingAuthentication
+    {
+        if (!array_key_exists($challenge, $_SESSION['pending_authentications'] ?? [])) {
+            return null;
+        }
 
-		$userHandle = $_SESSION['pending_authentications'][$challenge];
-		unset($_SESSION['pending_authentications'][$challenge]);
+        $userHandle = $_SESSION['pending_authentications'][$challenge];
+        unset($_SESSION['pending_authentications'][$challenge]);
 
-		return new PendingAuthentication($challenge, $userHandle);
-	}
+        return new PendingAuthentication($challenge, $userHandle);
+    }
 
-	public function rememberPendingRegistration(PendingRegistration $pending): void
-	{
-		$_SESSION['pending_registrations'][$pending->challenge] = $pending->userHandle;
+    public function rememberPendingRegistration(PendingRegistration $pending): void
+    {
+        $_SESSION['pending_registrations'][$pending->challenge] = $pending->userHandle;
 
-		while (count($_SESSION['pending_registrations']) > self::MAX_PENDING) {
-			array_shift($_SESSION['pending_registrations']);
-		}
-	}
+        while (count($_SESSION['pending_registrations']) > self::MAX_PENDING) {
+            array_shift($_SESSION['pending_registrations']);
+        }
+    }
 
-	public function consumePendingRegistration(string $challenge): ?PendingRegistration
-	{
-		if (!array_key_exists($challenge, $_SESSION['pending_registrations'] ?? [])) {
-			return null;
-		}
+    public function consumePendingRegistration(string $challenge): ?PendingRegistration
+    {
+        if (!array_key_exists($challenge, $_SESSION['pending_registrations'] ?? [])) {
+            return null;
+        }
 
-		$userHandle = $_SESSION['pending_registrations'][$challenge];
-		unset($_SESSION['pending_registrations'][$challenge]);
+        $userHandle = $_SESSION['pending_registrations'][$challenge];
+        unset($_SESSION['pending_registrations'][$challenge]);
 
-		return new PendingRegistration($challenge, $userHandle);
-	}
+        return new PendingRegistration($challenge, $userHandle);
+    }
 }

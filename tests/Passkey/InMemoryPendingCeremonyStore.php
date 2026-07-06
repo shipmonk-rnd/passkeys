@@ -15,37 +15,37 @@ use function base64_encode;
  */
 final class InMemoryPendingCeremonyStore implements PendingCeremonyStore
 {
-	/** @var array<string, PendingAuthentication> base64(challenge) → pending ceremony */
-	public private(set) array $pendingAuthentications = [];
+    /** @var array<string, PendingAuthentication> base64(challenge) → pending ceremony */
+    public private(set) array $pendingAuthentications = [];
 
-	/** @var array<string, PendingRegistration> base64(challenge) → pending ceremony */
-	public private(set) array $pendingRegistrations = [];
+    /** @var array<string, PendingRegistration> base64(challenge) → pending ceremony */
+    public private(set) array $pendingRegistrations = [];
 
-	public function rememberPendingAuthentication(PendingAuthentication $pending): void
-	{
-		$this->pendingAuthentications[base64_encode($pending->challenge)] = $pending;
-	}
+    public function rememberPendingAuthentication(PendingAuthentication $pending): void
+    {
+        $this->pendingAuthentications[base64_encode($pending->challenge)] = $pending;
+    }
 
-	public function consumePendingAuthentication(string $challenge): ?PendingAuthentication
-	{
-		$key = base64_encode($challenge);
-		$pending = $this->pendingAuthentications[$key] ?? null;
-		unset($this->pendingAuthentications[$key]);
+    public function consumePendingAuthentication(string $challenge): ?PendingAuthentication
+    {
+        $key = base64_encode($challenge);
+        $pending = $this->pendingAuthentications[$key] ?? null;
+        unset($this->pendingAuthentications[$key]);
 
-		return $pending;
-	}
+        return $pending;
+    }
 
-	public function rememberPendingRegistration(PendingRegistration $pending): void
-	{
-		$this->pendingRegistrations[base64_encode($pending->challenge)] = $pending;
-	}
+    public function rememberPendingRegistration(PendingRegistration $pending): void
+    {
+        $this->pendingRegistrations[base64_encode($pending->challenge)] = $pending;
+    }
 
-	public function consumePendingRegistration(string $challenge): ?PendingRegistration
-	{
-		$key = base64_encode($challenge);
-		$pending = $this->pendingRegistrations[$key] ?? null;
-		unset($this->pendingRegistrations[$key]);
+    public function consumePendingRegistration(string $challenge): ?PendingRegistration
+    {
+        $key = base64_encode($challenge);
+        $pending = $this->pendingRegistrations[$key] ?? null;
+        unset($this->pendingRegistrations[$key]);
 
-		return $pending;
-	}
+        return $pending;
+    }
 }

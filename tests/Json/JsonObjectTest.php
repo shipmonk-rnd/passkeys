@@ -8,43 +8,43 @@ use WebAuthnXTests\WebAuthnTestCase;
 
 class JsonObjectTest extends WebAuthnTestCase
 {
-	public function testFromStringRejectsInvalidJson(): void
-	{
-		self::assertException(
-			JsonObjectException::class,
-			'Invalid JSON',
-			static fn () => JsonObject::fromString('{not valid json'),
-		);
-	}
+    public function testFromStringRejectsInvalidJson(): void
+    {
+        self::assertException(
+            JsonObjectException::class,
+            'Invalid JSON',
+            static fn () => JsonObject::fromString('{not valid json'),
+        );
+    }
 
-	public function testFromStringRejectsNonObject(): void
-	{
-		self::assertException(
-			JsonObjectException::class,
-			'JSON is not an object',
-			static fn () => JsonObject::fromString('[1, 2, 3]'),
-		);
-	}
+    public function testFromStringRejectsNonObject(): void
+    {
+        self::assertException(
+            JsonObjectException::class,
+            'JSON is not an object',
+            static fn () => JsonObject::fromString('[1, 2, 3]'),
+        );
+    }
 
-	public function testGetOptionalBooleanReturnsValue(): void
-	{
-		$object = self::jsonObject(['yes' => true, 'no' => false]);
+    public function testGetOptionalBooleanReturnsValue(): void
+    {
+        $object = self::jsonObject(['yes' => true, 'no' => false]);
 
-		self::assertTrue($object->getOptionalBoolean('yes'));
-		self::assertFalse($object->getOptionalBoolean('no'));
-	}
+        self::assertTrue($object->getOptionalBoolean('yes'));
+        self::assertFalse($object->getOptionalBoolean('no'));
+    }
 
-	public function testGetOptionalBooleanReturnsNullWhenAbsent(): void
-	{
-		self::assertNull(self::jsonObject([])->getOptionalBoolean('missing'));
-	}
+    public function testGetOptionalBooleanReturnsNullWhenAbsent(): void
+    {
+        self::assertNull(self::jsonObject([])->getOptionalBoolean('missing'));
+    }
 
-	public function testGetOptionalBooleanRejectsNonBoolean(): void
-	{
-		self::assertException(
-			JsonObjectException::class,
-			"Value of key 'flag' is not a boolean",
-			static fn () => self::jsonObject(['flag' => 'true'])->getOptionalBoolean('flag'),
-		);
-	}
+    public function testGetOptionalBooleanRejectsNonBoolean(): void
+    {
+        self::assertException(
+            JsonObjectException::class,
+            "Value of key 'flag' is not a boolean",
+            static fn () => self::jsonObject(['flag' => 'true'])->getOptionalBoolean('flag'),
+        );
+    }
 }

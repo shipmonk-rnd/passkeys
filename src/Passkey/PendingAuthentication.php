@@ -16,14 +16,14 @@ namespace WebAuthnX\Passkey;
  */
 final readonly class PendingAuthentication
 {
-	/**
-	 * @param string      $challenge  raw challenge bytes issued for this ceremony
-	 * @param string|null $userHandle raw user handle bytes when the ceremony is pinned to an
-	 *     already-identified user; null for a usernameless (discoverable-credential) ceremony
-	 */
-	public function __construct(
-		public string $challenge,
-		public ?string $userHandle,
-	) {
-	}
+    /**
+     * @param string      $challenge  raw challenge bytes issued for this ceremony
+     * @param string|null $userHandle raw user handle bytes when the ceremony is pinned to an
+     *     already-identified user; null for a usernameless (discoverable-credential) ceremony
+     */
+    public function __construct(
+        public string $challenge,
+        public ?string $userHandle,
+    ) {
+    }
 }

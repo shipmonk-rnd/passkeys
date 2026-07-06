@@ -10,20 +10,20 @@ namespace WebAuthnX\Credential;
  */
 abstract readonly class AuthenticatorResponse
 {
-	/**
-	 * @param string $clientDataJSON the raw JSON bytes as serialized by the client (base64url-decoded);
-	 *     kept verbatim because hashes and signatures are computed over these exact bytes
-	 */
-	protected function __construct(
-		public string $clientDataJSON,
-	) {
-	}
+    /**
+     * @param string $clientDataJSON the raw JSON bytes as serialized by the client (base64url-decoded);
+     *     kept verbatim because hashes and signatures are computed over these exact bytes
+     */
+    protected function __construct(
+        public string $clientDataJSON,
+    ) {
+    }
 
-	/**
-	 * @throws MalformedDataException
-	 */
-	public function parseClientData(): CollectedClientData
-	{
-		return CollectedClientData::fromBytes($this->clientDataJSON);
-	}
+    /**
+     * @throws MalformedDataException
+     */
+    public function parseClientData(): CollectedClientData
+    {
+        return CollectedClientData::fromBytes($this->clientDataJSON);
+    }
 }

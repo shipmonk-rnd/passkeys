@@ -10,28 +10,28 @@ use JsonSerializable;
  */
 readonly class PublicKeyCredentialRpEntity extends PublicKeyCredentialEntity implements JsonSerializable
 {
-	/**
-	 * `$id` is optional: when null it is omitted from the serialized options and the browser
-	 * defaults the RP ID to the caller's effective domain.
-	 */
-	public function __construct(
-		string $name,
-		public ?string $id = null,
-	) {
-		parent::__construct($name);
-	}
+    /**
+     * `$id` is optional: when null it is omitted from the serialized options and the browser
+     * defaults the RP ID to the caller's effective domain.
+     */
+    public function __construct(
+        string $name,
+        public ?string $id = null,
+    ) {
+        parent::__construct($name);
+    }
 
-	/**
-	 * @return array<string, mixed>
-	 */
-	public function jsonSerialize(): array
-	{
-		$data = ['name' => $this->name];
+    /**
+     * @return array<string, mixed>
+     */
+    public function jsonSerialize(): array
+    {
+        $data = ['name' => $this->name];
 
-		if ($this->id !== null) {
-			$data['id'] = $this->id;
-		}
+        if ($this->id !== null) {
+            $data['id'] = $this->id;
+        }
 
-		return $data;
-	}
+        return $data;
+    }
 }

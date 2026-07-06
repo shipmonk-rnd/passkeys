@@ -46,16 +46,16 @@ use const JSON_THROW_ON_ERROR;
  */
 final class PasskeyStore implements PasskeyStoreInterface
 {
-	private readonly PDO $db;
+    private readonly PDO $db;
 
-	public function __construct(string $databaseFile)
-	{
-		$this->db = new PDO('sqlite:' . $databaseFile, options: [
-			PDO::ATTR_TIMEOUT => 5,
-			PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-		]);
+    public function __construct(string $databaseFile)
+    {
+        $this->db = new PDO('sqlite:' . $databaseFile, options: [
+            PDO::ATTR_TIMEOUT => 5,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        ]);
 
-		$this->db->exec('
+        $this->db->exec('
 			CREATE TABLE IF NOT EXISTS users (
 				id                  INTEGER PRIMARY KEY,
 				passkey_user_handle BLOB NOT NULL UNIQUE,
@@ -75,96 +75,96 @@ final class PasskeyStore implements PasskeyStoreInterface
 				created_at               TEXT NOT NULL
 			);
 		');
-	}
+    }
 
-	// -- users table --------------------------------------------------------------------------
+    // -- users table --------------------------------------------------------------------------
 
-	/**
-	 * @return array{id: int, passkey_user_handle: string, email: string}
-	 */
-	public function insertUser(string $email): array
-	{
-		$handle = random_bytes(64); // The spec-recommended user handle: 64 opaque random bytes, unrelated to the primary key.
+    /**
+     * @return array{id: int, passkey_user_handle: string, email: string}
+     */
+    public function insertUser(string $email): array
+    {
+        $handle = random_bytes(64); // The spec-recommended user handle: 64 opaque random bytes, unrelated to the primary key.
 
-		$statement = $this->db->prepare('INSERT INTO users (passkey_user_handle, email) VALUES (:handle, :email)');
-		$this->bindParameter($statement, ':handle', $handle, PDO::PARAM_LOB);
-		$this->bindParameter($statement, ':email', $email);
-		$statement->execute();
+        $statement = $this->db->prepare('INSERT INTO users (passkey_user_handle, email) VALUES (:handle, :email)');
+        $this->bindParameter($statement, ':handle', $handle, PDO::PARAM_LOB);
+        $this->bindParameter($statement, ':email', $email);
+        $statement->execute();
 
-		return ['id' => (int) $this->db->lastInsertId(), 'passkey_user_handle' => $handle, 'email' => $email];
-	}
+        return ['id' => (int) $this->db->lastInsertId(), 'passkey_user_handle' => $handle, 'email' => $email];
+    }
 
-	/**
-	 * @return array{id: int, passkey_user_handle: string, email: string}|null
-	 */
-	public function findUserByEmail(string $email): ?array
-	{
-		$statement = $this->db->prepare('SELECT * FROM users WHERE email = :email');
-		$this->bindParameter($statement, ':email', $email);
-		$statement->execute();
+    /**
+     * @return array{id: int, passkey_user_handle: string, email: string}|null
+     */
+    public function findUserByEmail(string $email): ?array
+    {
+        $statement = $this->db->prepare('SELECT * FROM users WHERE email = :email');
+        $this->bindParameter($statement, ':email', $email);
+        $statement->execute();
 
-		$row = $statement->fetch();
-		return $row === false ? null : $row;
-	}
+        $row = $statement->fetch();
+        return $row === false ? null : $row;
+    }
 
-	/**
-	 * @return array{id: int, passkey_user_handle: string, email: string}|null
-	 */
-	public function findUserById(int $id): ?array
-	{
-		$statement = $this->db->prepare('SELECT * FROM users WHERE id = :id');
-		$this->bindParameter($statement, ':id', $id, PDO::PARAM_INT);
-		$statement->execute();
+    /**
+     * @return array{id: int, passkey_user_handle: string, email: string}|null
+     */
+    public function findUserById(int $id): ?array
+    {
+        $statement = $this->db->prepare('SELECT * FROM users WHERE id = :id');
+        $this->bindParameter($statement, ':id', $id, PDO::PARAM_INT);
+        $statement->execute();
 
-		$row = $statement->fetch();
-		return $row === false ? null : $row;
-	}
+        $row = $statement->fetch();
+        return $row === false ? null : $row;
+    }
 
-	/**
-	 * @return array{id: int, passkey_user_handle: string, email: string}|null
-	 */
-	public function findUserByHandle(string $userHandle): ?array
-	{
-		$statement = $this->db->prepare('SELECT * FROM users WHERE passkey_user_handle = :handle');
-		$this->bindParameter($statement, ':handle', $userHandle, PDO::PARAM_LOB);
-		$statement->execute();
+    /**
+     * @return array{id: int, passkey_user_handle: string, email: string}|null
+     */
+    public function findUserByHandle(string $userHandle): ?array
+    {
+        $statement = $this->db->prepare('SELECT * FROM users WHERE passkey_user_handle = :handle');
+        $this->bindParameter($statement, ':handle', $userHandle, PDO::PARAM_LOB);
+        $statement->execute();
 
-		$row = $statement->fetch();
-		return $row === false ? null : $row;
-	}
+        $row = $statement->fetch();
+        return $row === false ? null : $row;
+    }
 
-	public function findUserHandleByUsername(string $username): ?string
-	{
-		// The demo's usernames are emails.
-		return $this->findUserByEmail($username)['passkey_user_handle'] ?? null;
-	}
+    public function findUserHandleByUsername(string $username): ?string
+    {
+        // The demo's usernames are emails.
+        return $this->findUserByEmail($username)['passkey_user_handle'] ?? null;
+    }
 
-	// -- credentials table --------------------------------------------------------------------
+    // -- credentials table --------------------------------------------------------------------
 
-	public function findCredentialByCredentialId(string $credentialId): ?CredentialRecord
-	{
-		$encodedCredentialId = base64_encode($credentialId);
+    public function findCredentialByCredentialId(string $credentialId): ?CredentialRecord
+    {
+        $encodedCredentialId = base64_encode($credentialId);
 
-		$statement = $this->db->prepare('
+        $statement = $this->db->prepare('
 			SELECT credentials.*, users.passkey_user_handle
 			FROM credentials
 			JOIN users ON users.id = credentials.user_id
 			WHERE credential_id = :credential_id
 		');
 
-		$this->bindParameter($statement, ':credential_id', $encodedCredentialId);
-		$statement->execute();
+        $this->bindParameter($statement, ':credential_id', $encodedCredentialId);
+        $statement->execute();
 
-		$row = $statement->fetch();
-		return $row === false ? null : $this->recordFromRow($row);
-	}
+        $row = $statement->fetch();
+        return $row === false ? null : $this->recordFromRow($row);
+    }
 
-	/**
-	 * @return list<CredentialRecord>
-	 */
-	public function findCredentialsByUserHandle(string $userHandle): array
-	{
-		$statement = $this->db->prepare('
+    /**
+     * @return list<CredentialRecord>
+     */
+    public function findCredentialsByUserHandle(string $userHandle): array
+    {
+        $statement = $this->db->prepare('
 			SELECT credentials.*, users.passkey_user_handle
 			FROM credentials
 			JOIN users ON users.id = credentials.user_id
@@ -172,17 +172,17 @@ final class PasskeyStore implements PasskeyStoreInterface
 			ORDER BY created_at
 		');
 
-		$this->bindParameter($statement, ':handle', $userHandle, PDO::PARAM_LOB);
-		$statement->execute();
+        $this->bindParameter($statement, ':handle', $userHandle, PDO::PARAM_LOB);
+        $statement->execute();
 
-		return array_map($this->recordFromRow(...), $statement->fetchAll());
-	}
+        return array_map($this->recordFromRow(...), $statement->fetchAll());
+    }
 
-	public function saveCredential(RegisteredPasskey $passkey): void
-	{
-		$record = $passkey->toCredentialRecord();
+    public function saveCredential(RegisteredPasskey $passkey): void
+    {
+        $record = $passkey->toCredentialRecord();
 
-		$statement = $this->db->prepare('
+        $statement = $this->db->prepare('
 			INSERT INTO credentials (
 				credential_id, user_id, public_key, sign_count, uv_initialized,
 				backup_eligible, backup_state, transports, authenticator_attachment, created_at
@@ -193,29 +193,29 @@ final class PasskeyStore implements PasskeyStoreInterface
 			)
 		');
 
-		$this->bindParameter($statement, ':credential_id', base64_encode($record->credentialId));
-		$this->bindParameter($statement, ':user_handle', $record->userHandle, PDO::PARAM_LOB);
-		$this->bindParameter($statement, ':public_key', base64_encode($record->publicKey->toBytes()));
-		$this->bindParameter($statement, ':sign_count', $record->signCount, PDO::PARAM_INT);
-		$this->bindParameter($statement, ':uv_initialized', (int) $record->uvInitialized, PDO::PARAM_INT);
-		$this->bindParameter($statement, ':backup_eligible', (int) $record->backupEligible, PDO::PARAM_INT);
-		$this->bindParameter($statement, ':backup_state', (int) $record->backupState, PDO::PARAM_INT);
-		$this->bindParameter($statement, ':transports', $record->transports === null ? null : json_encode($record->transports, JSON_THROW_ON_ERROR));
-		$this->bindParameter($statement, ':authenticator_attachment', $passkey->authenticatorAttachment?->value);
-		$this->bindParameter($statement, ':created_at', date('c'));
+        $this->bindParameter($statement, ':credential_id', base64_encode($record->credentialId));
+        $this->bindParameter($statement, ':user_handle', $record->userHandle, PDO::PARAM_LOB);
+        $this->bindParameter($statement, ':public_key', base64_encode($record->publicKey->toBytes()));
+        $this->bindParameter($statement, ':sign_count', $record->signCount, PDO::PARAM_INT);
+        $this->bindParameter($statement, ':uv_initialized', (int) $record->uvInitialized, PDO::PARAM_INT);
+        $this->bindParameter($statement, ':backup_eligible', (int) $record->backupEligible, PDO::PARAM_INT);
+        $this->bindParameter($statement, ':backup_state', (int) $record->backupState, PDO::PARAM_INT);
+        $this->bindParameter($statement, ':transports', $record->transports === null ? null : json_encode($record->transports, JSON_THROW_ON_ERROR));
+        $this->bindParameter($statement, ':authenticator_attachment', $passkey->authenticatorAttachment?->value);
+        $this->bindParameter($statement, ':created_at', date('c'));
 
-		$statement->execute();
-	}
+        $statement->execute();
+    }
 
-	public function updateCredential(AuthenticationResult $result): void
-	{
-		// A real relying party could additionally alert on $result->possibleClone.
-		$credentialId = base64_encode($result->credentialId);
-		$signCount = $result->newSignCount;
-		$backupState = (int) $result->backupState;
-		$uvInitialized = (int) $result->userVerified;
+    public function updateCredential(AuthenticationResult $result): void
+    {
+        // A real relying party could additionally alert on $result->possibleClone.
+        $credentialId = base64_encode($result->credentialId);
+        $signCount = $result->newSignCount;
+        $backupState = (int) $result->backupState;
+        $uvInitialized = (int) $result->userVerified;
 
-		$statement = $this->db->prepare('
+        $statement = $this->db->prepare('
 			UPDATE credentials
 			SET sign_count = :sign_count,
 				backup_state = :backup_state,
@@ -223,48 +223,48 @@ final class PasskeyStore implements PasskeyStoreInterface
 			WHERE credential_id = :credential_id
 		');
 
-		$this->bindParameter($statement, ':sign_count', $signCount, PDO::PARAM_INT);
-		$this->bindParameter($statement, ':backup_state', $backupState, PDO::PARAM_INT);
-		$this->bindParameter($statement, ':uv_initialized', $uvInitialized, PDO::PARAM_INT);
-		$this->bindParameter($statement, ':credential_id', $credentialId);
+        $this->bindParameter($statement, ':sign_count', $signCount, PDO::PARAM_INT);
+        $this->bindParameter($statement, ':backup_state', $backupState, PDO::PARAM_INT);
+        $this->bindParameter($statement, ':uv_initialized', $uvInitialized, PDO::PARAM_INT);
+        $this->bindParameter($statement, ':credential_id', $credentialId);
 
-		$statement->execute();
-	}
+        $statement->execute();
+    }
 
-	/**
-	 * Every credential registered to a user, as raw rows — for the demo's passkey list and its
-	 * "does this account have any passkeys yet" checks.
-	 *
-	 * @return list<array<string, mixed>>
-	 */
-	public function credentialsForUser(int $userId): array
-	{
-		$statement = $this->db->prepare('SELECT * FROM credentials WHERE user_id = :user_id ORDER BY created_at');
-		$this->bindParameter($statement, ':user_id', $userId, PDO::PARAM_INT);
-		$statement->execute();
+    /**
+     * Every credential registered to a user, as raw rows — for the demo's passkey list and its
+     * "does this account have any passkeys yet" checks.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function credentialsForUser(int $userId): array
+    {
+        $statement = $this->db->prepare('SELECT * FROM credentials WHERE user_id = :user_id ORDER BY created_at');
+        $this->bindParameter($statement, ':user_id', $userId, PDO::PARAM_INT);
+        $statement->execute();
 
-		return $statement->fetchAll();
-	}
+        return $statement->fetchAll();
+    }
 
-	/**
-	 * @param array<string, mixed> $row
-	 */
-	private function recordFromRow(array $row): CredentialRecord
-	{
-		return new CredentialRecord(
-			credentialId: base64_decode($row['credential_id']),
-			publicKey: CoseKey::fromBytes(base64_decode($row['public_key'])),
-			signCount: $row['sign_count'],
-			userHandle: $row['passkey_user_handle'],
-			uvInitialized: (bool) $row['uv_initialized'],
-			backupEligible: (bool) $row['backup_eligible'],
-			backupState: (bool) $row['backup_state'],
-			transports: $row['transports'] === null ? null : json_decode($row['transports'], flags: JSON_THROW_ON_ERROR),
-		);
-	}
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function recordFromRow(array $row): CredentialRecord
+    {
+        return new CredentialRecord(
+            credentialId: base64_decode($row['credential_id']),
+            publicKey: CoseKey::fromBytes(base64_decode($row['public_key'])),
+            signCount: $row['sign_count'],
+            userHandle: $row['passkey_user_handle'],
+            uvInitialized: (bool) $row['uv_initialized'],
+            backupEligible: (bool) $row['backup_eligible'],
+            backupState: (bool) $row['backup_state'],
+            transports: $row['transports'] === null ? null : json_decode($row['transports'], flags: JSON_THROW_ON_ERROR),
+        );
+    }
 
-	private function bindParameter(PDOStatement $statement, string $parameterName, mixed $value, int $type = PDO::PARAM_STR): void
-	{
-		$statement->bindValue($parameterName, $value, $type);
-	}
+    private function bindParameter(PDOStatement $statement, string $parameterName, mixed $value, int $type = PDO::PARAM_STR): void
+    {
+        $statement->bindValue($parameterName, $value, $type);
+    }
 }

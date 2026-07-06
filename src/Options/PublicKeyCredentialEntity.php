@@ -7,8 +7,8 @@ namespace WebAuthnX\Options;
  */
 readonly abstract class PublicKeyCredentialEntity
 {
-	public function __construct(
-		public string $name,
-	) {
-	}
+    public function __construct(
+        public string $name,
+    ) {
+    }
 }

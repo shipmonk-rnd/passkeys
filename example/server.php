@@ -58,11 +58,11 @@ session_start();
 $store = new PasskeyStore(__DIR__ . '/passkeys.sqlite');
 
 $flow = new PasskeyFlow(
-	rpId: 'localhost',
-	rpName: 'WebAuthnX Demo',
-	origins: ['http://localhost:8000'],
-	store: $store,
-	pendingCeremonyStore: new SessionPendingCeremonyStore(),
+    rpId: 'localhost',
+    rpName: 'WebAuthnX Demo',
+    origins: ['http://localhost:8000'],
+    store: $store,
+    pendingCeremonyStore: new SessionPendingCeremonyStore(),
 );
 
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
@@ -70,14 +70,14 @@ $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
 /** @param array<string, mixed>|string $body */
 function respond(int $status, array|string $body): void
 {
-	http_response_code($status);
-	header('Content-Type: application/json');
-	echo is_string($body) ? $body : json_encode($body, JSON_THROW_ON_ERROR);
+    http_response_code($status);
+    header('Content-Type: application/json');
+    echo is_string($body) ? $body : json_encode($body, JSON_THROW_ON_ERROR);
 }
 
 function body(): JsonObject
 {
-	return JsonObject::fromString((string) file_get_contents('php://input'));
+    return JsonObject::fromString((string) file_get_contents('php://input'));
 }
 
 // --- Session state: who is signed in ------------------------------------------------------------
@@ -87,151 +87,151 @@ function body(): JsonObject
 // account (PasskeyStore::findUserByHandle) and the session keys off the integer user id.
 function signIn(int $userId): void
 {
-	$_SESSION['auth_user_id'] = $userId;
+    $_SESSION['auth_user_id'] = $userId;
 }
 
 function currentUserId(): ?int
 {
-	return $_SESSION['auth_user_id'] ?? null;
+    return $_SESSION['auth_user_id'] ?? null;
 }
 
 match ($path) {
-	'/' => (static function (): void {
-		header('Content-Type: text/html; charset=utf-8');
-		echo file_get_contents(__DIR__ . '/index.html');
-	})(),
+    '/' => (static function (): void {
+        header('Content-Type: text/html; charset=utf-8');
+        echo file_get_contents(__DIR__ . '/index.html');
+    })(),
 
-	// Who is signed in, and their registered passkeys.
-	'/me' => (static function () use ($store): void {
-		$userId = currentUserId();
-		$user = $userId === null ? null : $store->findUserById($userId);
+    // Who is signed in, and their registered passkeys.
+    '/me' => (static function () use ($store): void {
+        $userId = currentUserId();
+        $user = $userId === null ? null : $store->findUserById($userId);
 
-		if ($userId === null || $user === null) {
-			respond(200, ['authenticated' => false]);
-			return;
-		}
+        if ($userId === null || $user === null) {
+            respond(200, ['authenticated' => false]);
+            return;
+        }
 
-		$credentials = [];
+        $credentials = [];
 
-		foreach ($store->credentialsForUser($userId) as $row) {
-			$credentials[] = [
-				'id' => $row['credential_id'],
-				'attachment' => $row['authenticator_attachment'],
-				'createdAt' => $row['created_at'],
-			];
-		}
+        foreach ($store->credentialsForUser($userId) as $row) {
+            $credentials[] = [
+                'id' => $row['credential_id'],
+                'attachment' => $row['authenticator_attachment'],
+                'createdAt' => $row['created_at'],
+            ];
+        }
 
-		respond(200, ['authenticated' => true, 'email' => $user['email'], 'credentials' => $credentials]);
-	})(),
+        respond(200, ['authenticated' => true, 'email' => $user['email'], 'credentials' => $credentials]);
+    })(),
 
-	'/logout' => (static function (): void {
-		unset($_SESSION['auth_user_id']);
-		respond(200, ['ok' => true]);
-	})(),
+    '/logout' => (static function (): void {
+        unset($_SESSION['auth_user_id']);
+        respond(200, ['ok' => true]);
+    })(),
 
-	// ---- Registration (navigator.credentials.create) ---------------------------------------
+    // ---- Registration (navigator.credentials.create) ---------------------------------------
 
-	'/register/options' => (static function () use ($store, $flow): void {
-		try {
-			$currentId = currentUserId();
+    '/register/options' => (static function () use ($store, $flow): void {
+        try {
+            $currentId = currentUserId();
 
-			if ($currentId !== null) {
-				// Signed in: enrol an additional passkey for the current account.
-				$user = $store->findUserById($currentId);
+            if ($currentId !== null) {
+                // Signed in: enrol an additional passkey for the current account.
+                $user = $store->findUserById($currentId);
 
-				if ($user === null) {
-					respond(400, ['ok' => false, 'message' => 'Signed-in user no longer exists']);
-					return;
-				}
+                if ($user === null) {
+                    respond(400, ['ok' => false, 'message' => 'Signed-in user no longer exists']);
+                    return;
+                }
 
-			} else {
-				// Not signed in: register a brand-new account by email. An existing account must
-				// never be enrollable while signed out — that would let anyone who knows the email
-				// attach their own passkey to it and take it over.
-				$email = body()->getString('email');
+            } else {
+                // Not signed in: register a brand-new account by email. An existing account must
+                // never be enrollable while signed out — that would let anyone who knows the email
+                // attach their own passkey to it and take it over.
+                $email = body()->getString('email');
 
-				if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
-					respond(400, ['ok' => false, 'message' => 'A valid email is required to register.']);
-					return;
-				}
+                if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+                    respond(400, ['ok' => false, 'message' => 'A valid email is required to register.']);
+                    return;
+                }
 
-				$existing = $store->findUserByEmail($email);
+                $existing = $store->findUserByEmail($email);
 
-				if ($existing !== null) {
-					respond(400, ['ok' => false, 'message' => 'This email already has an account — sign in with its passkey to add another one.']);
-					return;
-				}
+                if ($existing !== null) {
+                    respond(400, ['ok' => false, 'message' => 'This email already has an account — sign in with its passkey to add another one.']);
+                    return;
+                }
 
-				// The email is free: create the account and enrol its first passkey in one go. A
-				// cancelled prompt leaves a credential-less row that blocks the email for good
-				// (delete the row to retry). That is deliberate, not resumed: a pending ceremony
-				// stays completable for as long as the session keeps it, so whoever requested
-				// options for this email first could still attach their passkey to the account
-				// after the real user enrolled. A real service side-steps the whole problem by
-				// gating first enrolment on email verification.
-				$user = $store->insertUser($email);
-			}
+                // The email is free: create the account and enrol its first passkey in one go. A
+                // cancelled prompt leaves a credential-less row that blocks the email for good
+                // (delete the row to retry). That is deliberate, not resumed: a pending ceremony
+                // stays completable for as long as the session keeps it, so whoever requested
+                // options for this email first could still attach their passkey to the account
+                // after the real user enrolled. A real service side-steps the whole problem by
+                // gating first enrolment on email verification.
+                $user = $store->insertUser($email);
+            }
 
-			// The flow issues the challenge, excludes already-enrolled authenticators, and asks
-			// for a discoverable (resident) credential with user verification — the passkey defaults.
-			$options = $flow->registrationOptions($user['passkey_user_handle'], $user['email']);
+            // The flow issues the challenge, excludes already-enrolled authenticators, and asks
+            // for a discoverable (resident) credential with user verification — the passkey defaults.
+            $options = $flow->registrationOptions($user['passkey_user_handle'], $user['email']);
 
-			respond(200, $options->toJson());
+            respond(200, $options->toJson());
 
-		} catch (Throwable $e) {
-			respond(400, ['ok' => false, 'message' => $e->getMessage()]);
-		}
-	})(),
+        } catch (Throwable $e) {
+            respond(400, ['ok' => false, 'message' => $e->getMessage()]);
+        }
+    })(),
 
-	'/register/verify' => (static function () use ($store, $flow): void {
-		try {
-			// The flow verifies the ceremony and persists the credential (PasskeyStore::saveCredential).
-			$registered = $flow->register((string) file_get_contents('php://input'));
-			$user = $store->findUserByHandle($registered->userHandle);
+    '/register/verify' => (static function () use ($store, $flow): void {
+        try {
+            // The flow verifies the ceremony and persists the credential (PasskeyStore::saveCredential).
+            $registered = $flow->register((string) file_get_contents('php://input'));
+            $user = $store->findUserByHandle($registered->userHandle);
 
-			if ($user !== null) {
-				signIn($user['id']);
-			}
+            if ($user !== null) {
+                signIn($user['id']);
+            }
 
-			respond(200, ['ok' => true, 'email' => $user['email'] ?? 'unknown']);
+            respond(200, ['ok' => true, 'email' => $user['email'] ?? 'unknown']);
 
-		} catch (VerificationException $e) {
-			respond(400, ['ok' => false, 'reason' => $e->reason, 'message' => $e->getMessage()]);
-		}
-	})(),
+        } catch (VerificationException $e) {
+            respond(400, ['ok' => false, 'reason' => $e->reason, 'message' => $e->getMessage()]);
+        }
+    })(),
 
-	// ---- Authentication (navigator.credentials.get) ----------------------------------------
+    // ---- Authentication (navigator.credentials.get) ----------------------------------------
 
-	// Without an email the options are usernameless (no allowCredentials — a discoverable passkey
-	// identifies the user); with one, the ceremony is pinned to that account and its credentials
-	// are listed. The same endpoint also feeds the conditional-mediation (autofill) request.
-	'/login/options' => (static function () use ($flow): void {
-		try {
-			$body = JsonObject::fromString((string) file_get_contents('php://input'));
-			$email = $body->getOptionalString('email');
-			$options = $flow->authenticationOptions($email);
-			respond(200, $options->toJson());
+    // Without an email the options are usernameless (no allowCredentials — a discoverable passkey
+    // identifies the user); with one, the ceremony is pinned to that account and its credentials
+    // are listed. The same endpoint also feeds the conditional-mediation (autofill) request.
+    '/login/options' => (static function () use ($flow): void {
+        try {
+            $body = JsonObject::fromString((string) file_get_contents('php://input'));
+            $email = $body->getOptionalString('email');
+            $options = $flow->authenticationOptions($email);
+            respond(200, $options->toJson());
 
-		} catch (Throwable $e) {
-			respond(400, ['ok' => false, 'message' => $e->getMessage()]);
-		}
-	})(),
+        } catch (Throwable $e) {
+            respond(400, ['ok' => false, 'message' => $e->getMessage()]);
+        }
+    })(),
 
-	'/login/verify' => (static function () use ($store, $flow): void {
-		try {
-			$result = $flow->authenticate((string) file_get_contents('php://input'));
-			$user = $store->findUserByHandle($result->userHandle);
+    '/login/verify' => (static function () use ($store, $flow): void {
+        try {
+            $result = $flow->authenticate((string) file_get_contents('php://input'));
+            $user = $store->findUserByHandle($result->userHandle);
 
-			if ($user !== null) {
-				signIn($user['id']);
-			}
+            if ($user !== null) {
+                signIn($user['id']);
+            }
 
-			respond(200, ['ok' => true, 'email' => $user['email'] ?? 'unknown']);
+            respond(200, ['ok' => true, 'email' => $user['email'] ?? 'unknown']);
 
-		} catch (VerificationException $e) {
-			respond(400, ['ok' => false, 'reason' => $e->reason, 'message' => $e->getMessage()]);
-		}
-	})(),
+        } catch (VerificationException $e) {
+            respond(400, ['ok' => false, 'reason' => $e->reason, 'message' => $e->getMessage()]);
+        }
+    })(),
 
-	default => respond(404, ['message' => 'Not found']),
+    default => respond(404, ['message' => 'Not found']),
 };

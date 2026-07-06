@@ -7,7 +7,7 @@ namespace WebAuthnX\Enum;
  */
 enum UserVerificationRequirement: string
 {
-	case DISCOURAGED = 'discouraged';
-	case PREFERRED = 'preferred';
-	case REQUIRED = 'required';
+    case DISCOURAGED = 'discouraged';
+    case PREFERRED = 'preferred';
+    case REQUIRED = 'required';
 }

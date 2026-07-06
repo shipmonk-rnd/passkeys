@@ -14,13 +14,13 @@ namespace WebAuthnX\Passkey;
  */
 final readonly class PendingRegistration
 {
-	/**
-	 * @param string $challenge  raw challenge bytes issued for this ceremony
-	 * @param string $userHandle raw user handle bytes of the account being enrolled
-	 */
-	public function __construct(
-		public string $challenge,
-		public string $userHandle,
-	) {
-	}
+    /**
+     * @param string $challenge  raw challenge bytes issued for this ceremony
+     * @param string $userHandle raw user handle bytes of the account being enrolled
+     */
+    public function __construct(
+        public string $challenge,
+        public string $userHandle,
+    ) {
+    }
 }
