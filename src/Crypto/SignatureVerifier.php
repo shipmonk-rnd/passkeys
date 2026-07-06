@@ -2,7 +2,6 @@
 
 namespace WebAuthnX\Crypto;
 
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 use WebAuthnX\Cose\CoseKey;
 
@@ -48,7 +47,7 @@ final class SignatureVerifier
 	/**
 	 * @throws SignatureVerificationException
 	 */
-	public function verify(CoseKey $key, Bytes $message, Bytes $signature): bool
+	public function verify(CoseKey $key, string $message, string $signature): bool
 	{
 		if (!isset(self::OPENSSL_ALGORITHMS[$key->alg])) {
 			throw new SignatureVerificationException("Unsupported algorithm {$key->alg}");
@@ -64,8 +63,8 @@ final class SignatureVerifier
 		}
 
 		$result = openssl_verify(
-			$message->toBinaryString(),
-			$signature->toBinaryString(),
+			$message,
+			$signature,
 			$publicKey,
 			self::OPENSSL_ALGORITHMS[$key->alg],
 		);
@@ -76,10 +75,10 @@ final class SignatureVerifier
 		return $result === 1;
 	}
 
-	private static function toPem(Bytes $der): string
+	private static function toPem(string $der): string
 	{
 		return "-----BEGIN PUBLIC KEY-----\n"
-			. chunk_split(base64_encode($der->toBinaryString()), 64, "\n")
+			. chunk_split(base64_encode($der), 64, "\n")
 			. "-----END PUBLIC KEY-----\n";
 	}
 

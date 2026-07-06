@@ -2,11 +2,12 @@
 
 namespace WebAuthnX\Cose;
 
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cbor\CborEncoder;
 use WebAuthnX\Cbor\CborMap;
 use WebAuthnX\Cbor\CborMapException;
 use WebAuthnX\Der\DerEncoder;
+
+use function strlen;
 
 /**
  * COSE key of type EC2 (two-coordinate elliptic curve), e.g. ES256.
@@ -51,11 +52,15 @@ final class CoseEc2Key extends CoseKey
 		CoseAlgorithmIdentifier::ES512 => [self::CRV_P521, 66, '1.3.132.0.35'],
 	];
 
+	/**
+	 * @param string $x raw x-coordinate bytes (fixed length for the curve)
+	 * @param string $y raw y-coordinate bytes (fixed length for the curve)
+	 */
 	private function __construct(
 		int $alg,
 		public int $crv,
-		public Bytes $x,
-		public Bytes $y,
+		public string $x,
+		public string $y,
 	) {
 		parent::__construct($alg);
 	}
@@ -68,8 +73,8 @@ final class CoseEc2Key extends CoseKey
 	{
 		$alg = $map->getInt(self::LABEL_ALG);
 		$crv = $map->getInt(self::LABEL_CRV);
-		$x = $map->getBytes(self::LABEL_X);
-		$y = $map->getBytes(self::LABEL_Y);
+		$x = $map->getString(self::LABEL_X);
+		$y = $map->getString(self::LABEL_Y);
 
 		if (!isset(self::ALGORITHMS[$alg])) {
 			throw new CoseKeyException("Unsupported EC2 algorithm {$alg}");
@@ -81,30 +86,30 @@ final class CoseEc2Key extends CoseKey
 			throw new CoseKeyException("EC2 algorithm {$alg} requires curve {$expectedCrv}, got {$crv}");
 		}
 
-		if ($x->length !== $coordinateLength || $y->length !== $coordinateLength) {
+		if (strlen($x) !== $coordinateLength || strlen($y) !== $coordinateLength) {
 			throw new CoseKeyException("EC2 curve {$crv} requires {$coordinateLength}-byte coordinates");
 		}
 
 		return new self($alg, $crv, $x, $y);
 	}
 
-	public function toBytes(): Bytes
+	public function toBytes(): string
 	{
-		return Bytes::fromBinaryString(CborEncoder::encodeMap([
+		return CborEncoder::encodeMap([
 			[CborEncoder::encodeInt(self::LABEL_KTY), CborEncoder::encodeInt(self::KTY)],
 			[CborEncoder::encodeInt(self::LABEL_ALG), CborEncoder::encodeInt($this->alg)],
 			[CborEncoder::encodeInt(self::LABEL_CRV), CborEncoder::encodeInt($this->crv)],
-			[CborEncoder::encodeInt(self::LABEL_X), CborEncoder::encodeByteString($this->x->toBinaryString())],
-			[CborEncoder::encodeInt(self::LABEL_Y), CborEncoder::encodeByteString($this->y->toBinaryString())],
-		]));
+			[CborEncoder::encodeInt(self::LABEL_X), CborEncoder::encodeByteString($this->x)],
+			[CborEncoder::encodeInt(self::LABEL_Y), CborEncoder::encodeByteString($this->y)],
+		]);
 	}
 
-	public function toDerSubjectPublicKeyInfo(): Bytes
+	public function toDerSubjectPublicKeyInfo(): string
 	{
 		$curveOid = self::ALGORITHMS[$this->alg][2];
 
 		// Uncompressed point: 0x04 || X || Y (RFC 5480 §2.2).
-		$point = "\x04" . $this->x->toBinaryString() . $this->y->toBinaryString();
+		$point = "\x04" . $this->x . $this->y;
 
 		$spki = DerEncoder::encodeSequence(
 			DerEncoder::encodeSequence(
@@ -114,6 +119,6 @@ final class CoseEc2Key extends CoseKey
 			. DerEncoder::encodeBitString($point),
 		);
 
-		return Bytes::fromBinaryString($spki);
+		return $spki;
 	}
 }

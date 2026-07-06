@@ -2,7 +2,6 @@
 
 namespace WebAuthnX\Ceremony;
 
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cose\CoseKey;
 
 /**
@@ -17,13 +16,16 @@ use WebAuthnX\Cose\CoseKey;
 final readonly class CredentialRecord
 {
 	/**
-	 * @param  list<string>|null $transports as reported by the client at registration
+	 * @param  string            $credentialId raw credential id bytes (binary-safe storage or an
+	 *     encoding such as base64url is the caller's choice — decode back to raw bytes when loading)
+	 * @param  string            $userHandle   raw user handle bytes
+	 * @param  list<string>|null $transports   as reported by the client at registration
 	 */
 	public function __construct(
-		public Bytes $credentialId,
+		public string $credentialId,
 		public CoseKey $publicKey,
 		public int $signCount,
-		public Bytes $userHandle,
+		public string $userHandle,
 		public bool $uvInitialized,
 		public bool $backupEligible,
 		public bool $backupState,

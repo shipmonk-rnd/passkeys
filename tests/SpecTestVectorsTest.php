@@ -5,7 +5,6 @@ namespace WebAuthnXTests;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use WebAuthnX\Base64\Base64;
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Ceremony\AuthenticationExpectations;
 use WebAuthnX\Ceremony\CredentialRecord;
 use WebAuthnX\Ceremony\CredentialStore;
@@ -67,18 +66,18 @@ class SpecTestVectorsTest extends WebAuthnTestCase
 		$authentication = $vector->getObject('authentication');
 
 		$credentialId = self::hexField($registration, 'credentialId');
-		$userHandle = Bytes::fromBinaryString(self::USER_HANDLE);
+		$userHandle = self::USER_HANDLE;
 		$store = new InMemoryCredentialStore();
 		$relyingParty = new RelyingParty();
 
 		// --- Registration ceremony (§7.1) against the vector's frozen outputs. ---
 		$credential = PublicKeyCredential::fromRegistrationResponseJson(self::jsonObject([
-			'id' => Base64::urlEncode($credentialId->toBinaryString()),
-			'rawId' => Base64::urlEncode($credentialId->toBinaryString()),
+			'id' => Base64::urlEncode($credentialId),
+			'rawId' => Base64::urlEncode($credentialId),
 			'type' => 'public-key',
 			'response' => [
-				'clientDataJSON' => Base64::urlEncode(self::hexField($registration, 'clientDataJSON')->toBinaryString()),
-				'attestationObject' => Base64::urlEncode(self::hexField($registration, 'attestationObject')->toBinaryString()),
+				'clientDataJSON' => Base64::urlEncode(self::hexField($registration, 'clientDataJSON')),
+				'attestationObject' => Base64::urlEncode(self::hexField($registration, 'attestationObject')),
 			],
 		]));
 
@@ -94,10 +93,10 @@ class SpecTestVectorsTest extends WebAuthnTestCase
 		if ($fmt !== 'packed-x5c') {
 			$result = $relyingParty->verifyRegistration($credential, $registrationExpectations, $store);
 
-			self::assertSame(bin2hex($credentialId->toBinaryString()), bin2hex($result->credentialId->toBinaryString()));
+			self::assertSame(bin2hex($credentialId), bin2hex($result->credentialId));
 			self::assertSame(
-				bin2hex(self::hexField($registration, 'aaguid')->toBinaryString()),
-				bin2hex($result->aaguid->toBinaryString()),
+				bin2hex(self::hexField($registration, 'aaguid')),
+				bin2hex($result->aaguid),
 			);
 			self::assertSame(0, $result->signCount);
 			self::assertSame($alg, $result->publicKey->alg);
@@ -127,19 +126,19 @@ class SpecTestVectorsTest extends WebAuthnTestCase
 
 		$result = $relyingParty->verifyAuthentication($assertion, $authenticationExpectations, $store);
 
-		self::assertSame(bin2hex($credentialId->toBinaryString()), bin2hex($result->credentialId->toBinaryString()));
-		self::assertSame(self::USER_HANDLE, $result->userHandle->toBinaryString());
+		self::assertSame(bin2hex($credentialId), bin2hex($result->credentialId));
+		self::assertSame(self::USER_HANDLE, $result->userHandle);
 		self::assertSame(0, $result->newSignCount);
 		self::assertFalse($result->possibleClone);
 
 		// A single flipped signature byte must fail §7.2 step 21 against the registered key.
-		$tamperedBytes = $signature->toBinaryString();
+		$tamperedBytes = $signature;
 		$last = strlen($tamperedBytes) - 1;
 		$tamperedBytes = substr($tamperedBytes, 0, $last) . chr(ord($tamperedBytes[$last]) ^ 0x01);
 		$tampered = self::assertionCredential(
 			$credentialId,
 			$authentication,
-			Bytes::fromBinaryString($tamperedBytes),
+			$tamperedBytes,
 			$userHandle,
 		);
 
@@ -187,7 +186,7 @@ class SpecTestVectorsTest extends WebAuthnTestCase
 		CredentialStore&InMemoryCredentialStore $store,
 		JsonObject $registration,
 		int $alg,
-		Bytes $userHandle,
+		string $userHandle,
 	): void {
 		self::assertException(
 			VerificationException::class,
@@ -203,12 +202,12 @@ class SpecTestVectorsTest extends WebAuthnTestCase
 		self::assertNotNull($attestedCredentialData);
 
 		self::assertSame(
-			bin2hex(self::hexField($registration, 'credentialId')->toBinaryString()),
-			bin2hex($attestedCredentialData->credentialId->toBinaryString()),
+			bin2hex(self::hexField($registration, 'credentialId')),
+			bin2hex($attestedCredentialData->credentialId),
 		);
 		self::assertSame(
-			bin2hex(self::hexField($registration, 'aaguid')->toBinaryString()),
-			bin2hex($attestedCredentialData->aaGuid->toBinaryString()),
+			bin2hex(self::hexField($registration, 'aaguid')),
+			bin2hex($attestedCredentialData->aaGuid),
 		);
 		self::assertSame($alg, $attestedCredentialData->credentialPublicKey->alg);
 
@@ -227,20 +226,20 @@ class SpecTestVectorsTest extends WebAuthnTestCase
 	 * @return PublicKeyCredential<\WebAuthnX\Credential\AuthenticatorAssertionResponse>
 	 */
 	private static function assertionCredential(
-		Bytes $credentialId,
+		string $credentialId,
 		JsonObject $authentication,
-		Bytes $signature,
-		Bytes $userHandle,
+		string $signature,
+		string $userHandle,
 	): PublicKeyCredential {
 		return PublicKeyCredential::fromAuthenticationResponseJson(self::jsonObject([
-			'id' => Base64::urlEncode($credentialId->toBinaryString()),
-			'rawId' => Base64::urlEncode($credentialId->toBinaryString()),
+			'id' => Base64::urlEncode($credentialId),
+			'rawId' => Base64::urlEncode($credentialId),
 			'type' => 'public-key',
 			'response' => [
-				'clientDataJSON' => Base64::urlEncode(self::hexField($authentication, 'clientDataJSON')->toBinaryString()),
-				'authenticatorData' => Base64::urlEncode(self::hexField($authentication, 'authenticatorData')->toBinaryString()),
-				'signature' => Base64::urlEncode($signature->toBinaryString()),
-				'userHandle' => Base64::urlEncode($userHandle->toBinaryString()),
+				'clientDataJSON' => Base64::urlEncode(self::hexField($authentication, 'clientDataJSON')),
+				'authenticatorData' => Base64::urlEncode(self::hexField($authentication, 'authenticatorData')),
+				'signature' => Base64::urlEncode($signature),
+				'userHandle' => Base64::urlEncode($userHandle),
 			],
 		]));
 	}
@@ -256,7 +255,7 @@ class SpecTestVectorsTest extends WebAuthnTestCase
 		return JsonObject::fromString($content);
 	}
 
-	private static function hexField(JsonObject $object, string $field): Bytes
+	private static function hexField(JsonObject $object, string $field): string
 	{
 		return self::bytesFromHex($object->getString($field));
 	}

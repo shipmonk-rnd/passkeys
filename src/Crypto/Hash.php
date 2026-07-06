@@ -2,8 +2,6 @@
 
 namespace WebAuthnX\Crypto;
 
-use WebAuthnX\Binary\Bytes;
-
 use function hash;
 
 /**
@@ -14,8 +12,8 @@ use function hash;
  */
 final class Hash
 {
-	public static function sha256(Bytes $data): Bytes
+	public static function sha256(string $data): string
 	{
-		return Bytes::fromBinaryString(hash('sha256', $data->toBinaryString(), binary: true));
+		return hash('sha256', $data, binary: true);
 	}
 }

@@ -2,7 +2,6 @@
 
 namespace WebAuthnX\Credential;
 
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Binary\BytesReader;
 use WebAuthnX\Binary\BytesReaderException;
 use WebAuthnX\Cbor\CborMap;
@@ -22,8 +21,11 @@ readonly class AuthenticatorData
 	public const FLAG_ATTESTED_CREDENTIAL_DATA = 1 << 6;
 	public const FLAG_EXTENSION_DATA = 1 << 7;
 
+	/**
+	 * @param string $rpIdHash raw SHA-256 hash of the RP ID (32 bytes)
+	 */
 	private function __construct(
-		public Bytes $rpIdHash,
+		public string $rpIdHash,
 		public int $flags,
 		public int $signCount,
 		public ?AttestedCredentialData $attestedCredentialData,
@@ -34,7 +36,7 @@ readonly class AuthenticatorData
 	/**
 	 * @throws MalformedDataException
 	 */
-	public static function fromBytes(Bytes $bytes): AuthenticatorData
+	public static function fromBytes(string $bytes): AuthenticatorData
 	{
 		try {
 			return BytesReader::read($bytes, static function (BytesReader $bytesReader): self {

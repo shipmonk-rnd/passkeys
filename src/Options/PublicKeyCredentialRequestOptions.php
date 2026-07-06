@@ -4,7 +4,6 @@ namespace WebAuthnX\Options;
 
 use JsonSerializable;
 use WebAuthnX\Base64\Base64;
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Enum\PublicKeyCredentialHints;
 use WebAuthnX\Enum\UserVerificationRequirement;
 
@@ -36,13 +35,15 @@ readonly class PublicKeyCredentialRequestOptions implements JsonSerializable
 	 * AuthenticationExtensionsClientInputsJSON}), passed through verbatim — binary values must
 	 * already be base64url-encoded strings, e.g. `['appid' => 'https://example.com/appid.json']`.
 	 *
+	 * @param  string                                   $challenge raw challenge bytes (e.g. from
+	 *     {@see \random_bytes()}); base64url encoding happens on serialization
 	 * @param  list<PublicKeyCredentialDescriptor>|null $allowCredentials
 	 * @param  UserVerificationRequirement::*|null      $userVerification
 	 * @param  list<PublicKeyCredentialHints::*>|null   $hints
 	 * @param  array<string, mixed>|null                $extensions
 	 */
 	public function __construct(
-		public Bytes $challenge,
+		public string $challenge,
 		public ?int $timeout = self::RECOMMENDED_TIMEOUT,
 		public ?string $rpId = null,
 		public ?array $allowCredentials = null,
@@ -58,7 +59,7 @@ readonly class PublicKeyCredentialRequestOptions implements JsonSerializable
 	public function jsonSerialize(): array
 	{
 		$data = [
-			'challenge' => Base64::urlEncode($this->challenge->toBinaryString()),
+			'challenge' => Base64::urlEncode($this->challenge),
 		];
 
 		if ($this->timeout !== null) {

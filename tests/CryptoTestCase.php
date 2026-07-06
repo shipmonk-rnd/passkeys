@@ -3,7 +3,6 @@
 namespace WebAuthnXTests;
 
 use OpenSSLAsymmetricKey;
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 use WebAuthnX\Cose\CoseEc2Key;
 use WebAuthnX\Cose\CoseKey;
@@ -116,13 +115,13 @@ abstract class CryptoTestCase extends WebAuthnTestCase
 	 * mandates, producing exactly the signature encoding {@see \WebAuthnX\Crypto\SignatureVerifier}
 	 * expects (ASN.1 DER for ECDSA, raw PKCS#1 for RSA, raw 64-byte for Ed25519).
 	 */
-	protected static function sign(OpenSSLAsymmetricKey $privateKey, string $message, int $alg): Bytes
+	protected static function sign(OpenSSLAsymmetricKey $privateKey, string $message, int $alg): string
 	{
 		if (!openssl_sign($message, $signature, $privateKey, self::opensslDigest($alg)) || !is_string($signature)) {
 			self::fail('Failed to sign: ' . openssl_error_string());
 		}
 
-		return Bytes::fromBinaryString($signature);
+		return $signature;
 	}
 
 	protected static function opensslDigest(int $alg): int
@@ -135,11 +134,6 @@ abstract class CryptoTestCase extends WebAuthnTestCase
 			CoseAlgorithmIdentifier::EdDSA, CoseAlgorithmIdentifier::Ed25519, CoseAlgorithmIdentifier::Ed448 => 0,
 			default => self::fail("Unsupported test algorithm {$alg}"),
 		};
-	}
-
-	protected static function bytes(string $data): Bytes
-	{
-		return Bytes::fromBinaryString($data);
 	}
 
 	/**

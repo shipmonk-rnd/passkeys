@@ -34,7 +34,7 @@ class CborMapTest extends WebAuthnTestCase
 		self::assertSame(2, $map->getInt(1));
 		self::assertSame(-1, $map->getInt('neg'));
 		self::assertSame('abc', $map->getString(3));
-		self::assertSame("\x01\x02\x03\x04", $map->getBytes(4)->toBinaryString());
+		self::assertSame("\x01\x02\x03\x04", $map->getString(4)); // byte strings decode to plain strings too
 		self::assertSame(2, $map->getMap(5)->getInt(1));
 	}
 
@@ -53,7 +53,6 @@ class CborMapTest extends WebAuthnTestCase
 
 		self::assertException(CborMapException::class, "Key '1' is not a string", static fn () => $map->getString(1));
 		self::assertException(CborMapException::class, "Key '3' is not an integer", static fn () => $map->getInt(3));
-		self::assertException(CborMapException::class, "Key '1' is not a byte string", static fn () => $map->getBytes(1));
 		self::assertException(CborMapException::class, "Key '1' is not a map", static fn () => $map->getMap(1));
 	}
 

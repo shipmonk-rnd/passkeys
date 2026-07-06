@@ -43,13 +43,12 @@ Signatures are verified through `ext-openssl` with the COSE algorithm identifier
 ## Usage
 
 Everything lives under the `WebAuthnX\` namespace. Binary values (challenges, credential IDs,
-user handles) are modelled as `WebAuthnX\Binary\Bytes` and are base64url-encoded/decoded at the
-JSON boundary for you.
+user handles) are plain PHP strings holding **raw bytes** — the library base64url-encodes/decodes
+them at the JSON boundary for you, so you never pass base64url-encoded values to the API.
 
 ### 1. Create registration options
 
 ```php
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 use WebAuthnX\Enum\PublicKeyCredentialType;
 use WebAuthnX\Options\PublicKeyCredentialCreationOptions;
@@ -59,8 +58,8 @@ use WebAuthnX\Options\PublicKeyCredentialUserEntity;
 
 $options = new PublicKeyCredentialCreationOptions(
     rp: new PublicKeyCredentialRpEntity(name: 'Example RP', id: 'example.com'),
-    user: new PublicKeyCredentialUserEntity(Bytes::fromBinaryString($userId), 'alice', 'Alice Smith'),
-    challenge: Bytes::fromBinaryString(random_bytes(32)),
+    user: new PublicKeyCredentialUserEntity($userId, 'alice', 'Alice Smith'),
+    challenge: random_bytes(32),
     pubKeyCredParams: [
         new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::ES256),
         new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::RS256),
@@ -97,7 +96,7 @@ $credential = PublicKeyCredential::fromRegistrationResponseJson(JsonObject::from
 $result = (new RelyingParty())->verifyRegistration(
     $credential,
     new RegistrationExpectations(
-        challenge: $challengeYouIssued,          // the Bytes you generated for this ceremony
+        challenge: $challengeYouIssued,          // the raw bytes you generated for this ceremony
         rpId: 'example.com',
         origins: ['https://example.com'],
         allowedAlgorithms: [CoseAlgorithmIdentifier::ES256, CoseAlgorithmIdentifier::RS256],

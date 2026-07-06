@@ -2,8 +2,6 @@
 
 namespace WebAuthnX\Ceremony;
 
-use WebAuthnX\Binary\Bytes;
-
 /**
  * The outcome of a successful authentication ceremony (WebAuthn §7.2). Reaching this object means
  * the assertion signature verified and every mandated check passed; the caller should now persist
@@ -15,6 +13,8 @@ use WebAuthnX\Binary\Bytes;
 final readonly class AuthenticationResult
 {
 	/**
+	 * @param  string $credentialId raw credential id bytes of the credential that signed the assertion
+	 * @param  string $userHandle   raw user handle bytes from the located credential record
 	 * @param  int  $newSignCount  the counter reported by the authenticator, to store on the record
 	 * @param  bool $userVerified  whether the UV flag was set on this assertion
 	 * @param  bool $backupState   the credential's current backup state (may legitimately change over time)
@@ -23,8 +23,8 @@ final readonly class AuthenticationResult
 	 *     ceremony itself does not fail on it.
 	 */
 	public function __construct(
-		public Bytes $credentialId,
-		public Bytes $userHandle,
+		public string $credentialId,
+		public string $userHandle,
 		public int $newSignCount,
 		public bool $userVerified,
 		public bool $backupState,

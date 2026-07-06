@@ -3,7 +3,6 @@
 namespace WebAuthnX\Credential;
 
 use WebAuthnX\Base64\InvalidBase64Exception;
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Binary\BytesReader;
 use WebAuthnX\Binary\BytesReaderException;
 use WebAuthnX\Cbor\CborMap;
@@ -19,13 +18,15 @@ use WebAuthnX\Json\JsonObjectException;
 final readonly class AuthenticatorAttestationResponse extends AuthenticatorResponse
 {
 	/**
+	 * @param  string            $attestationObject raw CBOR bytes of the attestation object; parse
+	 *     with {@see self::parseAttestationObject()}
 	 * @param  list<string>|null $transports the authenticator's transports as reported by the
 	 *     client; unlike the rest of the response it cannot be recovered from the attestation
 	 *     object, and a relying party stores it to seed `allowCredentials` on later assertions.
 	 */
 	private function __construct(
-		Bytes $clientDataJSON,
-		public Bytes $attestationObject,
+		string $clientDataJSON,
+		public string $attestationObject,
 		public ?array $transports,
 	) {
 		parent::__construct($clientDataJSON);

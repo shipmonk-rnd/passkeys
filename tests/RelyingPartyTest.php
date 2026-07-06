@@ -6,7 +6,6 @@ use InvalidArgumentException;
 use OpenSSLAsymmetricKey;
 use PHPUnit\Framework\Attributes\DataProvider;
 use WebAuthnX\Base64\Base64;
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Ceremony\AuthenticationExpectations;
 use WebAuthnX\Ceremony\CredentialRecord;
 use WebAuthnX\Ceremony\RegistrationExpectations;
@@ -76,15 +75,15 @@ class RelyingPartyTest extends CryptoTestCase
 			$store,
 		);
 
-		self::assertSame(self::CREDENTIAL_ID, $registration->credentialId->toBinaryString());
+		self::assertSame(self::CREDENTIAL_ID, $registration->credentialId);
 		self::assertSame($alg, $registration->publicKey->alg);
 		self::assertSame(0, $registration->signCount);
 		self::assertTrue($registration->userVerified);
-		self::assertSame(self::AAGUID, $registration->aaguid->toBinaryString());
+		self::assertSame(self::AAGUID, $registration->aaguid);
 		self::assertSame(['internal'], $registration->transports);
 		self::assertSame(RegistrationResult::ATTESTATION_NONE, $registration->attestationType);
 
-		$store->add($registration->toCredentialRecord(Bytes::fromBinaryString(self::USER_HANDLE)));
+		$store->add($registration->toCredentialRecord(self::USER_HANDLE));
 
 		$authentication = $relyingParty->verifyAuthentication(
 			self::authenticationCredential($privateKey, $alg, signCount: 5),
@@ -92,8 +91,8 @@ class RelyingPartyTest extends CryptoTestCase
 			$store,
 		);
 
-		self::assertSame(self::CREDENTIAL_ID, $authentication->credentialId->toBinaryString());
-		self::assertSame(self::USER_HANDLE, $authentication->userHandle->toBinaryString());
+		self::assertSame(self::CREDENTIAL_ID, $authentication->credentialId);
+		self::assertSame(self::USER_HANDLE, $authentication->userHandle);
 		self::assertSame(5, $authentication->newSignCount);
 		self::assertTrue($authentication->userVerified);
 		self::assertFalse($authentication->possibleClone);
@@ -153,13 +152,13 @@ class RelyingPartyTest extends CryptoTestCase
 		$result = (new RelyingParty())->verifyAuthentication(
 			self::authenticationCredential($this->privateKey, CoseAlgorithmIdentifier::ES256, userHandle: null),
 			self::authenticationExpectations(
-				allowedCredentialIds: [Bytes::fromBinaryString(self::CREDENTIAL_ID)],
-				expectedUserHandle: Bytes::fromBinaryString(self::USER_HANDLE),
+				allowedCredentialIds: [self::CREDENTIAL_ID],
+				expectedUserHandle: self::USER_HANDLE,
 			),
 			$store,
 		);
 
-		self::assertSame(self::USER_HANDLE, $result->userHandle->toBinaryString());
+		self::assertSame(self::USER_HANDLE, $result->userHandle);
 	}
 
 	public function testAuthenticationFlagsPossibleCloneOnCounterRegression(): void
@@ -397,7 +396,7 @@ class RelyingPartyTest extends CryptoTestCase
 		$this->assertVerificationFailure(VerificationException::CREDENTIAL_NOT_ALLOWED, fn () =>
 			(new RelyingParty())->verifyAuthentication(
 				self::authenticationCredential($this->privateKey, CoseAlgorithmIdentifier::ES256),
-				self::authenticationExpectations(allowedCredentialIds: [Bytes::fromBinaryString("\x00\x01\x02")]),
+				self::authenticationExpectations(allowedCredentialIds: ["\x00\x01\x02"]),
 				$store,
 			));
 	}
@@ -440,7 +439,7 @@ class RelyingPartyTest extends CryptoTestCase
 		$this->assertVerificationFailure(VerificationException::USER_HANDLE_MISMATCH, fn () =>
 			(new RelyingParty())->verifyAuthentication(
 				self::authenticationCredential($this->privateKey, CoseAlgorithmIdentifier::ES256, userHandle: null),
-				self::authenticationExpectations(expectedUserHandle: Bytes::fromBinaryString(self::USER_HANDLE)),
+				self::authenticationExpectations(expectedUserHandle: self::USER_HANDLE),
 				$store,
 			));
 	}
@@ -452,7 +451,7 @@ class RelyingPartyTest extends CryptoTestCase
 		$this->assertVerificationFailure(VerificationException::USER_HANDLE_MISMATCH, fn () =>
 			(new RelyingParty())->verifyAuthentication(
 				self::authenticationCredential($this->privateKey, CoseAlgorithmIdentifier::ES256, userHandle: 'someone-else'),
-				self::authenticationExpectations(expectedUserHandle: Bytes::fromBinaryString(self::USER_HANDLE)),
+				self::authenticationExpectations(expectedUserHandle: self::USER_HANDLE),
 				$store,
 			));
 	}
@@ -579,7 +578,7 @@ class RelyingPartyTest extends CryptoTestCase
 		// loaded by OpenSSL, so verification raises a SignatureVerificationException that the façade
 		// repacks into a VerificationException.
 		$record = new CredentialRecord(
-			credentialId: Bytes::fromBinaryString(self::CREDENTIAL_ID),
+			credentialId: self::CREDENTIAL_ID,
 			publicKey: CoseKey::fromCborMap(self::cborMap([
 				1 => 2,
 				3 => CoseAlgorithmIdentifier::ES256,
@@ -588,7 +587,7 @@ class RelyingPartyTest extends CryptoTestCase
 				-3 => str_repeat("\x00", 32),
 			])),
 			signCount: 0,
-			userHandle: Bytes::fromBinaryString(self::USER_HANDLE),
+			userHandle: self::USER_HANDLE,
 			uvInitialized: true,
 			backupEligible: false,
 			backupState: false,
@@ -625,7 +624,7 @@ class RelyingPartyTest extends CryptoTestCase
 			$store,
 		);
 
-		self::assertSame(self::USER_HANDLE, $result->userHandle->toBinaryString());
+		self::assertSame(self::USER_HANDLE, $result->userHandle);
 	}
 
 	// --- topOrigin (§7.1 step 11 / §7.2 step 14) ------------------------------------------------
@@ -665,7 +664,7 @@ class RelyingPartyTest extends CryptoTestCase
 			$store,
 		);
 
-		self::assertSame(self::USER_HANDLE, $result->userHandle->toBinaryString());
+		self::assertSame(self::USER_HANDLE, $result->userHandle);
 	}
 
 	// --- Malformed responses fail closed as VerificationException -------------------------------
@@ -696,7 +695,7 @@ class RelyingPartyTest extends CryptoTestCase
 		$this->expectException(InvalidArgumentException::class);
 
 		new RegistrationExpectations(
-			challenge: Bytes::fromBinaryString('too-short'),
+			challenge: 'too-short',
 			rpId: self::RP_ID,
 			origins: [self::ORIGIN],
 			allowedAlgorithms: [CoseAlgorithmIdentifier::ES256],
@@ -708,7 +707,7 @@ class RelyingPartyTest extends CryptoTestCase
 		$this->expectException(InvalidArgumentException::class);
 
 		new AuthenticationExpectations(
-			challenge: Bytes::fromBinaryString('too-short'),
+			challenge: 'too-short',
 			rpId: self::RP_ID,
 			origins: [self::ORIGIN],
 		);
@@ -765,7 +764,7 @@ class RelyingPartyTest extends CryptoTestCase
 		bool $conditionalMediation = false,
 	): RegistrationExpectations {
 		return new RegistrationExpectations(
-			challenge: Bytes::fromBinaryString(self::CHALLENGE),
+			challenge: self::CHALLENGE,
 			rpId: self::RP_ID,
 			origins: [self::ORIGIN],
 			allowedAlgorithms: $allowedAlgorithms,
@@ -777,7 +776,7 @@ class RelyingPartyTest extends CryptoTestCase
 	}
 
 	/**
-	 * @param  list<Bytes>|null $allowedCredentialIds
+	 * @param  list<string>|null $allowedCredentialIds
 	 * @param  list<string>     $allowedTopOrigins
 	 */
 	private static function authenticationExpectations(
@@ -785,10 +784,10 @@ class RelyingPartyTest extends CryptoTestCase
 		bool $requireUserVerification = false,
 		bool $allowCrossOrigin = false,
 		array $allowedTopOrigins = [],
-		?Bytes $expectedUserHandle = null,
+		?string $expectedUserHandle = null,
 	): AuthenticationExpectations {
 		return new AuthenticationExpectations(
-			challenge: Bytes::fromBinaryString(self::CHALLENGE),
+			challenge: self::CHALLENGE,
 			rpId: self::RP_ID,
 			origins: [self::ORIGIN],
 			allowedCredentialIds: $allowedCredentialIds,
@@ -805,10 +804,10 @@ class RelyingPartyTest extends CryptoTestCase
 		bool $backupEligible = false,
 	): CredentialRecord {
 		return new CredentialRecord(
-			credentialId: Bytes::fromBinaryString(self::CREDENTIAL_ID),
+			credentialId: self::CREDENTIAL_ID,
 			publicKey: CoseKey::fromCborMap(self::cborMap($this->coseEntries)),
 			signCount: $signCount,
-			userHandle: Bytes::fromBinaryString($userHandle),
+			userHandle: $userHandle,
 			uvInitialized: true,
 			backupEligible: $backupEligible,
 			backupState: false,
@@ -868,7 +867,7 @@ class RelyingPartyTest extends CryptoTestCase
 				$attestationKey,
 				$authData . hash('sha256', $clientDataJson, binary: true),
 				$attestationAlg,
-			)->toBinaryString();
+			);
 
 			if ($tamperAttestationSignature) {
 				$signature[0] = chr(ord($signature[0]) ^ 0x01);
@@ -921,7 +920,7 @@ class RelyingPartyTest extends CryptoTestCase
 		$authData = $authDataOverride ?? self::authenticatorData($rpId, $flags, $signCount, null);
 		$clientDataJson = self::clientDataJson($type, $challenge, $origin, $crossOrigin, $topOrigin);
 
-		$signature = self::sign($privateKey, $authData . hash('sha256', $clientDataJson, binary: true), $alg)->toBinaryString();
+		$signature = self::sign($privateKey, $authData . hash('sha256', $clientDataJson, binary: true), $alg);
 
 		if ($tamperSignature) {
 			$signature[0] = chr(ord($signature[0]) ^ 0x01);

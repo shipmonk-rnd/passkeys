@@ -2,7 +2,6 @@
 
 namespace WebAuthnX\Ceremony;
 
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cose\CoseKey;
 
 /**
@@ -26,18 +25,20 @@ final readonly class RegistrationResult
 	public const ATTESTATION_SELF = 'self';
 
 	/**
+	 * @param  string            $credentialId raw credential id bytes (encode before embedding in JSON/HTML)
 	 * @param  bool              $userVerified whether the UV flag was set (the record's `uvInitialized`)
+	 * @param  string            $aaguid       raw AAGUID bytes (16 bytes) identifying the authenticator model
 	 * @param  list<string>|null $transports   transports reported by the client, to seed later `allowCredentials`
 	 * @param  self::ATTESTATION_* $attestationType how the credential was attested (no conveyed trust either way)
 	 */
 	public function __construct(
-		public Bytes $credentialId,
+		public string $credentialId,
 		public CoseKey $publicKey,
 		public int $signCount,
 		public bool $userVerified,
 		public bool $backupEligible,
 		public bool $backupState,
-		public Bytes $aaguid,
+		public string $aaguid,
 		public ?array $transports,
 		public string $attestationType,
 	) {
@@ -46,8 +47,10 @@ final readonly class RegistrationResult
 	/**
 	 * Assembles the persistable {@see CredentialRecord} for this registration, associating it with
 	 * the user handle from the creation options' `user.id`.
+	 *
+	 * @param string $userHandle raw user handle bytes
 	 */
-	public function toCredentialRecord(Bytes $userHandle): CredentialRecord
+	public function toCredentialRecord(string $userHandle): CredentialRecord
 	{
 		return new CredentialRecord(
 			credentialId: $this->credentialId,

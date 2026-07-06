@@ -3,7 +3,6 @@
 namespace WebAuthnXTests;
 
 use WebAuthnX\Base64\Base64;
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Credential\CollectedClientData;
 use WebAuthnX\Credential\MalformedDataException;
 
@@ -24,7 +23,7 @@ class CollectedClientDataTest extends WebAuthnTestCase
 		]));
 
 		self::assertSame('webauthn.get', $clientData->getType());
-		self::assertSame('challenge-bytes', $clientData->getChallenge()->toBinaryString());
+		self::assertSame('challenge-bytes', $clientData->getChallenge());
 		self::assertSame('https://example.com', $clientData->getOrigin());
 		self::assertSame('https://top.example.com', $clientData->getTopOrigin());
 		self::assertTrue($clientData->getCrossOrigin());
@@ -47,7 +46,7 @@ class CollectedClientDataTest extends WebAuthnTestCase
 	{
 		$this->expectException(MalformedDataException::class);
 
-		CollectedClientData::fromBytes(Bytes::fromBinaryString('not json at all'));
+		CollectedClientData::fromBytes('not json at all');
 	}
 
 	public function testRejectsMissingRequiredMember(): void
@@ -74,8 +73,8 @@ class CollectedClientDataTest extends WebAuthnTestCase
 	/**
 	 * @param  array<string, mixed> $members
 	 */
-	private static function clientDataJson(array $members): Bytes
+	private static function clientDataJson(array $members): string
 	{
-		return Bytes::fromBinaryString(json_encode($members, JSON_THROW_ON_ERROR));
+		return json_encode($members, JSON_THROW_ON_ERROR);
 	}
 }

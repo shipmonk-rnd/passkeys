@@ -3,7 +3,6 @@
 namespace WebAuthnX\Credential;
 
 use WebAuthnX\Base64\InvalidBase64Exception;
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Json\JsonObject;
 use WebAuthnX\Json\JsonObjectException;
 
@@ -13,11 +12,16 @@ use WebAuthnX\Json\JsonObjectException;
  */
 final readonly class AuthenticatorAssertionResponse extends AuthenticatorResponse
 {
+	/**
+	 * @param string      $authenticatorData raw authenticator data bytes; parse with {@see AuthenticatorData::fromBytes()}
+	 * @param string      $signature         raw assertion signature bytes
+	 * @param string|null $userHandle        raw user handle bytes, if the authenticator returned one
+	 */
 	private function __construct(
-		Bytes $clientDataJSON,
-		public Bytes $authenticatorData,
-		public Bytes $signature,
-		public ?Bytes $userHandle,
+		string $clientDataJSON,
+		public string $authenticatorData,
+		public string $signature,
+		public ?string $userHandle,
 	) {
 		parent::__construct($clientDataJSON);
 	}

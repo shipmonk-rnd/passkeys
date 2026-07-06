@@ -21,7 +21,6 @@
 namespace WebAuthnXDemo;
 
 use Throwable;
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Ceremony\AuthenticationExpectations;
 use WebAuthnX\Ceremony\RegistrationExpectations;
 use WebAuthnX\Ceremony\VerificationException;
@@ -92,44 +91,44 @@ function body(): JsonObject
 // --- Session state: the pending ceremony challenge + who is signed in --------------------------
 // Transient per-browser state (not database tables); a real app keeps these in the session/cache.
 
-function rememberChallenge(Bytes $challenge): void
+function rememberChallenge(string $challenge): void
 {
-	$_SESSION['pending_challenge'] = base64_encode($challenge->toBinaryString());
+	$_SESSION['pending_challenge'] = base64_encode($challenge);
 }
 
 /** Returns and clears the pending challenge, keeping each challenge single-use. */
-function consumeChallenge(): ?Bytes
+function consumeChallenge(): ?string
 {
 	$challenge = $_SESSION['pending_challenge'] ?? null;
 	unset($_SESSION['pending_challenge']);
 
-	return $challenge === null ? null : Bytes::fromBinaryString(base64_decode($challenge));
+	return $challenge === null ? null : base64_decode($challenge);
 }
 
 /** The user a pending registration ceremony is enrolling a passkey for. */
-function rememberPendingUser(Bytes $handle): void
+function rememberPendingUser(string $handle): void
 {
-	$_SESSION['pending_user_handle'] = base64_encode($handle->toBinaryString());
+	$_SESSION['pending_user_handle'] = base64_encode($handle);
 }
 
-function consumePendingUser(): ?Bytes
+function consumePendingUser(): ?string
 {
 	$handle = $_SESSION['pending_user_handle'] ?? null;
 	unset($_SESSION['pending_user_handle']);
 
-	return $handle === null ? null : Bytes::fromBinaryString(base64_decode($handle));
+	return $handle === null ? null : base64_decode($handle);
 }
 
-function signIn(Bytes $handle): void
+function signIn(string $handle): void
 {
-	$_SESSION['auth_user_handle'] = base64_encode($handle->toBinaryString());
+	$_SESSION['auth_user_handle'] = base64_encode($handle);
 }
 
-function currentUserHandle(): ?Bytes
+function currentUserHandle(): ?string
 {
 	$handle = $_SESSION['auth_user_handle'] ?? null;
 
-	return $handle === null ? null : Bytes::fromBinaryString(base64_decode($handle));
+	return $handle === null ? null : base64_decode($handle);
 }
 
 match ($path) {
@@ -198,8 +197,8 @@ match ($path) {
 
 				$existing = $store->findUserByEmail($email);
 				$handle = $existing !== null
-					? Bytes::fromBinaryString(base64_decode($existing['user_handle']))
-					: Bytes::fromBinaryString(random_bytes(16));
+					? base64_decode($existing['user_handle'])
+					: random_bytes(16);
 
 				if ($existing === null) {
 					$store->insertUser($handle, $email);
@@ -212,12 +211,12 @@ match ($path) {
 			foreach ($store->credentialsForUser($handle) as $row) {
 				$excludeCredentials[] = new PublicKeyCredentialDescriptor(
 					PublicKeyCredentialType::PUBLIC_KEY,
-					Bytes::fromBinaryString(base64_decode($row['credential_id'])),
+					base64_decode($row['credential_id']),
 					$row['transports'],
 				);
 			}
 
-			$challenge = Bytes::fromBinaryString(random_bytes(32));
+			$challenge = random_bytes(32);
 			rememberChallenge($challenge);
 			rememberPendingUser($handle);
 
@@ -284,7 +283,7 @@ match ($path) {
 	// ---- Authentication (navigator.credentials.get) ----------------------------------------
 
 	'/login/options' => (static function (): void {
-		$challenge = Bytes::fromBinaryString(random_bytes(32));
+		$challenge = random_bytes(32);
 		rememberChallenge($challenge);
 
 		// No allowCredentials: a discoverable passkey identifies the user by its returned userHandle.

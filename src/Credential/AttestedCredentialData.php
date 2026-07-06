@@ -2,7 +2,6 @@
 
 namespace WebAuthnX\Credential;
 
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Binary\BytesReader;
 use WebAuthnX\Binary\BytesReaderException;
 use WebAuthnX\Cbor\CborMap;
@@ -16,9 +15,13 @@ use WebAuthnX\Cose\CoseKeyException;
  */
 readonly class AttestedCredentialData
 {
+	/**
+	 * @param string $aaGuid       raw AAGUID bytes (16 bytes)
+	 * @param string $credentialId raw credential id bytes
+	 */
 	private function __construct(
-		public Bytes $aaGuid,
-		public Bytes $credentialId,
+		public string $aaGuid,
+		public string $credentialId,
 		public CoseKey $credentialPublicKey,
 	) {
 	}

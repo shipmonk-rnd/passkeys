@@ -20,6 +20,10 @@ use function is_string;
  * encodings and out-of-order map keys. That is deliberate: WebAuthn signature verification does
  * not depend on the exact CBOR byte encoding (COSE keys are re-encoded to DER before use), so
  * decoding leniently is safe here.
+ *
+ * Byte strings and text strings both decode to a PHP string and are indistinguishable afterwards
+ * (text strings are additionally validated as UTF-8). This too is deliberate leniency: no consumer
+ * needs to tell the two apart at the same map key, only the decoded value matters.
  */
 class CborDecoder
 {

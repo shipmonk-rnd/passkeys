@@ -4,7 +4,6 @@ namespace WebAuthnXTests\Der;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Der\DerEncoder;
 
 class DerEncoderTest extends TestCase

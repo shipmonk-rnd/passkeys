@@ -59,7 +59,7 @@ class PublicKeyCredentialTest extends WebAuthnTestCase
 
 		self::assertSame(PublicKeyCredentialType::PUBLIC_KEY, $credential->type);
 		self::assertSame(Base64::urlEncode('credential-id'), $credential->id);
-		self::assertSame('credential-id', $credential->rawId->toBinaryString());
+		self::assertSame('credential-id', $credential->rawId);
 		self::assertSame('platform', $credential->authenticatorAttachment);
 		self::assertNotNull($credential->clientExtensionResults);
 
@@ -108,10 +108,10 @@ class PublicKeyCredentialTest extends WebAuthnTestCase
 
 		$response = $credential->response;
 		self::assertInstanceOf(AuthenticatorAssertionResponse::class, $response);
-		self::assertSame('signature-bytes', $response->signature->toBinaryString());
-		self::assertSame('authenticator-data', $response->authenticatorData->toBinaryString());
+		self::assertSame('signature-bytes', $response->signature);
+		self::assertSame('authenticator-data', $response->authenticatorData);
 		self::assertNotNull($response->userHandle);
-		self::assertSame('user-handle', $response->userHandle->toBinaryString());
+		self::assertSame('user-handle', $response->userHandle);
 		self::assertSame('webauthn.get', $response->parseClientData()->getType());
 	}
 

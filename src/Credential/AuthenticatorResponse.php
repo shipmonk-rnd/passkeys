@@ -2,8 +2,6 @@
 
 namespace WebAuthnX\Credential;
 
-use WebAuthnX\Binary\Bytes;
-
 /**
  * Base for the two authenticator responses returned by a credential.
  *
@@ -12,8 +10,12 @@ use WebAuthnX\Binary\Bytes;
  */
 abstract readonly class AuthenticatorResponse
 {
+	/**
+	 * @param string $clientDataJSON the raw JSON bytes as serialized by the client (base64url-decoded);
+	 *     kept verbatim because hashes and signatures are computed over these exact bytes
+	 */
 	protected function __construct(
-		public Bytes $clientDataJSON,
+		public string $clientDataJSON,
 	) {
 	}
 

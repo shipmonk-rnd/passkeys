@@ -4,7 +4,6 @@ namespace WebAuthnXTests\Cbor;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Binary\BytesReader;
 use WebAuthnX\Cbor\CborDecoder;
 use WebAuthnX\Cbor\InvalidCborException;
@@ -27,10 +26,6 @@ class CborDecoderTest extends WebAuthnTestCase
 
 		if (is_float($expected) && is_nan($expected)) {
 			self::assertNan($actual);
-
-		} elseif ($expected instanceof Bytes) {
-			self::assertInstanceOf(Bytes::class, $actual);
-			self::assertSame($expected->toBinaryString(), $actual->toBinaryString());
 
 		} else {
 			self::assertSame($expected, $actual);
@@ -63,8 +58,8 @@ class CborDecoderTest extends WebAuthnTestCase
 		yield ['3b 7f ff ff ff ff ff ff ff', -9223372036854775807 - 1];
 
 		// byte strings
-		yield ['40', Bytes::fromBinaryString('')];
-		yield ['44 01 02 03 04', Bytes::fromBinaryString("\x01\x02\x03\x04")];
+		yield ['40', ''];
+		yield ['44 01 02 03 04', "\x01\x02\x03\x04"];
 
 		// utf-8 strings
 		yield ['60', ''];

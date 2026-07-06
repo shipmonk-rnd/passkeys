@@ -64,7 +64,7 @@ class CborEncoderTest extends WebAuthnTestCase
 		);
 
 		self::assertSame(2, $map->getInt(1));
-		self::assertSame('xy', $map->getBytes(-1)->toBinaryString());
+		self::assertSame('xy', $map->getString(-1));
 	}
 
 	public function testEmptyMap(): void

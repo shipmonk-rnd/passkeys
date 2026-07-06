@@ -2,7 +2,6 @@
 
 namespace WebAuthnX\Cbor;
 
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Binary\BytesReader;
 
 use function is_array;
@@ -54,6 +53,9 @@ readonly class CborMap
 	}
 
 	/**
+	 * CBOR byte strings and text strings both decode to a PHP string (see {@see CborDecoder}),
+	 * so this serves fields of either kind; for a byte-string field it returns the raw bytes.
+	 *
 	 * @throws CborMapException
 	 */
 	public function getString(int|string $key): string
@@ -62,20 +64,6 @@ readonly class CborMap
 
 		if (!is_string($value)) {
 			throw new CborMapException("Key '$key' is not a string");
-		}
-
-		return $value;
-	}
-
-	/**
-	 * @throws CborMapException
-	 */
-	public function getBytes(int|string $key): Bytes
-	{
-		$value = $this->getMixed($key);
-
-		if (!$value instanceof Bytes) {
-			throw new CborMapException("Key '$key' is not a byte string");
 		}
 
 		return $value;

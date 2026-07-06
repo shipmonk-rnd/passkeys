@@ -4,7 +4,6 @@ namespace WebAuthnXTests;
 
 use WebAuthnX\Credential\AuthenticatorAssertionResponse;
 use WebAuthnX\Base64\Base64;
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 use WebAuthnX\Crypto\Hash;
 use WebAuthnX\Crypto\SignatureVerifier;
@@ -52,10 +51,8 @@ class AssertionSignatureTest extends CryptoTestCase
 		]));
 
 		// Reconstruct the signed message the way a relying party would.
-		$message = Bytes::fromBinaryString(
-			$response->authenticatorData->toBinaryString()
-			. Hash::sha256($response->clientDataJSON)->toBinaryString(),
-		);
+		$message = $response->authenticatorData
+			. Hash::sha256($response->clientDataJSON);
 
 		self::assertTrue((new SignatureVerifier())->verify($coseKey, $message, $response->signature));
 	}

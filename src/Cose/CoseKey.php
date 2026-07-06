@@ -2,7 +2,6 @@
 
 namespace WebAuthnX\Cose;
 
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Binary\BytesReader;
 use WebAuthnX\Binary\BytesReaderException;
 use WebAuthnX\Cbor\CborMap;
@@ -51,7 +50,7 @@ abstract class CoseKey
 	 *
 	 * @throws CoseKeyException on malformed input (not a single, complete COSE_Key CBOR map)
 	 */
-	public static function fromBytes(Bytes $bytes): CoseKey
+	public static function fromBytes(string $bytes): CoseKey
 	{
 		try {
 			return BytesReader::read(
@@ -69,11 +68,11 @@ abstract class CoseKey
 	 * for persisting a credential's public key (e.g. one blob column per credential). Reconstruct
 	 * it with {@see self::fromBytes()}.
 	 */
-	abstract public function toBytes(): Bytes;
+	abstract public function toBytes(): string;
 
 	/**
 	 * Encodes this key as a DER-encoded SubjectPublicKeyInfo (RFC 5280 §4.1.2.7),
 	 * the form consumed by {@see \openssl_pkey_get_public()}.
 	 */
-	abstract public function toDerSubjectPublicKeyInfo(): Bytes;
+	abstract public function toDerSubjectPublicKeyInfo(): string;
 }

@@ -6,7 +6,6 @@ use JsonException;
 use stdClass;
 use WebAuthnX\Base64\Base64;
 use WebAuthnX\Base64\InvalidBase64Exception;
-use WebAuthnX\Binary\Bytes;
 use function is_array;
 use function is_string;
 
@@ -39,15 +38,6 @@ readonly class JsonObject
 		}
 
 		return new self($data);
-	}
-
-
-	/**
-	 * @throws JsonObjectException
-	 */
-	public static function fromBytes(Bytes $bytes): self
-	{
-		return self::fromString($bytes->toBinaryString());
 	}
 
 
@@ -161,25 +151,29 @@ readonly class JsonObject
 
 
 	/**
+	 * Reads a base64url-encoded member and returns the decoded raw bytes.
+	 *
 	 * @throws JsonObjectException
 	 * @throws InvalidBase64Exception
 	 */
-	public function getBytes(string $key): Bytes
+	public function getBytes(string $key): string
 	{
-		return Bytes::fromBinaryString(Base64::urlDecode($this->getString($key)));
+		return Base64::urlDecode($this->getString($key));
 	}
 
 
 	/**
+	 * Reads a base64url-encoded member and returns the decoded raw bytes.
+	 *
 	 * @throws JsonObjectException
 	 * @throws InvalidBase64Exception
 	 */
-	public function getOptionalBytes(string $key): ?Bytes
+	public function getOptionalBytes(string $key): ?string
 	{
 		if (!isset($this->object->$key)) {
 			return null;
 		}
 
-		return Bytes::fromBinaryString(Base64::urlDecode($this->getString($key)));
+		return Base64::urlDecode($this->getString($key));
 	}
 }

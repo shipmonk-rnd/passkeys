@@ -2,8 +2,6 @@
 
 namespace WebAuthnX\Ceremony;
 
-use WebAuthnX\Binary\Bytes;
-
 /**
  * The relying party's read access to its stored credentials, keyed by credential id.
  *
@@ -18,5 +16,8 @@ use WebAuthnX\Binary\Bytes;
  */
 interface CredentialStore
 {
-	public function findByCredentialId(Bytes $credentialId): ?CredentialRecord;
+	/**
+	 * @param string $credentialId raw credential id bytes (not base64url-encoded)
+	 */
+	public function findByCredentialId(string $credentialId): ?CredentialRecord;
 }

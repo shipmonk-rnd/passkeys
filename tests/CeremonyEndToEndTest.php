@@ -6,7 +6,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use WebAuthnX\Credential\AuthenticatorAttestationResponse;
 use WebAuthnX\Credential\AuthenticatorData;
 use WebAuthnX\Base64\Base64;
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 use WebAuthnX\Cose\CoseOkpKey;
 use WebAuthnX\Crypto\Hash;
@@ -87,24 +86,22 @@ class CeremonyEndToEndTest extends CryptoTestCase
 			'response' => [
 				'clientDataJSON' => Base64::urlEncode($assertionClientData),
 				'authenticatorData' => Base64::urlEncode($assertionAuthData),
-				'signature' => Base64::urlEncode($signature->toBinaryString()),
+				'signature' => Base64::urlEncode($signature),
 				'userHandle' => Base64::urlEncode('user-handle'),
 			],
 		], JSON_THROW_ON_ERROR)));
 
 		$assertionResponse = $authentication->response;
-		$message = Bytes::fromBinaryString(
-			$assertionResponse->authenticatorData->toBinaryString()
-			. Hash::sha256($assertionResponse->clientDataJSON)->toBinaryString(),
-		);
+		$message = $assertionResponse->authenticatorData
+			. Hash::sha256($assertionResponse->clientDataJSON);
 
 		$verifier = new SignatureVerifier();
 		self::assertTrue($verifier->verify($registeredKey, $message, $assertionResponse->signature));
 
 		// A single flipped signature byte must not verify against the registered key.
-		$tampered = $assertionResponse->signature->toBinaryString();
+		$tampered = $assertionResponse->signature;
 		$tampered[0] = chr(ord($tampered[0]) ^ 0x01);
-		self::assertFalse($verifier->verify($registeredKey, $message, Bytes::fromBinaryString($tampered)));
+		self::assertFalse($verifier->verify($registeredKey, $message, $tampered));
 	}
 
 	/**

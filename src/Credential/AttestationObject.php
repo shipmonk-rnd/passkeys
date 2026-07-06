@@ -2,7 +2,6 @@
 
 namespace WebAuthnX\Credential;
 
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cbor\CborMap;
 use WebAuthnX\Cbor\CborMapException;
 
@@ -11,8 +10,11 @@ use WebAuthnX\Cbor\CborMapException;
  */
 readonly class AttestationObject
 {
+	/**
+	 * @param string $authData raw authenticator data bytes; parse with {@see self::parseAuthenticatorData()}
+	 */
 	private function __construct(
-		public Bytes $authData,
+		public string $authData,
 		public string $fmt,
 		public CborMap $attStmt,
 	) {
@@ -24,7 +26,7 @@ readonly class AttestationObject
 	public static function fromCborMap(CborMap $map): AttestationObject
 	{
 		return new self(
-			$map->getBytes('authData'),
+			$map->getString('authData'),
 			$map->getString('fmt'),
 			$map->getMap('attStmt'), // keys are utf-8 strings
 		);

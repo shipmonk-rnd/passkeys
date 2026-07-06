@@ -4,7 +4,6 @@ namespace WebAuthnX\Options;
 
 use JsonSerializable;
 use WebAuthnX\Base64\Base64;
-use WebAuthnX\Binary\Bytes;
 
 /**
  * @see https://w3c.github.io/webauthn/#dictdef-publickeycredentialuserentityjson
@@ -12,8 +11,12 @@ use WebAuthnX\Binary\Bytes;
  */
 readonly class PublicKeyCredentialUserEntity extends PublicKeyCredentialEntity implements JsonSerializable
 {
+	/**
+	 * @param string $id raw user handle bytes (an opaque identifier, at most 64 bytes — not an
+	 *     email or username); base64url encoding happens on serialization
+	 */
 	public function __construct(
-		public Bytes $id,
+		public string $id,
 		string $name,
 		public string $displayName,
 	) {
@@ -26,7 +29,7 @@ readonly class PublicKeyCredentialUserEntity extends PublicKeyCredentialEntity i
 	public function jsonSerialize(): array
 	{
 		return [
-			'id' => Base64::urlEncode($this->id->toBinaryString()),
+			'id' => Base64::urlEncode($this->id),
 			'name' => $this->name,
 			'displayName' => $this->displayName,
 		];

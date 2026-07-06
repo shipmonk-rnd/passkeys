@@ -6,7 +6,6 @@ use WebAuthnX\Enum\AuthenticatorAttachment;
 use WebAuthnX\Options\AuthenticatorSelectionCriteria;
 use WebAuthnX\Enum\AuthenticatorTransport;
 use WebAuthnX\Base64\Base64;
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 use WebAuthnX\Options\PublicKeyCredentialCreationOptions;
 use WebAuthnX\Options\PublicKeyCredentialDescriptor;
@@ -28,8 +27,8 @@ class PublicKeyCredentialCreationOptionsTest extends WebAuthnTestCase
 	{
 		$options = new PublicKeyCredentialCreationOptions(
 			rp: new PublicKeyCredentialRpEntity(name: 'Example RP', id: 'example.com'),
-			user: new PublicKeyCredentialUserEntity(Bytes::fromBinaryString('user-id'), 'alice', 'Alice Smith'),
-			challenge: Bytes::fromBinaryString('challenge-bytes'),
+			user: new PublicKeyCredentialUserEntity('user-id', 'alice', 'Alice Smith'),
+			challenge: 'challenge-bytes',
 			pubKeyCredParams: [
 				new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::ES256),
 				new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::RS256),
@@ -38,7 +37,7 @@ class PublicKeyCredentialCreationOptionsTest extends WebAuthnTestCase
 			excludeCredentials: [
 				new PublicKeyCredentialDescriptor(
 					PublicKeyCredentialType::PUBLIC_KEY,
-					Bytes::fromBinaryString('cred-1'),
+					'cred-1',
 					[AuthenticatorTransport::INTERNAL, AuthenticatorTransport::HYBRID],
 				),
 			],
@@ -90,8 +89,8 @@ class PublicKeyCredentialCreationOptionsTest extends WebAuthnTestCase
 	{
 		$options = new PublicKeyCredentialCreationOptions(
 			rp: new PublicKeyCredentialRpEntity(name: 'Example RP', id: 'example.com'),
-			user: new PublicKeyCredentialUserEntity(Bytes::fromBinaryString('user-id'), 'alice', 'Alice Smith'),
-			challenge: Bytes::fromBinaryString('challenge-bytes'),
+			user: new PublicKeyCredentialUserEntity('user-id', 'alice', 'Alice Smith'),
+			challenge: 'challenge-bytes',
 			pubKeyCredParams: [
 				new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::ES256),
 			],
@@ -119,8 +118,8 @@ class PublicKeyCredentialCreationOptionsTest extends WebAuthnTestCase
 	{
 		$options = new PublicKeyCredentialCreationOptions(
 			rp: new PublicKeyCredentialRpEntity(name: 'Example RP', id: 'example.com'),
-			user: new PublicKeyCredentialUserEntity(Bytes::fromBinaryString('user-id'), 'alice', 'Alice Smith'),
-			challenge: Bytes::fromBinaryString('challenge-bytes'),
+			user: new PublicKeyCredentialUserEntity('user-id', 'alice', 'Alice Smith'),
+			challenge: 'challenge-bytes',
 			pubKeyCredParams: [
 				new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::ES256),
 			],
@@ -136,8 +135,8 @@ class PublicKeyCredentialCreationOptionsTest extends WebAuthnTestCase
 	{
 		$options = new PublicKeyCredentialCreationOptions(
 			rp: new PublicKeyCredentialRpEntity(name: 'Example RP', id: 'example.com'),
-			user: new PublicKeyCredentialUserEntity(Bytes::fromBinaryString('user-id'), 'alice', 'Alice Smith'),
-			challenge: Bytes::fromBinaryString('challenge-bytes'),
+			user: new PublicKeyCredentialUserEntity('user-id', 'alice', 'Alice Smith'),
+			challenge: 'challenge-bytes',
 			pubKeyCredParams: [
 				new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::ES256),
 			],
@@ -151,8 +150,8 @@ class PublicKeyCredentialCreationOptionsTest extends WebAuthnTestCase
 	{
 		$options = new PublicKeyCredentialCreationOptions(
 			rp: new PublicKeyCredentialRpEntity(name: 'Example RP'),
-			user: new PublicKeyCredentialUserEntity(Bytes::fromBinaryString('user-id'), 'alice', 'Alice Smith'),
-			challenge: Bytes::fromBinaryString('challenge-bytes'),
+			user: new PublicKeyCredentialUserEntity('user-id', 'alice', 'Alice Smith'),
+			challenge: 'challenge-bytes',
 			pubKeyCredParams: [
 				new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::ES256),
 			],
@@ -172,8 +171,8 @@ class PublicKeyCredentialCreationOptionsTest extends WebAuthnTestCase
 	{
 		$options = new PublicKeyCredentialCreationOptions(
 			rp: new PublicKeyCredentialRpEntity(name: 'Example RP'),
-			user: new PublicKeyCredentialUserEntity(Bytes::fromBinaryString('user-id'), 'alice', 'a</script>b'),
-			challenge: Bytes::fromBinaryString('challenge-bytes'),
+			user: new PublicKeyCredentialUserEntity('user-id', 'alice', 'a</script>b'),
+			challenge: 'challenge-bytes',
 			pubKeyCredParams: [
 				new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::ES256),
 			],
@@ -188,7 +187,7 @@ class PublicKeyCredentialCreationOptionsTest extends WebAuthnTestCase
 	{
 		$descriptor = new PublicKeyCredentialDescriptor(
 			PublicKeyCredentialType::PUBLIC_KEY,
-			Bytes::fromBinaryString('cred-1'),
+			'cred-1',
 		);
 
 		self::assertSame(

@@ -2,7 +2,6 @@
 
 namespace WebAuthnX;
 
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Ceremony\AuthenticationExpectations;
 use WebAuthnX\Ceremony\AuthenticationResult;
 use WebAuthnX\Ceremony\CredentialStore;
@@ -173,7 +172,7 @@ final class RelyingParty
 		// §7.1 step 25: credential ids are bounded at 1023 bytes.
 		$credentialId = $attestedCredentialData->credentialId;
 
-		if (strlen($credentialId->toBinaryString()) > self::MAX_CREDENTIAL_ID_LENGTH) {
+		if (strlen($credentialId) > self::MAX_CREDENTIAL_ID_LENGTH) {
 			throw new VerificationException(
 				VerificationException::CREDENTIAL_ID_TOO_LONG,
 				'Credential ID exceeds ' . self::MAX_CREDENTIAL_ID_LENGTH . ' bytes',
@@ -218,7 +217,7 @@ final class RelyingParty
 	private function verifyAttestationStatement(
 		AttestationObject $attestationObject,
 		CoseKey $credentialPublicKey,
-		Bytes $clientDataJSON,
+		string $clientDataJSON,
 	): string {
 		if ($attestationObject->fmt === self::FMT_NONE) {
 			return RegistrationResult::ATTESTATION_NONE;
@@ -235,7 +234,7 @@ final class RelyingParty
 
 		try {
 			$alg = $attestationObject->attStmt->getInt('alg');
-			$sig = $attestationObject->attStmt->getBytes('sig');
+			$sig = $attestationObject->attStmt->getString('sig');
 
 		} catch (CborMapException $e) {
 			throw new VerificationException(
@@ -252,10 +251,7 @@ final class RelyingParty
 			);
 		}
 
-		$message = Bytes::fromBinaryString(
-			$attestationObject->authData->toBinaryString()
-			. Hash::sha256($clientDataJSON)->toBinaryString(),
-		);
+		$message = $attestationObject->authData . Hash::sha256($clientDataJSON);
 
 		if (!$this->signatureVerifier->verify($credentialPublicKey, $message, $sig)) {
 			throw new VerificationException(
@@ -371,10 +367,7 @@ final class RelyingParty
 		}
 
 		// §7.2 steps 20–21: verify the signature over authenticatorData || SHA-256(clientDataJSON).
-		$message = Bytes::fromBinaryString(
-			$response->authenticatorData->toBinaryString()
-			. Hash::sha256($response->clientDataJSON)->toBinaryString(),
-		);
+		$message = $response->authenticatorData . Hash::sha256($response->clientDataJSON);
 
 		if (!$this->signatureVerifier->verify($record->publicKey, $message, $response->signature)) {
 			throw new VerificationException(VerificationException::INVALID_SIGNATURE, 'Assertion signature is invalid');
@@ -405,7 +398,7 @@ final class RelyingParty
 		CollectedClientData $clientData,
 		RegistrationExpectations|AuthenticationExpectations $expectations,
 	): void {
-		if (!hash_equals($expectations->challenge->toBinaryString(), $clientData->getChallenge()->toBinaryString())) {
+		if (!hash_equals($expectations->challenge, $clientData->getChallenge())) {
 			throw new VerificationException(VerificationException::CHALLENGE_MISMATCH, 'Challenge does not match');
 		}
 
@@ -451,9 +444,9 @@ final class RelyingParty
 	 */
 	private function verifyRpIdHash(AuthenticatorData $authData, string $rpId): void
 	{
-		$expectedHash = Hash::sha256(Bytes::fromBinaryString($rpId));
+		$expectedHash = Hash::sha256($rpId);
 
-		if (!hash_equals($expectedHash->toBinaryString(), $authData->rpIdHash->toBinaryString())) {
+		if (!hash_equals($expectedHash, $authData->rpIdHash)) {
 			throw new VerificationException(VerificationException::RP_ID_MISMATCH, 'RP ID hash does not match');
 		}
 	}
@@ -485,12 +478,12 @@ final class RelyingParty
 	 * @throws VerificationException
 	 */
 	private function verifyUserHandle(
-		?Bytes $responseUserHandle,
-		?Bytes $expectedUserHandle,
-		Bytes $recordUserHandle,
+		?string $responseUserHandle,
+		?string $expectedUserHandle,
+		string $recordUserHandle,
 	): void {
 		if ($expectedUserHandle !== null) {
-			if (!hash_equals($expectedUserHandle->toBinaryString(), $recordUserHandle->toBinaryString())) {
+			if (!hash_equals($expectedUserHandle, $recordUserHandle)) {
 				throw new VerificationException(
 					VerificationException::USER_HANDLE_MISMATCH,
 					'Credential does not belong to the identified user',
@@ -499,7 +492,7 @@ final class RelyingParty
 
 			if (
 				$responseUserHandle !== null
-				&& !hash_equals($expectedUserHandle->toBinaryString(), $responseUserHandle->toBinaryString())
+				&& !hash_equals($expectedUserHandle, $responseUserHandle)
 			) {
 				throw new VerificationException(
 					VerificationException::USER_HANDLE_MISMATCH,
@@ -517,7 +510,7 @@ final class RelyingParty
 			);
 		}
 
-		if (!hash_equals($responseUserHandle->toBinaryString(), $recordUserHandle->toBinaryString())) {
+		if (!hash_equals($responseUserHandle, $recordUserHandle)) {
 			throw new VerificationException(
 				VerificationException::USER_HANDLE_MISMATCH,
 				'Returned user handle does not match the located credential',
@@ -526,12 +519,12 @@ final class RelyingParty
 	}
 
 	/**
-	 * @param  list<Bytes> $list
+	 * @param  list<string> $list
 	 */
-	private function credentialIdInList(Bytes $needle, array $list): bool
+	private function credentialIdInList(string $needle, array $list): bool
 	{
 		foreach ($list as $candidate) {
-			if (hash_equals($candidate->toBinaryString(), $needle->toBinaryString())) {
+			if (hash_equals($candidate, $needle)) {
 				return true;
 			}
 		}

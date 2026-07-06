@@ -2,13 +2,13 @@
 
 namespace WebAuthnX\Cose;
 
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cbor\CborEncoder;
 use WebAuthnX\Cbor\CborMap;
 use WebAuthnX\Cbor\CborMapException;
 use WebAuthnX\Der\DerEncoder;
 
 use function in_array;
+use function strlen;
 
 /**
  * COSE key of type OKP (Octet Key Pair), i.e. an Edwards-curve key such as Ed25519.
@@ -53,10 +53,13 @@ final class CoseOkpKey extends CoseKey
 		self::CRV_ED448 => [57, '1.3.101.113'],
 	];
 
+	/**
+	 * @param string $x raw public key bytes (fixed length for the curve)
+	 */
 	private function __construct(
 		int $alg,
 		public int $crv,
-		public Bytes $x,
+		public string $x,
 	) {
 		parent::__construct($alg);
 	}
@@ -69,7 +72,7 @@ final class CoseOkpKey extends CoseKey
 	{
 		$alg = $map->getInt(self::LABEL_ALG);
 		$crv = $map->getInt(self::LABEL_CRV);
-		$x = $map->getBytes(self::LABEL_X);
+		$x = $map->getString(self::LABEL_X);
 
 		if (!isset(self::ALGORITHMS[$alg])) {
 			throw new CoseKeyException("Unsupported OKP algorithm {$alg}");
@@ -81,30 +84,30 @@ final class CoseOkpKey extends CoseKey
 
 		[$keyLength] = self::CURVES[$crv];
 
-		if ($x->length !== $keyLength) {
+		if (strlen($x) !== $keyLength) {
 			throw new CoseKeyException("OKP curve {$crv} requires {$keyLength}-byte public key");
 		}
 
 		return new self($alg, $crv, $x);
 	}
 
-	public function toBytes(): Bytes
+	public function toBytes(): string
 	{
-		return Bytes::fromBinaryString(CborEncoder::encodeMap([
+		return CborEncoder::encodeMap([
 			[CborEncoder::encodeInt(self::LABEL_KTY), CborEncoder::encodeInt(self::KTY)],
 			[CborEncoder::encodeInt(self::LABEL_ALG), CborEncoder::encodeInt($this->alg)],
 			[CborEncoder::encodeInt(self::LABEL_CRV), CborEncoder::encodeInt($this->crv)],
-			[CborEncoder::encodeInt(self::LABEL_X), CborEncoder::encodeByteString($this->x->toBinaryString())],
-		]));
+			[CborEncoder::encodeInt(self::LABEL_X), CborEncoder::encodeByteString($this->x)],
+		]);
 	}
 
-	public function toDerSubjectPublicKeyInfo(): Bytes
+	public function toDerSubjectPublicKeyInfo(): string
 	{
 		$spki = DerEncoder::encodeSequence(
 			DerEncoder::encodeSequence(DerEncoder::encodeObjectIdentifier(self::CURVES[$this->crv][1]))
-			. DerEncoder::encodeBitString($this->x->toBinaryString()),
+			. DerEncoder::encodeBitString($this->x),
 		);
 
-		return Bytes::fromBinaryString($spki);
+		return $spki;
 	}
 }

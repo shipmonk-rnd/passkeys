@@ -6,7 +6,6 @@ use PHPUnit\Framework\Constraint\Exception as ExceptionConstraint;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Throwable;
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Binary\BytesReader;
 use WebAuthnX\Cbor\CborMap;
 use WebAuthnX\Json\JsonObject;
@@ -20,9 +19,9 @@ use const JSON_THROW_ON_ERROR;
 abstract class WebAuthnTestCase extends TestCase
 {
 	/**
-	 * Decodes a (possibly space-separated) hex string into {@see Bytes}.
+	 * Decodes a (possibly space-separated) hex string into a binary string.
 	 */
-	protected static function bytesFromHex(string $hex): Bytes
+	protected static function bytesFromHex(string $hex): string
 	{
 		$binary = hex2bin(str_replace(' ', '', $hex));
 
@@ -30,7 +29,7 @@ abstract class WebAuthnTestCase extends TestCase
 			throw new RuntimeException('Invalid hex string in test data');
 		}
 
-		return Bytes::fromBinaryString($binary);
+		return $binary;
 	}
 
 	/**
@@ -42,7 +41,7 @@ abstract class WebAuthnTestCase extends TestCase
 	protected static function cborMap(array $entries): CborMap
 	{
 		return BytesReader::read(
-			Bytes::fromBinaryString(CborTestEncoder::intMap($entries)),
+			CborTestEncoder::intMap($entries),
 			static fn (BytesReader $reader): CborMap => CborMap::fromBytesReader($reader),
 		);
 	}

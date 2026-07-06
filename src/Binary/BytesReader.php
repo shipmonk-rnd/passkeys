@@ -8,29 +8,42 @@ use LogicException;
 use function is_float;
 use function ord;
 use function preg_match;
+use function strlen;
 use function substr;
 use function unpack;
 
 use const INF;
 use const NAN;
 
+/**
+ * Sequential reader over a binary string, reading big-endian integers, floats and raw byte
+ * substrings while tracking the current offset. The whole input must be consumed — leftover
+ * bytes are an error, so a parser cannot silently ignore trailing data.
+ */
 class BytesReader
 {
+	private readonly int $length;
+
+	/**
+	 * @param string $data binary string to read from
+	 */
 	private function __construct(
-		private readonly Bytes $bytes,
+		private readonly string $data,
 		private int $offset,
 	) {
+		$this->length = strlen($data);
 	}
 
 	/**
 	 * @template T
 	 *
+	 * @param  string $bytes binary string to read from
 	 * @param  Closure(self): T $callback
 	 * @param-immediately-invoked-callable $callback
 	 * @return T
 	 * @throws BytesReaderException
 	 */
-	public static function read(Bytes $bytes, Closure $callback): mixed
+	public static function read(string $bytes, Closure $callback): mixed
 	{
 		$reader = new self($bytes, 0);
 		$result = $callback($reader);
@@ -125,30 +138,29 @@ class BytesReader
 	}
 
 	/**
+	 * @return string raw bytes, without any validation
 	 * @throws BytesReaderException
 	 */
-	public function bytes(int $length): Bytes
+	public function bytes(int $length): string
 	{
 		if ($length < 0) {
 			throw new LogicException('Length must be non-negative');
 		}
 
-		if ($this->offset + $length > $this->bytes->length) {
-			throw new BytesReaderException('Unexpected end of data');
-		}
-
-		$bytes = $this->bytes->slice($this->offset, $length);
-		$this->offset += $length;
-
-		return $bytes;
+		return $this->readRaw($length);
 	}
 
 	/**
+	 * @return string validated UTF-8 string
 	 * @throws BytesReaderException
 	 */
 	public function utf8(int $length): string
 	{
-		$binaryString = $this->bytes($length)->toBinaryString();
+		if ($length < 0) {
+			throw new LogicException('Length must be non-negative');
+		}
+
+		$binaryString = $this->readRaw($length);
 
 		if (preg_match('//u', $binaryString) !== 1) {
 			throw new BytesReaderException('Invalid UTF-8 string');
@@ -162,11 +174,11 @@ class BytesReader
 	 */
 	private function readRaw(int $length): string
 	{
-		if ($this->offset + $length > $this->bytes->length) {
+		if ($this->offset + $length > $this->length) {
 			throw new BytesReaderException('Unexpected end of data');
 		}
 
-		$raw = substr($this->bytes->data, $this->bytes->offset + $this->offset, $length);
+		$raw = substr($this->data, $this->offset, $length);
 		$this->offset += $length;
 
 		return $raw;
@@ -191,7 +203,7 @@ class BytesReader
 	 */
 	private function end(): void
 	{
-		if ($this->offset !== $this->bytes->length) {
+		if ($this->offset !== $this->length) {
 			throw new BytesReaderException('Unexpected data after end');
 		}
 	}

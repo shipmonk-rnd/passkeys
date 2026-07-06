@@ -4,7 +4,6 @@ namespace WebAuthnX\Options;
 
 use JsonSerializable;
 use WebAuthnX\Base64\Base64;
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Enum\PublicKeyCredentialHints;
 
 use function json_encode;
@@ -35,6 +34,8 @@ readonly class PublicKeyCredentialCreationOptions implements JsonSerializable
 	 * AuthenticationExtensionsClientInputsJSON}), passed through verbatim — binary values must
 	 * already be base64url-encoded strings, e.g. `['credProps' => true]`.
 	 *
+	 * @param  string                                   $challenge raw challenge bytes (e.g. from
+	 *     {@see \random_bytes()}); base64url encoding happens on serialization
 	 * @param  list<PublicKeyCredentialParameters>      $pubKeyCredParams
 	 * @param  list<PublicKeyCredentialDescriptor>|null $excludeCredentials
 	 * @param  list<PublicKeyCredentialHints::*>|null   $hints
@@ -43,7 +44,7 @@ readonly class PublicKeyCredentialCreationOptions implements JsonSerializable
 	public function __construct(
 		public PublicKeyCredentialRpEntity $rp,
 		public PublicKeyCredentialUserEntity $user,
-		public Bytes $challenge,
+		public string $challenge,
 		public array $pubKeyCredParams,
 		public ?int $timeout = self::RECOMMENDED_TIMEOUT,
 		public ?array $excludeCredentials = null,
@@ -61,7 +62,7 @@ readonly class PublicKeyCredentialCreationOptions implements JsonSerializable
 		$data = [
 			'rp' => $this->rp,
 			'user' => $this->user,
-			'challenge' => Base64::urlEncode($this->challenge->toBinaryString()),
+			'challenge' => Base64::urlEncode($this->challenge),
 			'pubKeyCredParams' => $this->pubKeyCredParams,
 		];
 

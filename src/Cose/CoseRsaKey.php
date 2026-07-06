@@ -2,7 +2,6 @@
 
 namespace WebAuthnX\Cose;
 
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cbor\CborEncoder;
 use WebAuthnX\Cbor\CborMap;
 use WebAuthnX\Cbor\CborMapException;
@@ -42,10 +41,14 @@ final class CoseRsaKey extends CoseKey
 	/** Minimum accepted modulus size in bytes (2048 bits; RFC 8230 §6.1). */
 	private const MIN_MODULUS_BYTES = 256;
 
+	/**
+	 * @param string $n modulus as raw big-endian bytes
+	 * @param string $e public exponent as raw big-endian bytes
+	 */
 	private function __construct(
 		int $alg,
-		public Bytes $n,
-		public Bytes $e,
+		public string $n,
+		public string $e,
 	) {
 		parent::__construct($alg);
 	}
@@ -57,14 +60,14 @@ final class CoseRsaKey extends CoseKey
 	public static function fromCborMap(CborMap $map): self
 	{
 		$alg = $map->getInt(self::LABEL_ALG);
-		$n = $map->getBytes(self::LABEL_N);
-		$e = $map->getBytes(self::LABEL_E);
+		$n = $map->getString(self::LABEL_N);
+		$e = $map->getString(self::LABEL_E);
 
 		if (!in_array($alg, self::ALGORITHMS, true)) {
 			throw new CoseKeyException("Unsupported RSA algorithm {$alg}");
 		}
 
-		$modulus = ltrim($n->toBinaryString(), "\x00");
+		$modulus = ltrim($n, "\x00");
 
 		if (strlen($modulus) < self::MIN_MODULUS_BYTES) {
 			throw new CoseKeyException('RSA modulus must be at least 2048 bits');
@@ -73,7 +76,7 @@ final class CoseRsaKey extends CoseKey
 		// A public exponent of 1 makes verification the identity function, so the
 		// PKCS#1 encoded message can be presented as the signature and "verifies"
 		// without the private key. Even exponents are likewise invalid for RSA.
-		$exponent = ltrim($e->toBinaryString(), "\x00");
+		$exponent = ltrim($e, "\x00");
 
 		if ($exponent === '' || $exponent === "\x01" || (ord(substr($exponent, -1)) & 1) === 0) {
 			throw new CoseKeyException('RSA public exponent must be an odd integer greater than 1');
@@ -82,22 +85,22 @@ final class CoseRsaKey extends CoseKey
 		return new self($alg, $n, $e);
 	}
 
-	public function toBytes(): Bytes
+	public function toBytes(): string
 	{
-		return Bytes::fromBinaryString(CborEncoder::encodeMap([
+		return CborEncoder::encodeMap([
 			[CborEncoder::encodeInt(self::LABEL_KTY), CborEncoder::encodeInt(self::KTY)],
 			[CborEncoder::encodeInt(self::LABEL_ALG), CborEncoder::encodeInt($this->alg)],
-			[CborEncoder::encodeInt(self::LABEL_N), CborEncoder::encodeByteString($this->n->toBinaryString())],
-			[CborEncoder::encodeInt(self::LABEL_E), CborEncoder::encodeByteString($this->e->toBinaryString())],
-		]));
+			[CborEncoder::encodeInt(self::LABEL_N), CborEncoder::encodeByteString($this->n)],
+			[CborEncoder::encodeInt(self::LABEL_E), CborEncoder::encodeByteString($this->e)],
+		]);
 	}
 
-	public function toDerSubjectPublicKeyInfo(): Bytes
+	public function toDerSubjectPublicKeyInfo(): string
 	{
 		// RSAPublicKey ::= SEQUENCE { modulus INTEGER, publicExponent INTEGER } (RFC 8017 App. A.1.1).
 		$rsaPublicKey = DerEncoder::encodeSequence(
-			DerEncoder::encodeUnsignedInt($this->n->toBinaryString())
-			. DerEncoder::encodeUnsignedInt($this->e->toBinaryString()),
+			DerEncoder::encodeUnsignedInt($this->n)
+			. DerEncoder::encodeUnsignedInt($this->e),
 		);
 
 		$spki = DerEncoder::encodeSequence(
@@ -108,6 +111,6 @@ final class CoseRsaKey extends CoseKey
 			. DerEncoder::encodeBitString($rsaPublicKey),
 		);
 
-		return Bytes::fromBinaryString($spki);
+		return $spki;
 	}
 }

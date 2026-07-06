@@ -3,7 +3,6 @@
 namespace WebAuthnX\Credential;
 
 use WebAuthnX\Base64\InvalidBase64Exception;
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Json\JsonObject;
 use WebAuthnX\Json\JsonObjectException;
 
@@ -15,9 +14,12 @@ use WebAuthnX\Json\JsonObjectException;
  */
 readonly class CollectedClientData
 {
+	/**
+	 * @param string $challenge raw challenge bytes (base64url-decoded from the JSON member)
+	 */
 	private function __construct(
 		private string $type,
-		private Bytes $challenge,
+		private string $challenge,
 		private string $origin,
 		private ?string $topOrigin,
 		private ?bool $crossOrigin,
@@ -30,10 +32,10 @@ readonly class CollectedClientData
 	 *
 	 * @throws MalformedDataException
 	 */
-	public static function fromBytes(Bytes $clientDataJSON): self
+	public static function fromBytes(string $clientDataJSON): self
 	{
 		try {
-			$object = JsonObject::fromBytes($clientDataJSON);
+			$object = JsonObject::fromString($clientDataJSON);
 
 			return new self(
 				$object->getString('type'),
@@ -53,7 +55,10 @@ readonly class CollectedClientData
 		return $this->type;
 	}
 
-	public function getChallenge(): Bytes
+	/**
+	 * @return string raw challenge bytes (not base64url-encoded)
+	 */
+	public function getChallenge(): string
 	{
 		return $this->challenge;
 	}

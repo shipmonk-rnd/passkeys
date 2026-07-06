@@ -3,7 +3,6 @@
 namespace WebAuthnXTests\Crypto;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 use WebAuthnX\Cose\CoseKey;
 use WebAuthnX\Cose\CoseOkpKey;
@@ -26,7 +25,7 @@ class SignatureVerifierTest extends CryptoTestCase
 		$signature = self::sign($privateKey, self::MESSAGE, $alg);
 
 		self::assertTrue(
-			(new SignatureVerifier())->verify($coseKey, self::bytes(self::MESSAGE), $signature),
+			(new SignatureVerifier())->verify($coseKey, self::MESSAGE, $signature),
 		);
 	}
 
@@ -37,7 +36,7 @@ class SignatureVerifierTest extends CryptoTestCase
 		$signature = self::sign($privateKey, self::MESSAGE, $alg);
 
 		self::assertFalse(
-			(new SignatureVerifier())->verify($coseKey, self::bytes(self::MESSAGE . '!'), $signature),
+			(new SignatureVerifier())->verify($coseKey, self::MESSAGE . '!', $signature),
 		);
 	}
 
@@ -49,7 +48,7 @@ class SignatureVerifierTest extends CryptoTestCase
 		$signature = self::sign($privateKey, self::MESSAGE, $alg);
 
 		self::assertFalse(
-			(new SignatureVerifier())->verify($otherCoseKey, self::bytes(self::MESSAGE), $signature),
+			(new SignatureVerifier())->verify($otherCoseKey, self::MESSAGE, $signature),
 		);
 	}
 
@@ -76,21 +75,21 @@ class SignatureVerifierTest extends CryptoTestCase
 				parent::__construct($alg);
 			}
 
-			public function toDerSubjectPublicKeyInfo(): Bytes
+			public function toDerSubjectPublicKeyInfo(): string
 			{
-				return Bytes::fromBinaryString('');
+				return '';
 			}
 
-			public function toBytes(): Bytes
+			public function toBytes(): string
 			{
-				return Bytes::fromBinaryString('');
+				return '';
 			}
 		};
 
 		self::assertException(
 			SignatureVerificationException::class,
 			'Unsupported algorithm 9999',
-			static fn () => (new SignatureVerifier())->verify($key, self::bytes('x'), self::bytes('y')),
+			static fn () => (new SignatureVerifier())->verify($key, 'x', 'y'),
 		);
 	}
 
@@ -102,21 +101,21 @@ class SignatureVerifierTest extends CryptoTestCase
 				parent::__construct($alg);
 			}
 
-			public function toDerSubjectPublicKeyInfo(): Bytes
+			public function toDerSubjectPublicKeyInfo(): string
 			{
-				return Bytes::fromBinaryString("\x00\x01\x02");
+				return "\x00\x01\x02";
 			}
 
-			public function toBytes(): Bytes
+			public function toBytes(): string
 			{
-				return Bytes::fromBinaryString("\x00\x01\x02");
+				return "\x00\x01\x02";
 			}
 		};
 
 		self::assertException(
 			SignatureVerificationException::class,
 			'Failed to load public key%A',
-			static fn () => (new SignatureVerifier())->verify($key, self::bytes('x'), self::bytes('y')),
+			static fn () => (new SignatureVerifier())->verify($key, 'x', 'y'),
 		);
 	}
 
@@ -129,10 +128,10 @@ class SignatureVerifierTest extends CryptoTestCase
 	{
 		[$coseKey, $privateKey] = self::generateCoseKeyPair($alg, $okpCrv);
 		$signature = self::sign($privateKey, self::MESSAGE, $alg);
-		$malformed = Bytes::fromBinaryString(substr($signature->toBinaryString(), 0, 5));
+		$malformed = substr($signature, 0, 5);
 
 		self::assertFalse(
-			(new SignatureVerifier())->verify($coseKey, self::bytes(self::MESSAGE), $malformed),
+			(new SignatureVerifier())->verify($coseKey, self::MESSAGE, $malformed),
 		);
 	}
 
@@ -152,14 +151,14 @@ class SignatureVerifierTest extends CryptoTestCase
 			1 => CoseOkpKey::KTY,
 			3 => CoseAlgorithmIdentifier::EdDSA,
 			-1 => CoseOkpKey::CRV_ED25519,
-			-2 => $publicKey->toBinaryString(),
+			-2 => $publicKey,
 		]));
 
 		$verifier = new SignatureVerifier();
-		self::assertTrue($verifier->verify($coseKey, self::bytes(''), $signature));
+		self::assertTrue($verifier->verify($coseKey, '', $signature));
 
-		$tampered = $signature->toBinaryString();
+		$tampered = $signature;
 		$tampered[0] = chr(ord($tampered[0]) ^ 0x01);
-		self::assertFalse($verifier->verify($coseKey, self::bytes(''), Bytes::fromBinaryString($tampered)));
+		self::assertFalse($verifier->verify($coseKey, '', $tampered));
 	}
 }

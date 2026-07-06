@@ -4,7 +4,6 @@ namespace WebAuthnX\Options;
 
 use JsonSerializable;
 use WebAuthnX\Base64\Base64;
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Enum\AuthenticatorTransport;
 use WebAuthnX\Enum\PublicKeyCredentialType;
 
@@ -16,11 +15,13 @@ readonly class PublicKeyCredentialDescriptor implements JsonSerializable
 {
 	/**
 	 * @param  PublicKeyCredentialType::*           $type
+	 * @param  string                               $id raw credential id bytes; base64url encoding
+	 *     happens on serialization
 	 * @param  list<AuthenticatorTransport::*>|null $transports
 	 */
 	public function __construct(
 		public string $type,
-		public Bytes $id,
+		public string $id,
 		public ?array $transports = null,
 	) {
 	}
@@ -32,7 +33,7 @@ readonly class PublicKeyCredentialDescriptor implements JsonSerializable
 	{
 		$data = [
 			'type' => $this->type,
-			'id' => Base64::urlEncode($this->id->toBinaryString()),
+			'id' => Base64::urlEncode($this->id),
 		];
 
 		if ($this->transports !== null) {

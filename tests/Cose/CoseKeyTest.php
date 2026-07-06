@@ -3,7 +3,6 @@
 namespace WebAuthnXTests\Cose;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 use WebAuthnX\Cose\CoseEc2Key;
 use WebAuthnX\Cose\CoseKey;
@@ -34,7 +33,7 @@ class CoseKeyTest extends CryptoTestCase
 		self::assertInstanceOf($expectedClass, $coseKey);
 		self::assertSame(
 			bin2hex(self::pemToDer(self::stringField(self::keyDetails($privateKey), 'key'))),
-			bin2hex($coseKey->toDerSubjectPublicKeyInfo()->toBinaryString()),
+			bin2hex($coseKey->toDerSubjectPublicKeyInfo()),
 		);
 	}
 
@@ -65,12 +64,12 @@ class CoseKeyTest extends CryptoTestCase
 			1 => CoseOkpKey::KTY,
 			3 => CoseAlgorithmIdentifier::EdDSA,
 			-1 => CoseOkpKey::CRV_ED25519,
-			-2 => $publicKey->toBinaryString(),
+			-2 => $publicKey,
 		]));
 
 		self::assertSame(
 			'302a300506032b6570032100d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a',
-			bin2hex($coseKey->toDerSubjectPublicKeyInfo()->toBinaryString()),
+			bin2hex($coseKey->toDerSubjectPublicKeyInfo()),
 		);
 	}
 
@@ -93,12 +92,12 @@ class CoseKeyTest extends CryptoTestCase
 
 		self::assertInstanceOf($expectedClass, $restored);
 		self::assertSame(
-			bin2hex($coseKey->toDerSubjectPublicKeyInfo()->toBinaryString()),
-			bin2hex($restored->toDerSubjectPublicKeyInfo()->toBinaryString()),
+			bin2hex($coseKey->toDerSubjectPublicKeyInfo()),
+			bin2hex($restored->toDerSubjectPublicKeyInfo()),
 		);
 		self::assertSame(
-			bin2hex($coseKey->toBytes()->toBinaryString()),
-			bin2hex($restored->toBytes()->toBinaryString()),
+			bin2hex($coseKey->toBytes()),
+			bin2hex($restored->toBytes()),
 		);
 	}
 
@@ -114,7 +113,7 @@ class CoseKeyTest extends CryptoTestCase
 	public function testFromBytesRejectsTrailingBytes(): void
 	{
 		[$coseKey] = self::generateCoseKeyPair(CoseAlgorithmIdentifier::ES256);
-		$withTrailingByte = Bytes::fromBinaryString($coseKey->toBytes()->toBinaryString() . "\x00");
+		$withTrailingByte = $coseKey->toBytes() . "\x00";
 
 		self::assertException(
 			CoseKeyException::class,

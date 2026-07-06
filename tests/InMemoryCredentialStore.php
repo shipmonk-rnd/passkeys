@@ -2,7 +2,6 @@
 
 namespace WebAuthnXTests;
 
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Ceremony\CredentialRecord;
 use WebAuthnX\Ceremony\CredentialStore;
 
@@ -17,11 +16,11 @@ final class InMemoryCredentialStore implements CredentialStore
 
 	public function add(CredentialRecord $record): void
 	{
-		$this->records[$record->credentialId->toBinaryString()] = $record;
+		$this->records[$record->credentialId] = $record;
 	}
 
-	public function findByCredentialId(Bytes $credentialId): ?CredentialRecord
+	public function findByCredentialId(string $credentialId): ?CredentialRecord
 	{
-		return $this->records[$credentialId->toBinaryString()] ?? null;
+		return $this->records[$credentialId] ?? null;
 	}
 }

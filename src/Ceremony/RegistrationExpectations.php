@@ -3,7 +3,8 @@
 namespace WebAuthnX\Ceremony;
 
 use InvalidArgumentException;
-use WebAuthnX\Binary\Bytes;
+
+use function strlen;
 
 /**
  * The relying-party state a registration ceremony is verified against (WebAuthn §7.1): the
@@ -18,6 +19,7 @@ final readonly class RegistrationExpectations
 	private const MIN_CHALLENGE_LENGTH = 16;
 
 	/**
+	 * @param  string             $challenge         the raw challenge bytes issued for this ceremony (not base64url-encoded)
 	 * @param  string             $rpId              the RP ID whose SHA-256 must equal `authData.rpIdHash`
 	 * @param  list<string>       $origins           exact, expected client-data origins (scheme+host+port)
 	 * @param  list<int>          $allowedAlgorithms COSE algorithm identifiers offered in `pubKeyCredParams`
@@ -30,7 +32,7 @@ final readonly class RegistrationExpectations
 	 * @throws InvalidArgumentException if the challenge is shorter than 16 bytes
 	 */
 	public function __construct(
-		public Bytes $challenge,
+		public string $challenge,
 		public string $rpId,
 		public array $origins,
 		public array $allowedAlgorithms,
@@ -39,7 +41,7 @@ final readonly class RegistrationExpectations
 		public array $allowedTopOrigins = [],
 		public bool $conditionalMediation = false,
 	) {
-		if ($challenge->length < self::MIN_CHALLENGE_LENGTH) {
+		if (strlen($challenge) < self::MIN_CHALLENGE_LENGTH) {
 			throw new InvalidArgumentException('Challenge must be at least ' . self::MIN_CHALLENGE_LENGTH . ' bytes');
 		}
 	}

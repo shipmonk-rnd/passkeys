@@ -2,7 +2,6 @@
 
 namespace WebAuthnXDemo;
 
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Ceremony\CredentialRecord;
 use WebAuthnX\Ceremony\CredentialStore;
 use WebAuthnX\Cose\CoseKey;
@@ -39,10 +38,10 @@ final class PasskeyStore implements CredentialStore
 
 	// -- users table --------------------------------------------------------------------------
 
-	public function insertUser(Bytes $handle, string $email): void
+	public function insertUser(string $handle, string $email): void
 	{
 		// INSERT INTO users (user_handle, email) VALUES (?, ?)
-		$userHandle = base64_encode($handle->toBinaryString());
+		$userHandle = base64_encode($handle);
 		$_SESSION['users'][$userHandle] = ['user_handle' => $userHandle, 'email' => $email];
 	}
 
@@ -64,18 +63,18 @@ final class PasskeyStore implements CredentialStore
 	/**
 	 * @return array{user_handle: string, email: string}|null
 	 */
-	public function findUserByHandle(Bytes $handle): ?array
+	public function findUserByHandle(string $handle): ?array
 	{
 		// SELECT * FROM users WHERE user_handle = ?
-		return $_SESSION['users'][base64_encode($handle->toBinaryString())] ?? null;
+		return $_SESSION['users'][base64_encode($handle)] ?? null;
 	}
 
 	// -- credentials table --------------------------------------------------------------------
 
-	public function findByCredentialId(Bytes $credentialId): ?CredentialRecord
+	public function findByCredentialId(string $credentialId): ?CredentialRecord
 	{
 		// SELECT * FROM credentials WHERE credential_id = ?
-		$row = $_SESSION['credentials'][base64_encode($credentialId->toBinaryString())] ?? null;
+		$row = $_SESSION['credentials'][base64_encode($credentialId)] ?? null;
 
 		if ($row === null) {
 			return null;
@@ -83,9 +82,9 @@ final class PasskeyStore implements CredentialStore
 
 		return new CredentialRecord(
 			credentialId: $credentialId,
-			publicKey: CoseKey::fromBytes(Bytes::fromBinaryString(base64_decode($row['public_key']))),
+			publicKey: CoseKey::fromBytes(base64_decode($row['public_key'])),
 			signCount: $row['sign_count'],
-			userHandle: Bytes::fromBinaryString(base64_decode($row['user_handle'])),
+			userHandle: base64_decode($row['user_handle']),
 			uvInitialized: $row['uv_initialized'],
 			backupEligible: $row['backup_eligible'],
 			backupState: $row['backup_state'],
@@ -96,12 +95,12 @@ final class PasskeyStore implements CredentialStore
 	public function insertCredential(CredentialRecord $record, ?string $authenticatorAttachment): void
 	{
 		// INSERT INTO credentials (...) VALUES (...)
-		$credentialId = base64_encode($record->credentialId->toBinaryString());
+		$credentialId = base64_encode($record->credentialId);
 
 		$_SESSION['credentials'][$credentialId] = [
 			'credential_id' => $credentialId,
-			'user_handle' => base64_encode($record->userHandle->toBinaryString()),
-			'public_key' => base64_encode($record->publicKey->toBytes()->toBinaryString()),
+			'user_handle' => base64_encode($record->userHandle),
+			'public_key' => base64_encode($record->publicKey->toBytes()),
 			'sign_count' => $record->signCount,
 			'uv_initialized' => $record->uvInitialized,
 			'backup_eligible' => $record->backupEligible,
@@ -112,10 +111,10 @@ final class PasskeyStore implements CredentialStore
 		];
 	}
 
-	public function updateSignCount(Bytes $credentialId, int $newSignCount): void
+	public function updateSignCount(string $credentialId, int $newSignCount): void
 	{
 		// UPDATE credentials SET sign_count = ? WHERE credential_id = ?
-		$key = base64_encode($credentialId->toBinaryString());
+		$key = base64_encode($credentialId);
 
 		if (array_key_exists($key, $_SESSION['credentials'])) {
 			$_SESSION['credentials'][$key]['sign_count'] = $newSignCount;
@@ -128,10 +127,10 @@ final class PasskeyStore implements CredentialStore
 	 *
 	 * @return list<array<string, mixed>>
 	 */
-	public function credentialsForUser(Bytes $handle): array
+	public function credentialsForUser(string $handle): array
 	{
 		// SELECT * FROM credentials WHERE user_handle = ?
-		$userHandle = base64_encode($handle->toBinaryString());
+		$userHandle = base64_encode($handle);
 		$rows = [];
 
 		foreach ($_SESSION['credentials'] as $row) {

@@ -3,7 +3,6 @@
 namespace WebAuthnX\Credential;
 
 use WebAuthnX\Base64\InvalidBase64Exception;
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Json\JsonObject;
 use WebAuthnX\Json\JsonObjectException;
 
@@ -19,11 +18,12 @@ use WebAuthnX\Json\JsonObjectException;
 final readonly class PublicKeyCredential
 {
 	/**
-	 * @param  T $response
+	 * @param  T      $response
+	 * @param  string $rawId raw credential id bytes ({@see $id} is its base64url form)
 	 */
 	private function __construct(
 		public string $id,
-		public Bytes $rawId,
+		public string $rawId,
 		public string $type,
 		public AuthenticatorResponse $response,
 		public ?string $authenticatorAttachment,

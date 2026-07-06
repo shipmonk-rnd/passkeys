@@ -4,7 +4,6 @@ namespace WebAuthnXTests;
 
 use WebAuthnX\Enum\AuthenticatorTransport;
 use WebAuthnX\Base64\Base64;
-use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Options\PublicKeyCredentialDescriptor;
 use WebAuthnX\Enum\PublicKeyCredentialHints;
 use WebAuthnX\Options\PublicKeyCredentialRequestOptions;
@@ -20,13 +19,13 @@ class PublicKeyCredentialRequestOptionsTest extends WebAuthnTestCase
 	public function testSerializesAllMembers(): void
 	{
 		$options = new PublicKeyCredentialRequestOptions(
-			challenge: Bytes::fromBinaryString('challenge-bytes'),
+			challenge: 'challenge-bytes',
 			timeout: 60000,
 			rpId: 'example.com',
 			allowCredentials: [
 				new PublicKeyCredentialDescriptor(
 					PublicKeyCredentialType::PUBLIC_KEY,
-					Bytes::fromBinaryString('cred-1'),
+					'cred-1',
 					[AuthenticatorTransport::USB],
 				),
 			],
@@ -58,7 +57,7 @@ class PublicKeyCredentialRequestOptionsTest extends WebAuthnTestCase
 	public function testSerializesOnlyRequiredMembersWithRecommendedTimeoutDefault(): void
 	{
 		$options = new PublicKeyCredentialRequestOptions(
-			challenge: Bytes::fromBinaryString('challenge-bytes'),
+			challenge: 'challenge-bytes',
 		);
 
 		self::assertSame(
@@ -73,7 +72,7 @@ class PublicKeyCredentialRequestOptionsTest extends WebAuthnTestCase
 	public function testNullTimeoutIsOmitted(): void
 	{
 		$options = new PublicKeyCredentialRequestOptions(
-			challenge: Bytes::fromBinaryString('challenge-bytes'),
+			challenge: 'challenge-bytes',
 			timeout: null,
 		);
 
@@ -86,7 +85,7 @@ class PublicKeyCredentialRequestOptionsTest extends WebAuthnTestCase
 	public function testEmptyExtensionsSerializeAsJsonObject(): void
 	{
 		$options = new PublicKeyCredentialRequestOptions(
-			challenge: Bytes::fromBinaryString('challenge-bytes'),
+			challenge: 'challenge-bytes',
 			extensions: [],
 		);
 
