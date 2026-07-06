@@ -22,7 +22,8 @@ use const OPENSSL_ALGO_SHA512;
  *
  * For ECDSA algorithms the signature is expected in the ASN.1 DER form
  * (Ecdsa-Sig-Value) produced by authenticators; for RSASSA-PKCS1-v1_5 it is the
- * raw signature; for EdDSA it is the raw 64-byte Ed25519 signature. All are what
+ * raw signature; for EdDSA it is the raw Ed25519 (64-byte) or Ed448 (114-byte)
+ * signature. All are what
  * {@see \openssl_verify()} consumes directly (EdDSA requires OpenSSL 3.0 / PHP 8.4).
  *
  * @see https://www.rfc-editor.org/rfc/rfc9053.html signature algorithms
@@ -40,6 +41,8 @@ final class SignatureVerifier
 		CoseAlgorithmIdentifier::ES512 => OPENSSL_ALGO_SHA512,
 		CoseAlgorithmIdentifier::RS256 => OPENSSL_ALGO_SHA256,
 		CoseAlgorithmIdentifier::EdDSA => self::OPENSSL_ALGO_EDDSA,
+		CoseAlgorithmIdentifier::Ed25519 => self::OPENSSL_ALGO_EDDSA,
+		CoseAlgorithmIdentifier::Ed448 => self::OPENSSL_ALGO_EDDSA,
 	];
 
 	/**

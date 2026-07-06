@@ -8,6 +8,8 @@ use WebAuthnX\Cbor\CborMap;
 use WebAuthnX\Cbor\CborMapException;
 use WebAuthnX\Der\DerEncoder;
 
+use function in_array;
+
 /**
  * COSE key of type OKP (Octet Key Pair), i.e. an Edwards-curve key such as Ed25519.
  *
@@ -23,20 +25,32 @@ final class CoseOkpKey extends CoseKey
 	/** COSE curve identifier: Ed25519. */
 	public const CRV_ED25519 = 6;
 
+	/** COSE curve identifier: Ed448. */
+	public const CRV_ED448 = 7;
+
 	/** OKP key label: curve (crv). */
 	private const LABEL_CRV = -1;
 
 	/** OKP key label: public key (x). */
 	private const LABEL_X = -2;
 
-	/** OID for id-Ed25519 (RFC 8410 §3); note it carries no algorithm parameters. */
-	private const OID_ED25519 = '1.3.101.112';
-
 	/**
-	 * Maps each supported algorithm to its curve and public-key length in bytes.
+	 * Maps each supported algorithm to the curves it allows: the generic EdDSA identifier
+	 * spans both Edwards curves, while the fully-specified RFC 9864 identifiers pin one.
 	 */
 	private const ALGORITHMS = [
-		CoseAlgorithmIdentifier::EdDSA => [self::CRV_ED25519, 32],
+		CoseAlgorithmIdentifier::EdDSA => [self::CRV_ED25519, self::CRV_ED448],
+		CoseAlgorithmIdentifier::Ed25519 => [self::CRV_ED25519],
+		CoseAlgorithmIdentifier::Ed448 => [self::CRV_ED448],
+	];
+
+	/**
+	 * Maps each supported curve to its public-key length in bytes and its id-Ed* OID
+	 * (RFC 8410 §3); note these OIDs carry no algorithm parameters.
+	 */
+	private const CURVES = [
+		self::CRV_ED25519 => [32, '1.3.101.112'],
+		self::CRV_ED448 => [57, '1.3.101.113'],
 	];
 
 	private function __construct(
@@ -61,11 +75,11 @@ final class CoseOkpKey extends CoseKey
 			throw new CoseKeyException("Unsupported OKP algorithm {$alg}");
 		}
 
-		[$expectedCrv, $keyLength] = self::ALGORITHMS[$alg];
-
-		if ($crv !== $expectedCrv) {
-			throw new CoseKeyException("OKP algorithm {$alg} requires curve {$expectedCrv}, got {$crv}");
+		if (!in_array($crv, self::ALGORITHMS[$alg], true)) {
+			throw new CoseKeyException("OKP algorithm {$alg} does not allow curve {$crv}");
 		}
+
+		[$keyLength] = self::CURVES[$crv];
 
 		if ($x->length !== $keyLength) {
 			throw new CoseKeyException("OKP curve {$crv} requires {$keyLength}-byte public key");
@@ -87,7 +101,7 @@ final class CoseOkpKey extends CoseKey
 	public function toDerSubjectPublicKeyInfo(): Bytes
 	{
 		$spki = DerEncoder::encodeSequence(
-			DerEncoder::encodeSequence(DerEncoder::encodeObjectIdentifier(self::OID_ED25519))
+			DerEncoder::encodeSequence(DerEncoder::encodeObjectIdentifier(self::CURVES[$this->crv][1]))
 			. DerEncoder::encodeBitString($this->x->toBinaryString()),
 		);
 

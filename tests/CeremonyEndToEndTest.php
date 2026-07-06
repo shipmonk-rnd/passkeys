@@ -8,6 +8,7 @@ use WebAuthnX\Credential\AuthenticatorData;
 use WebAuthnX\Base64\Base64;
 use WebAuthnX\Binary\Bytes;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
+use WebAuthnX\Cose\CoseOkpKey;
 use WebAuthnX\Crypto\Hash;
 use WebAuthnX\Crypto\SignatureVerifier;
 use WebAuthnX\Json\JsonObject;
@@ -41,9 +42,9 @@ class CeremonyEndToEndTest extends CryptoTestCase
 	private const CREDENTIAL_ID = "\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a";
 
 	#[DataProvider('provideAlgorithms')]
-	public function testRegistrationThenAuthentication(int $alg): void
+	public function testRegistrationThenAuthentication(int $alg, int $okpCrv = CoseOkpKey::CRV_ED25519): void
 	{
-		[$privateKey, $coseEntries] = self::generateKeyAndCoseEntries($alg);
+		[$privateKey, $coseEntries] = self::generateKeyAndCoseEntries($alg, $okpCrv);
 		$rpIdHash = hash('sha256', self::RP_ID, binary: true);
 
 		// --- Registration ceremony: parse the attestation and recover the credential public key. ---
@@ -106,7 +107,7 @@ class CeremonyEndToEndTest extends CryptoTestCase
 	}
 
 	/**
-	 * @return iterable<string, array{int}>
+	 * @return iterable<string, array{int, 1?: int}>
 	 */
 	public static function provideAlgorithms(): iterable
 	{
@@ -114,7 +115,10 @@ class CeremonyEndToEndTest extends CryptoTestCase
 		yield 'ES384' => [CoseAlgorithmIdentifier::ES384];
 		yield 'ES512' => [CoseAlgorithmIdentifier::ES512];
 		yield 'RS256' => [CoseAlgorithmIdentifier::RS256];
-		yield 'EdDSA' => [CoseAlgorithmIdentifier::EdDSA];
+		yield 'EdDSA / Ed25519' => [CoseAlgorithmIdentifier::EdDSA, CoseOkpKey::CRV_ED25519];
+		yield 'EdDSA / Ed448' => [CoseAlgorithmIdentifier::EdDSA, CoseOkpKey::CRV_ED448];
+		yield 'Ed25519' => [CoseAlgorithmIdentifier::Ed25519];
+		yield 'Ed448' => [CoseAlgorithmIdentifier::Ed448];
 	}
 
 	/**

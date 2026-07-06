@@ -16,7 +16,7 @@ for PHP with **no third-party runtime dependencies** — only PHP itself and the
 
 ## Requirements
 
-- PHP **8.4+** (Ed25519 support in `ext-openssl` requires OpenSSL 3.0 / PHP 8.4)
+- PHP **8.4+** (Ed25519/Ed448 support in `ext-openssl` requires OpenSSL 3.0 / PHP 8.4)
 - `ext-openssl`
 
 ## Installation
@@ -35,7 +35,9 @@ Signatures are verified through `ext-openssl` with the COSE algorithm identifier
 | `-35`  | `CoseAlgorithmIdentifier::ES384` | ECDSA w/ SHA-384 (P-384) |
 | `-36`  | `CoseAlgorithmIdentifier::ES512` | ECDSA w/ SHA-512 (P-521) |
 | `-257` | `CoseAlgorithmIdentifier::RS256` | RSASSA-PKCS1-v1_5 w/ SHA-256 |
-| `-8`   | `CoseAlgorithmIdentifier::EdDSA` | EdDSA (Ed25519) |
+| `-8`   | `CoseAlgorithmIdentifier::EdDSA` | EdDSA (Ed25519 or Ed448) |
+| `-19`  | `CoseAlgorithmIdentifier::Ed25519` | EdDSA w/ Ed25519, fully specified (RFC 9864) |
+| `-53`  | `CoseAlgorithmIdentifier::Ed448` | EdDSA w/ Ed448, fully specified (RFC 9864) |
 
 ## Usage
 

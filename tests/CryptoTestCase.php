@@ -27,6 +27,7 @@ use const OPENSSL_ALGO_SHA384;
 use const OPENSSL_ALGO_SHA512;
 use const OPENSSL_KEYTYPE_EC;
 use const OPENSSL_KEYTYPE_ED25519;
+use const OPENSSL_KEYTYPE_ED448;
 use const OPENSSL_KEYTYPE_RSA;
 use const STR_PAD_LEFT;
 
@@ -42,9 +43,9 @@ abstract class CryptoTestCase extends WebAuthnTestCase
 	 *
 	 * @return array{CoseKey, OpenSSLAsymmetricKey}
 	 */
-	protected static function generateCoseKeyPair(int $alg): array
+	protected static function generateCoseKeyPair(int $alg, int $okpCrv = CoseOkpKey::CRV_ED25519): array
 	{
-		[$privateKey, $entries] = self::generateKeyAndCoseEntries($alg);
+		[$privateKey, $entries] = self::generateKeyAndCoseEntries($alg, $okpCrv);
 
 		return [CoseKey::fromCborMap(self::cborMap($entries)), $privateKey];
 	}
@@ -52,11 +53,12 @@ abstract class CryptoTestCase extends WebAuthnTestCase
 	/**
 	 * Generates a fresh key pair and returns the OpenSSL private key together with the
 	 * integer-keyed COSE map entries describing its public key — the same shape an
-	 * authenticator embeds in attested credential data.
+	 * authenticator embeds in attested credential data. EdDSA is the only COSE algorithm
+	 * spanning two curves, so those need the extra `$okpCrv` discriminator.
 	 *
 	 * @return array{OpenSSLAsymmetricKey, array<int, int|string>}
 	 */
-	protected static function generateKeyAndCoseEntries(int $alg): array
+	protected static function generateKeyAndCoseEntries(int $alg, int $okpCrv = CoseOkpKey::CRV_ED25519): array
 	{
 		if ($alg === CoseAlgorithmIdentifier::RS256) {
 			$privateKey = self::generateKey(['private_key_type' => OPENSSL_KEYTYPE_RSA, 'private_key_bits' => 2048]);
@@ -70,15 +72,28 @@ abstract class CryptoTestCase extends WebAuthnTestCase
 			]];
 		}
 
-		if ($alg === CoseAlgorithmIdentifier::EdDSA) {
-			$privateKey = self::generateKey(['private_key_type' => OPENSSL_KEYTYPE_ED25519]);
+		$crv = match ($alg) {
+			CoseAlgorithmIdentifier::EdDSA => $okpCrv,
+			CoseAlgorithmIdentifier::Ed25519 => CoseOkpKey::CRV_ED25519,
+			CoseAlgorithmIdentifier::Ed448 => CoseOkpKey::CRV_ED448,
+			default => null,
+		};
+
+		if ($crv !== null) {
+			[$keyType, $detailsField] = match ($crv) {
+				CoseOkpKey::CRV_ED25519 => [OPENSSL_KEYTYPE_ED25519, 'ed25519'],
+				CoseOkpKey::CRV_ED448 => [OPENSSL_KEYTYPE_ED448, 'ed448'],
+				default => self::fail("Unsupported test OKP curve {$crv}"),
+			};
+
+			$privateKey = self::generateKey(['private_key_type' => $keyType]);
 			$details = self::keyDetails($privateKey);
 
 			return [$privateKey, [
 				1 => CoseOkpKey::KTY,
 				3 => $alg,
-				-1 => CoseOkpKey::CRV_ED25519,
-				-2 => self::stringField($details, 'ed25519', 'pub_key'),
+				-1 => $crv,
+				-2 => self::stringField($details, $detailsField, 'pub_key'),
 			]];
 		}
 
@@ -116,7 +131,8 @@ abstract class CryptoTestCase extends WebAuthnTestCase
 			CoseAlgorithmIdentifier::ES256, CoseAlgorithmIdentifier::RS256 => OPENSSL_ALGO_SHA256,
 			CoseAlgorithmIdentifier::ES384 => OPENSSL_ALGO_SHA384,
 			CoseAlgorithmIdentifier::ES512 => OPENSSL_ALGO_SHA512,
-			CoseAlgorithmIdentifier::EdDSA => 0, // EdDSA is a pure signature scheme (no prehash)
+			// EdDSA is a pure signature scheme (no prehash)
+			CoseAlgorithmIdentifier::EdDSA, CoseAlgorithmIdentifier::Ed25519, CoseAlgorithmIdentifier::Ed448 => 0,
 			default => self::fail("Unsupported test algorithm {$alg}"),
 		};
 	}
