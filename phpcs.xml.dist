@@ -19,8 +19,7 @@
         <exclude name="Squiz.Functions.GlobalFunction"/>
     </rule>
 
-    <!-- align @param annotations to columns; severity must be restored explicitly
-         because ShipMonkCodingStandard excludes these codes -->
+    <!-- align @param annotations to columns; severity must be restored explicitly because ShipMonkCodingStandard excludes these codes -->
     <rule ref="Squiz.Commenting.FunctionComment.SpacingAfterParamType">
         <severity>5</severity>
     </rule>

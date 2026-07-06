@@ -38,7 +38,11 @@ readonly class PublicKeyCredentialUserEntity extends PublicKeyCredentialEntity i
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array{
+     *     id: string,
+     *     name: string,
+     *     displayName: string,
+     * }
      */
     public function jsonSerialize(): array
     {

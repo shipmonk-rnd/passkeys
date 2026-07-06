@@ -3,6 +3,7 @@
 namespace WebAuthnX\Options;
 
 use JsonSerializable;
+use stdClass;
 use WebAuthnX\Base64\Base64;
 use WebAuthnX\Enum\PublicKeyCredentialHint;
 use WebAuthnX\Enum\UserVerificationRequirement;
@@ -28,17 +29,10 @@ readonly class PublicKeyCredentialRequestOptions implements JsonSerializable
     public const int RECOMMENDED_TIMEOUT = 300_000;
 
     /**
-     * `$timeout` defaults to {@see self::RECOMMENDED_TIMEOUT}; pass null to omit it and let the
-     * client apply its own default. `$extensions` are the client extension inputs in their JSON
-     * form ({@link https://w3c.github.io/webauthn/#dictdef-authenticationextensionsclientinputsjson
-     * AuthenticationExtensionsClientInputsJSON}), passed through verbatim — binary values must
-     * already be base64url-encoded strings, e.g. `['appid' => 'https://example.com/appid.json']`.
-     *
-     * @param string                                   $challenge        raw challenge bytes (e.g. from
-     *                                              {@see \random_bytes()}); base64url encoding happens on serialization
+     * @param string                                   $challenge        raw challenge bytes (e.g. from {@see \random_bytes()}); base64url encoding happens on serialization
      * @param list<PublicKeyCredentialDescriptor>|null $allowCredentials
      * @param list<PublicKeyCredentialHint>|null       $hints
-     * @param array<string, mixed>|null                $extensions
+     * @param array<string, mixed>|null                $extensions       client extension inputs in their JSON form ({@link https://w3c.github.io/webauthn/#dictdef-authenticationextensionsclientinputsjson AuthenticationExtensionsClientInputsJSON})
      */
     public function __construct(
         public string $challenge,
@@ -53,7 +47,15 @@ readonly class PublicKeyCredentialRequestOptions implements JsonSerializable
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array{
+     *     challenge: string,
+     *     timeout?: int,
+     *     rpId?: string,
+     *     allowCredentials?: list<PublicKeyCredentialDescriptor>,
+     *     userVerification?: UserVerificationRequirement,
+     *     hints?: list<PublicKeyCredentialHint>,
+     *     extensions?: stdClass,
+     * }
      */
     public function jsonSerialize(): array
     {
@@ -82,8 +84,7 @@ readonly class PublicKeyCredentialRequestOptions implements JsonSerializable
         }
 
         if ($this->extensions !== null) {
-            // Cast so an empty map serializes as {} (a JSON object), never [].
-            $data['extensions'] = (object) $this->extensions;
+            $data['extensions'] = (object) $this->extensions; // cast so an empty map serializes as {} (a JSON object), never []
         }
 
         return $data;
@@ -91,8 +92,6 @@ readonly class PublicKeyCredentialRequestOptions implements JsonSerializable
 
     public function toJson(): string
     {
-        // Default escaping (slashes escaped to "<\/…") is kept deliberately: it neutralises a
-        // "</script>" breakout if a relying party inlines this JSON into an HTML <script> block.
         return json_encode($this, JSON_THROW_ON_ERROR);
     }
 

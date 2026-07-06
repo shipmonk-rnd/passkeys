@@ -24,7 +24,12 @@ readonly class AuthenticatorSelectionCriteria implements JsonSerializable
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array{
+     *     authenticatorAttachment?: AuthenticatorAttachment,
+     *     residentKey?: ResidentKeyRequirement,
+     *     requireResidentKey?: bool,
+     *     userVerification?: UserVerificationRequirement,
+     * }
      */
     public function jsonSerialize(): array
     {

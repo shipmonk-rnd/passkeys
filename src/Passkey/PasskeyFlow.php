@@ -67,13 +67,9 @@ class PasskeyFlow
 {
 
     /**
-     * @param string       $rpId    the {@link https://w3c.github.io/webauthn/#rp-id RP ID} — the
-     *              domain your passkeys are scoped to, e.g. `example.com` (it must be a registrable-suffix
-     *              match of your origins)
-     * @param string       $rpName  the human-readable relying party name, e.g. `Example Corp` —
-     *            shown by authenticator UIs when a passkey is created
-     * @param list<string> $origins the exact origins your login pages are served from,
-     *     e.g. `['https://example.com']`
+     * @param string       $rpId    the {@link https://w3c.github.io/webauthn/#rp-id RP ID} — the domain your passkeys are scoped to, e.g. `example.com` (it must be a registrable-suffix match of your origins)
+     * @param string       $rpName  the human-readable relying party name, e.g. `Example Corp` — shown by authenticator UIs when a passkey is created
+     * @param list<string> $origins the exact origins your login pages are served from, e.g. `['https://example.com']`
      */
     public function __construct(
         private readonly string $rpId,

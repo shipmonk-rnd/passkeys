@@ -19,8 +19,7 @@ final readonly class AuthenticatorAttestationResponse extends AuthenticatorRespo
 {
 
     /**
-     * @param string            $attestationObject raw CBOR bytes of the attestation object; parse
-     *                with {@see self::parseAttestationObject()}
+     * @param string            $attestationObject raw CBOR bytes of the attestation object; parse with {@see self::parseAttestationObject()}
      * @param list<string>|null $transports        the authenticator's transports as reported by the
      *            client; unlike the rest of the response it cannot be recovered from the attestation
      *            object, and a relying party stores it to seed `allowCredentials` on later assertions.

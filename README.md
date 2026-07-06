@@ -221,9 +221,12 @@ Signatures are verified through `ext-openssl` with the COSE algorithm identifier
 ## Development
 
 ```sh
-composer test        # PHPUnit
-composer phpstan     # PHPStan (level max)
-composer coverage    # PHPUnit with coverage + coverage-guard (needs Xdebug or PCOV)
+composer check          # all the checks below
+composer check:cs       # Code Sniffer
+composer fix:cs         # Code Sniffer auto-fix
+composer check:tests    # PHPUnit
+composer check:types    # PHPStan (level max)
+composer check:coverage # PHPUnit with coverage + coverage-guard (needs Xdebug or PCOV)
 ```
 
 CI runs the test suite with coverage enforcement (`shipmonk/coverage-guard`), PHPStan at level

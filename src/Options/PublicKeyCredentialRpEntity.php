@@ -24,7 +24,10 @@ readonly class PublicKeyCredentialRpEntity extends PublicKeyCredentialEntity imp
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array{
+     *     name: string,
+     *     id?: string,
+     * }
      */
     public function jsonSerialize(): array
     {

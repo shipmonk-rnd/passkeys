@@ -25,7 +25,10 @@ readonly class PublicKeyCredentialParameters implements JsonSerializable
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array{
+     *     type: PublicKeyCredentialType::*,
+     *     alg: CoseAlgorithmIdentifier::*,
+     * }
      */
     public function jsonSerialize(): array
     {

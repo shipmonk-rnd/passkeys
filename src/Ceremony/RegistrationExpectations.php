@@ -28,10 +28,8 @@ final readonly class RegistrationExpectations
      * @param list<CoseAlgorithmIdentifier::*> $allowedAlgorithms       COSE algorithm identifiers offered in `pubKeyCredParams`
      * @param bool                             $requireUserVerification whether the UV flag must be set (§7.1 step 16)
      * @param bool                             $allowCrossOrigin        whether a cross-origin (iframe) creation is acceptable
-     * @param list<string>                     $allowedTopOrigins       exact top origins accepted when the RP is sub-framed
-     *                               (only consulted when `allowCrossOrigin` is true and the client reports a `topOrigin`)
-     * @param bool                             $conditionalMediation    set when `mediation: "conditional"` was used, which
-     *                                    relaxes the User Present requirement of §7.1 step 15
+     * @param list<string>                     $allowedTopOrigins       exact top origins accepted when the RP is sub-framed (only consulted when `allowCrossOrigin` is true and the client reports a `topOrigin`)
+     * @param bool                             $conditionalMediation    set when `mediation: "conditional"` was used, which relaxes the User Present requirement of §7.1 step 15
      *
      * @throws InvalidArgumentException if the challenge is shorter than 16 bytes
      */

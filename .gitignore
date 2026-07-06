@@ -1,8 +1,4 @@
-/vendor
-/spec
-/.phpunit.cache
-/.phpunit.result.cache
-/clover.xml
+/cache
 /composer.lock
 /example/passkeys.sqlite
-/cache
+/vendor
