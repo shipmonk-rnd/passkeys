@@ -5,7 +5,7 @@ namespace WebAuthnX\Ceremony;
 /**
  * The relying party's read access to its stored credentials, keyed by credential id.
  *
- * The library owns no persistence: it calls {@see self::findByCredentialId()} to enforce the
+ * The library owns no persistence: it calls {@see self::findCredentialByCredentialId()} to enforce the
  * "not already registered" check of WebAuthn §7.1 step 26 and to locate the credential record
  * for an assertion (§7.2 step 6). Because credential ids are globally unique, a single lookup
  * by id serves both the pre-identified and the discoverable (usernameless) authentication flows.
@@ -19,5 +19,5 @@ interface CredentialStore
 	/**
 	 * @param string $credentialId raw credential id bytes (not base64url-encoded)
 	 */
-	public function findByCredentialId(string $credentialId): ?CredentialRecord;
+	public function findCredentialByCredentialId(string $credentialId): ?CredentialRecord;
 }

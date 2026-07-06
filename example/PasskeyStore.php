@@ -144,7 +144,7 @@ final class PasskeyStore implements PasskeyStoreInterface
 
 	// -- credentials table --------------------------------------------------------------------
 
-	public function findByCredentialId(string $credentialId): ?CredentialRecord
+	public function findCredentialByCredentialId(string $credentialId): ?CredentialRecord
 	{
 		$encodedCredentialId = base64_encode($credentialId);
 

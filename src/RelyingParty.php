@@ -174,7 +174,7 @@ final class RelyingParty
 		}
 
 		// §7.1 step 26: the credential id must not already be registered for any user.
-		if ($store->findByCredentialId($credentialId) !== null) {
+		if ($store->findCredentialByCredentialId($credentialId) !== null) {
 			throw new VerificationException(
 				VerificationException::CREDENTIAL_ALREADY_REGISTERED,
 				'Credential ID is already registered',
@@ -314,7 +314,7 @@ final class RelyingParty
 		}
 
 		// §7.2 step 6: locate the credential record and resolve the user handle.
-		$record = $store->findByCredentialId($credential->rawId);
+		$record = $store->findCredentialByCredentialId($credential->rawId);
 
 		if ($record === null) {
 			throw new VerificationException(VerificationException::UNKNOWN_CREDENTIAL, 'Credential is not registered');

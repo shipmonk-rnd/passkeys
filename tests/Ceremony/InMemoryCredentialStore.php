@@ -19,7 +19,7 @@ final class InMemoryCredentialStore implements CredentialStore
 		$this->records[$record->credentialId] = $record;
 	}
 
-	public function findByCredentialId(string $credentialId): ?CredentialRecord
+	public function findCredentialByCredentialId(string $credentialId): ?CredentialRecord
 	{
 		return $this->records[$credentialId] ?? null;
 	}

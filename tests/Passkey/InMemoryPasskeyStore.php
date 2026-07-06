@@ -38,7 +38,7 @@ final class InMemoryPasskeyStore implements PasskeyStore
 		$this->credentials[base64_encode($record->credentialId)] = $record;
 	}
 
-	public function findByCredentialId(string $credentialId): ?CredentialRecord
+	public function findCredentialByCredentialId(string $credentialId): ?CredentialRecord
 	{
 		return $this->credentials[base64_encode($credentialId)] ?? null;
 	}
