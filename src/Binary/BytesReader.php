@@ -118,7 +118,7 @@ class BytesReader
 			default => ($mantissa + 1024) * (2 ** ($exponent - 25)),
 		};
 
-		return ($value & 0x8000) ? -$float : $float;
+		return ($value & 0x8000) !== 0 ? -$float : $float;
 	}
 
 	/**

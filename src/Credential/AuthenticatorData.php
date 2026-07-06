@@ -44,11 +44,11 @@ readonly class AuthenticatorData
 				$flags = $bytesReader->u8();
 				$signCount = $bytesReader->u32();
 
-				$attestedCredentialData = $flags & self::FLAG_ATTESTED_CREDENTIAL_DATA
+				$attestedCredentialData = ($flags & self::FLAG_ATTESTED_CREDENTIAL_DATA) !== 0
 					? AttestedCredentialData::fromBytesReader($bytesReader)
 					: null;
 
-				$extensions = $flags & self::FLAG_EXTENSION_DATA
+				$extensions = ($flags & self::FLAG_EXTENSION_DATA) !== 0
 					? CborMap::fromBytesReader($bytesReader) // keys are utf-8 strings
 					: null;
 
