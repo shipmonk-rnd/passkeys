@@ -76,7 +76,7 @@ class PasskeyFlow
 		private readonly string $rpName,
 		private readonly array $origins,
 		private readonly PasskeyStore $store,
-		private readonly PendingCeremonyStore $pendingStore,
+		private readonly PendingCeremonyStore $pendingCeremonyStore,
 		private readonly RelyingParty $relyingParty = new RelyingParty(),
 	) {
 	}
@@ -96,7 +96,7 @@ class PasskeyFlow
 		$userHandle = $username === null ? null : $this->store->findUserHandleByUsername($username);
 		$allowCredentials = $userHandle === null ? null : $this->credentialDescriptorsFor($userHandle);
 		$challenge = $this->generateChallenge();
-		$this->pendingStore->rememberPendingAuthentication(new PendingAuthentication($challenge, $userHandle));
+		$this->pendingCeremonyStore->rememberPendingAuthentication(new PendingAuthentication($challenge, $userHandle));
 
 		return new PublicKeyCredentialRequestOptions(
 			challenge: $challenge,
@@ -137,7 +137,7 @@ class PasskeyFlow
 
 		// The challenge is the ceremony key; it is attacker-supplied until verifyAuthentication()
 		// re-checks it (in constant time) against the pending record consumed here.
-		$pending = $this->pendingStore->consumePendingAuthentication($clientData->getChallenge());
+		$pending = $this->pendingCeremonyStore->consumePendingAuthentication($clientData->getChallenge());
 
 		if ($pending === null) {
 			throw new VerificationException(
@@ -192,7 +192,7 @@ class PasskeyFlow
 		?string $displayName = null,
 	): PublicKeyCredentialCreationOptions {
 		$challenge = $this->generateChallenge();
-		$this->pendingStore->rememberPendingRegistration(new PendingRegistration($challenge, $userHandle));
+		$this->pendingCeremonyStore->rememberPendingRegistration(new PendingRegistration($challenge, $userHandle));
 
 		return new PublicKeyCredentialCreationOptions(
 			rp: new PublicKeyCredentialRpEntity(name: $this->rpName, id: $this->rpId),
@@ -236,7 +236,7 @@ class PasskeyFlow
 			);
 		}
 
-		$pending = $this->pendingStore->consumePendingRegistration($clientData->getChallenge());
+		$pending = $this->pendingCeremonyStore->consumePendingRegistration($clientData->getChallenge());
 
 		if ($pending === null) {
 			throw new VerificationException(
