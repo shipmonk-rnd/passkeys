@@ -3,6 +3,7 @@
 namespace WebAuthnX\Ceremony;
 
 use InvalidArgumentException;
+use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 
 use function strlen;
 
@@ -22,7 +23,7 @@ final readonly class RegistrationExpectations
 	 * @param  string             $challenge         the raw challenge bytes issued for this ceremony (not base64url-encoded)
 	 * @param  string             $rpId              the RP ID whose SHA-256 must equal `authData.rpIdHash`
 	 * @param  list<string>       $origins           exact, expected client-data origins (scheme+host+port)
-	 * @param  list<int>          $allowedAlgorithms COSE algorithm identifiers offered in `pubKeyCredParams`
+	 * @param  list<CoseAlgorithmIdentifier::*> $allowedAlgorithms COSE algorithm identifiers offered in `pubKeyCredParams`
 	 * @param  bool               $requireUserVerification whether the UV flag must be set (§7.1 step 16)
 	 * @param  bool               $allowCrossOrigin  whether a cross-origin (iframe) creation is acceptable
 	 * @param  list<string>       $allowedTopOrigins exact top origins accepted when the RP is sub-framed

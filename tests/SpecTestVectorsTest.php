@@ -54,6 +54,9 @@ class SpecTestVectorsTest extends WebAuthnTestCase
 	/** The vectors carry no user handle; the relying party assigns one at registration. */
 	private const string USER_HANDLE = 'spec-vector-user';
 
+	/**
+	 * @param CoseAlgorithmIdentifier::* $alg
+	 */
 	#[DataProvider('provideVectors')]
 	public function testRegistrationThenAuthentication(
 		string $fixture,

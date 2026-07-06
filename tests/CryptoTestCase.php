@@ -40,6 +40,7 @@ abstract class CryptoTestCase extends WebAuthnTestCase
 	 * Generates a fresh key pair for the given COSE algorithm and returns both the
 	 * parsed COSE public key and the OpenSSL private key (for signing in tests).
 	 *
+	 * @param  CoseAlgorithmIdentifier::* $alg
 	 * @return array{CoseKey, OpenSSLAsymmetricKey}
 	 */
 	protected static function generateCoseKeyPair(int $alg, int $okpCrv = CoseOkpKey::CRV_ED25519): array
@@ -55,6 +56,7 @@ abstract class CryptoTestCase extends WebAuthnTestCase
 	 * authenticator embeds in attested credential data. EdDSA is the only COSE algorithm
 	 * spanning two curves, so those need the extra `$okpCrv` discriminator.
 	 *
+	 * @param  CoseAlgorithmIdentifier::* $alg
 	 * @return array{OpenSSLAsymmetricKey, array<int, int|string>}
 	 */
 	protected static function generateKeyAndCoseEntries(int $alg, int $okpCrv = CoseOkpKey::CRV_ED25519): array
@@ -114,6 +116,8 @@ abstract class CryptoTestCase extends WebAuthnTestCase
 	 * Signs a message with the OpenSSL private key using the digest the given COSE algorithm
 	 * mandates, producing exactly the signature encoding {@see \WebAuthnX\Cose\CoseKey::verify()}
 	 * expects (ASN.1 DER for ECDSA, raw PKCS#1 for RSA, raw 64-byte for Ed25519).
+	 *
+	 * @param CoseAlgorithmIdentifier::* $alg
 	 */
 	protected static function sign(OpenSSLAsymmetricKey $privateKey, string $message, int $alg): string
 	{
@@ -124,6 +128,9 @@ abstract class CryptoTestCase extends WebAuthnTestCase
 		return $signature;
 	}
 
+	/**
+	 * @param CoseAlgorithmIdentifier::* $alg
+	 */
 	protected static function opensslDigest(int $alg): int
 	{
 		return match ($alg) {
@@ -132,11 +139,11 @@ abstract class CryptoTestCase extends WebAuthnTestCase
 			CoseAlgorithmIdentifier::ES512 => OPENSSL_ALGO_SHA512,
 			// EdDSA is a pure signature scheme (no prehash)
 			CoseAlgorithmIdentifier::EdDSA, CoseAlgorithmIdentifier::Ed25519, CoseAlgorithmIdentifier::Ed448 => 0,
-			default => self::fail("Unsupported test algorithm {$alg}"),
 		};
 	}
 
 	/**
+	 * @param  CoseAlgorithmIdentifier::ES256|CoseAlgorithmIdentifier::ES384|CoseAlgorithmIdentifier::ES512 $alg
 	 * @return array{string, int, int} OpenSSL curve name, COSE curve id, coordinate length
 	 */
 	protected static function ec2Spec(int $alg): array
@@ -145,7 +152,6 @@ abstract class CryptoTestCase extends WebAuthnTestCase
 			CoseAlgorithmIdentifier::ES256 => ['prime256v1', CoseEc2Key::CRV_P256, 32],
 			CoseAlgorithmIdentifier::ES384 => ['secp384r1', CoseEc2Key::CRV_P384, 48],
 			CoseAlgorithmIdentifier::ES512 => ['secp521r1', CoseEc2Key::CRV_P521, 66],
-			default => self::fail("Unsupported test algorithm {$alg}"),
 		};
 	}
 

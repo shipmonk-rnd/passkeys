@@ -20,6 +20,7 @@ class CoseKeyTest extends CryptoTestCase
 	 * The DER SubjectPublicKeyInfo we build from a COSE key must be byte-for-byte
 	 * identical to what OpenSSL emits for the same key.
 	 *
+	 * @param  CoseAlgorithmIdentifier::* $alg
 	 * @param  class-string<CoseKey> $expectedClass
 	 */
 	#[DataProvider('provideAlgorithms')]
@@ -38,7 +39,7 @@ class CoseKeyTest extends CryptoTestCase
 	}
 
 	/**
-	 * @return iterable<string, array{int, class-string<CoseKey>, 2?: int}>
+	 * @return iterable<string, array{CoseAlgorithmIdentifier::*, class-string<CoseKey>, 2?: int}>
 	 */
 	public static function provideAlgorithms(): iterable
 	{
@@ -78,6 +79,7 @@ class CoseKeyTest extends CryptoTestCase
 	 * (same type, same key material) and re-encode to the same bytes — this is the round-trip a
 	 * relying party relies on to persist and later load a credential's public key.
 	 *
+	 * @param  CoseAlgorithmIdentifier::* $alg
 	 * @param  class-string<CoseKey> $expectedClass
 	 */
 	#[DataProvider('provideAlgorithms')]

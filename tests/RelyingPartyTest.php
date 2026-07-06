@@ -64,6 +64,9 @@ class RelyingPartyTest extends CryptoTestCase
 
 	// --- Happy path: full round trip for every supported algorithm ------------------------------
 
+	/**
+	 * @param CoseAlgorithmIdentifier::* $alg
+	 */
 	#[DataProvider('provideAlgorithms')]
 	public function testRegistrationThenAuthenticationRoundTrip(int $alg): void
 	{
@@ -100,6 +103,9 @@ class RelyingPartyTest extends CryptoTestCase
 		self::assertFalse($authentication->possibleClone);
 	}
 
+	/**
+	 * @param CoseAlgorithmIdentifier::* $alg
+	 */
 	#[DataProvider('provideAlgorithms')]
 	public function testRegistrationVerifiesPackedSelfAttestation(int $alg): void
 	{
@@ -116,7 +122,7 @@ class RelyingPartyTest extends CryptoTestCase
 	}
 
 	/**
-	 * @return iterable<string, array{int}>
+	 * @return iterable<string, array{CoseAlgorithmIdentifier::*}>
 	 */
 	public static function provideAlgorithms(): iterable
 	{
@@ -756,7 +762,7 @@ class RelyingPartyTest extends CryptoTestCase
 	// --- Fixture builders -----------------------------------------------------------------------
 
 	/**
-	 * @param  list<int>    $allowedAlgorithms
+	 * @param  list<CoseAlgorithmIdentifier::*> $allowedAlgorithms
 	 * @param  list<string> $allowedTopOrigins
 	 */
 	private static function registrationExpectations(
@@ -832,6 +838,7 @@ class RelyingPartyTest extends CryptoTestCase
 	 * wholesale (for the x5c / missing-field negatives).
 	 *
 	 * @param  array<int, int|string> $coseEntries
+	 * @param  CoseAlgorithmIdentifier::*|null $attestationAlg
 	 * @return PublicKeyCredential<AuthenticatorAttestationResponse>
 	 */
 	private static function registrationCredential(
@@ -901,6 +908,7 @@ class RelyingPartyTest extends CryptoTestCase
 	}
 
 	/**
+	 * @param  CoseAlgorithmIdentifier::* $alg
 	 * @return PublicKeyCredential<AuthenticatorAssertionResponse>
 	 */
 	private static function authenticationCredential(

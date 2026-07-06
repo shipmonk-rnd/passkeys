@@ -41,6 +41,9 @@ class CeremonyEndToEndTest extends CryptoTestCase
 	private const string RP_ID = 'example.com';
 	private const string CREDENTIAL_ID = "\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a";
 
+	/**
+	 * @param CoseAlgorithmIdentifier::* $alg
+	 */
 	#[DataProvider('provideAlgorithms')]
 	public function testRegistrationThenAuthentication(int $alg, int $okpCrv = CoseOkpKey::CRV_ED25519): void
 	{
@@ -104,7 +107,7 @@ class CeremonyEndToEndTest extends CryptoTestCase
 	}
 
 	/**
-	 * @return iterable<string, array{int, 1?: int}>
+	 * @return iterable<string, array{CoseAlgorithmIdentifier::*, 1?: int}>
 	 */
 	public static function provideAlgorithms(): iterable
 	{

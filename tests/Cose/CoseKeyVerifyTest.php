@@ -19,6 +19,9 @@ class CoseKeyVerifyTest extends CryptoTestCase
 {
 	private const string MESSAGE = 'authenticatorData||clientDataHash ' . '0123456789abcdef';
 
+	/**
+	 * @param CoseAlgorithmIdentifier::* $alg
+	 */
 	#[DataProvider('provideAlgorithms')]
 	public function testVerifiesValidSignature(int $alg, int $okpCrv = CoseOkpKey::CRV_ED25519): void
 	{
@@ -28,6 +31,9 @@ class CoseKeyVerifyTest extends CryptoTestCase
 		self::assertTrue($coseKey->verify(self::MESSAGE, $signature));
 	}
 
+	/**
+	 * @param CoseAlgorithmIdentifier::* $alg
+	 */
 	#[DataProvider('provideAlgorithms')]
 	public function testRejectsSignatureOverDifferentData(int $alg, int $okpCrv = CoseOkpKey::CRV_ED25519): void
 	{
@@ -37,6 +43,9 @@ class CoseKeyVerifyTest extends CryptoTestCase
 		self::assertFalse($coseKey->verify(self::MESSAGE . '!', $signature));
 	}
 
+	/**
+	 * @param CoseAlgorithmIdentifier::* $alg
+	 */
 	#[DataProvider('provideAlgorithms')]
 	public function testRejectsSignatureFromDifferentKey(int $alg, int $okpCrv = CoseOkpKey::CRV_ED25519): void
 	{
@@ -48,7 +57,7 @@ class CoseKeyVerifyTest extends CryptoTestCase
 	}
 
 	/**
-	 * @return iterable<string, array{int, 1?: int}>
+	 * @return iterable<string, array{CoseAlgorithmIdentifier::*, 1?: int}>
 	 */
 	public static function provideAlgorithms(): iterable
 	{
@@ -96,6 +105,9 @@ class CoseKeyVerifyTest extends CryptoTestCase
 	/**
 	 * A malformed signature is a verification failure (false), never an exception —
 	 * regardless of whether OpenSSL reports it as 0 (RSA/EdDSA) or -1 (ECDSA DER parse).
+	 */
+	/**
+	 * @param CoseAlgorithmIdentifier::* $alg
 	 */
 	#[DataProvider('provideAlgorithms')]
 	public function testRejectsMalformedSignature(int $alg, int $okpCrv = CoseOkpKey::CRV_ED25519): void
