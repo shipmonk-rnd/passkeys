@@ -47,8 +47,8 @@ final class CoseRsaKey extends CoseKey
 	 */
 	private function __construct(
 		int $alg,
-		public string $n,
-		public string $e,
+		public readonly string $n,
+		public readonly string $e,
 	) {
 		parent::__construct($alg);
 	}

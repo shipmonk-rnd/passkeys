@@ -121,7 +121,7 @@ class CborDecoderTest extends WebAuthnTestCase
 		self::assertException(
 			InvalidCborException::class,
 			$message,
-			static function () use ($bytes) {
+			static function () use ($bytes): void {
 				BytesReader::read($bytes, static function (BytesReader $reader): mixed {
 					return CborDecoder::decode($reader);
 				});

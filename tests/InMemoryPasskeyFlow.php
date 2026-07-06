@@ -27,16 +27,16 @@ final class InMemoryPasskeyFlow extends PasskeyFlow
 	private array $credentials = [];
 
 	/** @var array<string, PendingAuthentication> base64(challenge) → pending ceremony */
-	public array $pendingAuthentications = [];
+	public private(set) array $pendingAuthentications = [];
 
 	/** @var array<string, PendingRegistration> base64(challenge) → pending ceremony */
-	public array $pendingRegistrations = [];
+	public private(set) array $pendingRegistrations = [];
 
 	/** @var list<AuthenticationResult> everything passed to updateCredential() */
-	public array $updatedCredentials = [];
+	public private(set) array $updatedCredentials = [];
 
 	/** @var list<RegisteredPasskey> everything passed to saveCredential() */
-	public array $savedPasskeys = [];
+	public private(set) array $savedPasskeys = [];
 
 	/**
 	 * @param list<string> $origins

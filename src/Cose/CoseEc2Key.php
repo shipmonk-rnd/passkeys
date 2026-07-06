@@ -58,9 +58,9 @@ final class CoseEc2Key extends CoseKey
 	 */
 	private function __construct(
 		int $alg,
-		public int $crv,
-		public string $x,
-		public string $y,
+		public readonly int $crv,
+		public readonly string $x,
+		public readonly string $y,
 	) {
 		parent::__construct($alg);
 	}

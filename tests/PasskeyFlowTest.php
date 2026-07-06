@@ -12,6 +12,7 @@ use WebAuthnX\Credential\AuthenticatorData;
 use WebAuthnX\Enum\AuthenticatorAttachment;
 use WebAuthnX\Enum\ResidentKeyRequirement;
 use WebAuthnX\Enum\UserVerificationRequirement;
+use WebAuthnX\Options\PublicKeyCredentialParameters;
 use WebAuthnX\Options\PublicKeyCredentialRequestOptions;
 
 use function array_map;
@@ -201,7 +202,7 @@ class PasskeyFlowTest extends CryptoTestCase
 		self::assertSame(self::DAVE, $options->user->displayName);
 		self::assertSame(
 			[CoseAlgorithmIdentifier::ES256, CoseAlgorithmIdentifier::RS256, CoseAlgorithmIdentifier::EdDSA],
-			array_map(static fn ($parameters) => $parameters->alg, $options->pubKeyCredParams),
+			array_map(static fn (PublicKeyCredentialParameters $parameters) => $parameters->alg, $options->pubKeyCredParams),
 		);
 		self::assertSame(ResidentKeyRequirement::REQUIRED, $options->authenticatorSelection?->residentKey);
 		self::assertSame(UserVerificationRequirement::REQUIRED, $options->authenticatorSelection->userVerification);

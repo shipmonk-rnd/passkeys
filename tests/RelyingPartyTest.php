@@ -738,6 +738,7 @@ class RelyingPartyTest extends CryptoTestCase
 	/**
 	 * @param  VerificationException::* $expectedReason
 	 * @param  callable(): mixed        $cb
+	 * @param-immediately-invoked-callable $cb
 	 */
 	private function assertVerificationFailure(string $expectedReason, callable $cb): void
 	{

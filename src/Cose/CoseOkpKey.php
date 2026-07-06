@@ -58,8 +58,8 @@ final class CoseOkpKey extends CoseKey
 	 */
 	private function __construct(
 		int $alg,
-		public int $crv,
-		public string $x,
+		public readonly int $crv,
+		public readonly string $x,
 	) {
 		parent::__construct($alg);
 	}

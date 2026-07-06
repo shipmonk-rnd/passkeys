@@ -24,7 +24,7 @@ abstract class CoseKey
 	protected const int LABEL_ALG = 3;
 
 	protected function __construct(
-		public int $alg,
+		public readonly int $alg,
 	) {
 	}
 

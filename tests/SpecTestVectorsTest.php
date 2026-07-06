@@ -7,7 +7,6 @@ use RuntimeException;
 use WebAuthnX\Base64\Base64;
 use WebAuthnX\Ceremony\AuthenticationExpectations;
 use WebAuthnX\Ceremony\CredentialRecord;
-use WebAuthnX\Ceremony\CredentialStore;
 use WebAuthnX\Ceremony\RegistrationExpectations;
 use WebAuthnX\Ceremony\RegistrationResult;
 use WebAuthnX\Ceremony\VerificationException;
@@ -183,7 +182,7 @@ class SpecTestVectorsTest extends WebAuthnTestCase
 		RelyingParty $relyingParty,
 		PublicKeyCredential $credential,
 		RegistrationExpectations $expectations,
-		CredentialStore&InMemoryCredentialStore $store,
+		InMemoryCredentialStore $store,
 		JsonObject $registration,
 		int $alg,
 		string $userHandle,

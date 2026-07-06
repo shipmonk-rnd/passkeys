@@ -27,6 +27,7 @@ class PublicKeyCredentialTest extends WebAuthnTestCase
 	 * {@see MalformedDataException}; the specific cause is preserved as its previous exception.
 	 *
 	 * @param  callable(): mixed $cb
+	 * @param-immediately-invoked-callable $cb
 	 */
 	private static function assertMalformedData(string $previousMessage, callable $cb): void
 	{
