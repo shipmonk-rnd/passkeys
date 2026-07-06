@@ -23,7 +23,7 @@ parameters:
     reportPossiblyNonexistentGeneralArrayOffset: true
     phpVersion:
         min: 80400
-        max: 80400
+        max: 80500
     paths:
         - src
         - tests
