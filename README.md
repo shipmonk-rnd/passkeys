@@ -8,10 +8,11 @@ for PHP with **no third-party runtime dependencies** — only PHP itself and the
 > This library serializes the options a browser consumes, parses and validates every
 > WebAuthn/COSE/CBOR structure a browser and authenticator produce, and provides a
 > `RelyingParty` façade that runs the full WebAuthn §7.1 (registration) and §7.2
-> (authentication) verification procedures. What it does **not** do yet is verify
-> attestation *statements* (`packed`, `tpm`, `android-key`, `fido-u2f`, `apple`) — it accepts
-> the `none` format and rejects the rest — so it cannot yet prove *which* authenticator model
-> produced a credential. See [Scope](#scope) and
+> (authentication) verification procedures. It accepts the `none` format and verifies `packed`
+> *self* attestation (which clients pass through even under `attestation: "none"`). What it does
+> **not** do yet is verify certificate-based attestation statements (`packed` with `x5c`, `tpm`,
+> `android-key`, `fido-u2f`, `apple`) — those are rejected — so it cannot yet prove *which*
+> authenticator model produced a credential. See [Scope](#scope) and
 > [`docs/ceremony-implementation-plan.md`](docs/ceremony-implementation-plan.md).
 
 ## Requirements
@@ -167,7 +168,8 @@ It shows both ceremonies driven through `RelyingParty`, plus a file-backed `Cred
 **Implemented:**
 
 - A `RelyingParty` façade performing the full WebAuthn §7.1 (registration) and §7.2
-  (authentication) verification procedures for the `attestation: "none"` case
+  (authentication) verification procedures for the `attestation: "none"` case, including
+  `packed` self-attestation verification (§8.2 without `x5c`)
 - Caller-owned state abstractions (`CredentialStore`, per-ceremony `*Expectations`) and rich,
   typed results (`RegistrationResult` / `AuthenticationResult`) with a fail-closed error model
 - Full response parsing: `PublicKeyCredential`, attestation/assertion responses, `AttestationObject`,
@@ -180,8 +182,8 @@ It shows both ceremonies driven through `RelyingParty`, plus a file-backed `Cred
 
 **Not implemented yet, planned as the next layer:**
 
-- Attestation-statement format verification (`packed`, `tpm`, `android-key`, `fido-u2f`, `apple`, …)
-  and trust-anchor evaluation
+- Certificate-based attestation-statement verification (`packed` with `x5c`, `tpm`, `android-key`,
+  `fido-u2f`, `apple`, …) and trust-anchor evaluation
 - FIDO Metadata Service integration
 
 ## Development

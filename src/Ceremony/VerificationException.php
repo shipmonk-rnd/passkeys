@@ -34,6 +34,7 @@ final class VerificationException extends RuntimeException
 	public const USER_NOT_VERIFIED = 'user_not_verified';
 	public const INVALID_BACKUP_STATE = 'invalid_backup_state';
 	public const UNSUPPORTED_ATTESTATION_FORMAT = 'unsupported_attestation_format';
+	public const INVALID_ATTESTATION_STATEMENT = 'invalid_attestation_statement';
 	public const MISSING_ATTESTED_CREDENTIAL_DATA = 'missing_attested_credential_data';
 	public const UNSUPPORTED_ALGORITHM = 'unsupported_algorithm';
 	public const CREDENTIAL_ID_TOO_LONG = 'credential_id_too_long';

@@ -99,6 +99,21 @@ class RelyingPartyTest extends CryptoTestCase
 		self::assertFalse($authentication->possibleClone);
 	}
 
+	#[DataProvider('provideAlgorithms')]
+	public function testRegistrationVerifiesPackedSelfAttestation(int $alg): void
+	{
+		[$privateKey, $coseEntries] = self::generateKeyAndCoseEntries($alg);
+
+		$result = (new RelyingParty())->verifyRegistration(
+			self::registrationCredential($coseEntries, fmt: 'packed', attestationKey: $privateKey, attestationAlg: $alg),
+			self::registrationExpectations(allowedAlgorithms: [$alg]),
+			new InMemoryCredentialStore(),
+		);
+
+		self::assertSame(RegistrationResult::ATTESTATION_SELF, $result->attestationType);
+		self::assertSame($alg, $result->publicKey->alg);
+	}
+
 	/**
 	 * @return iterable<string, array{int}>
 	 */
@@ -273,7 +288,83 @@ class RelyingPartyTest extends CryptoTestCase
 	{
 		$this->assertRegistrationFails(
 			VerificationException::UNSUPPORTED_ATTESTATION_FORMAT,
+			self::registrationCredential($this->coseEntries, fmt: 'fido-u2f'),
+		);
+	}
+
+	public function testRegistrationRejectsPackedAttestationWithCertificateChain(): void
+	{
+		// x5c present means Basic/AttCA attestation (§8.2), which needs the deferred X.509 layer.
+		$attStmt = CborTestEncoder::map([
+			[CborTestEncoder::textString('alg'), CborTestEncoder::int(CoseAlgorithmIdentifier::ES256)],
+			[CborTestEncoder::textString('sig'), CborTestEncoder::byteString('irrelevant')],
+			[CborTestEncoder::textString('x5c'), CborTestEncoder::byteString('certificate-chain-placeholder')],
+		]);
+
+		$this->assertRegistrationFails(
+			VerificationException::UNSUPPORTED_ATTESTATION_FORMAT,
+			self::registrationCredential($this->coseEntries, fmt: 'packed', attStmtOverride: $attStmt),
+		);
+	}
+
+	public function testRegistrationRejectsPackedSelfAttestationWithMissingFields(): void
+	{
+		// fmt `packed` with an empty attStmt: no x5c makes it self attestation, but alg/sig are missing.
+		$this->assertRegistrationFails(
+			VerificationException::INVALID_ATTESTATION_STATEMENT,
 			self::registrationCredential($this->coseEntries, fmt: 'packed'),
+		);
+	}
+
+	public function testRegistrationRejectsPackedSelfAttestationAlgorithmMismatch(): void
+	{
+		$this->assertRegistrationFails(
+			VerificationException::INVALID_ATTESTATION_STATEMENT,
+			self::registrationCredential(
+				$this->coseEntries,
+				fmt: 'packed',
+				attestationKey: $this->privateKey,
+				attestationAlg: CoseAlgorithmIdentifier::ES256,
+				attStmtAlgOverride: CoseAlgorithmIdentifier::RS256,
+			),
+		);
+	}
+
+	public function testRegistrationRejectsUnusableAttestedKey(): void
+	{
+		// Same off-curve key trick as {@see testAuthenticationRejectsUnusableStoredKey}: the all-zero
+		// P-256 point parses as COSE and passes the algorithm allow-list, but OpenSSL refuses to load
+		// it when the self-attestation signature is checked.
+		$coseEntries = [
+			1 => 2,
+			3 => CoseAlgorithmIdentifier::ES256,
+			-1 => 1,
+			-2 => str_repeat("\x00", 32),
+			-3 => str_repeat("\x00", 32),
+		];
+
+		$attStmt = CborTestEncoder::map([
+			[CborTestEncoder::textString('alg'), CborTestEncoder::int(CoseAlgorithmIdentifier::ES256)],
+			[CborTestEncoder::textString('sig'), CborTestEncoder::byteString('irrelevant')],
+		]);
+
+		$this->assertRegistrationFails(
+			VerificationException::UNUSABLE_CREDENTIAL_KEY,
+			self::registrationCredential($coseEntries, fmt: 'packed', attStmtOverride: $attStmt),
+		);
+	}
+
+	public function testRegistrationRejectsPackedSelfAttestationWithBadSignature(): void
+	{
+		$this->assertRegistrationFails(
+			VerificationException::INVALID_ATTESTATION_STATEMENT,
+			self::registrationCredential(
+				$this->coseEntries,
+				fmt: 'packed',
+				attestationKey: $this->privateKey,
+				attestationAlg: CoseAlgorithmIdentifier::ES256,
+				tamperAttestationSignature: true,
+			),
 		);
 	}
 
@@ -733,6 +824,11 @@ class RelyingPartyTest extends CryptoTestCase
 	}
 
 	/**
+	 * `$attestationKey`/`$attestationAlg` build a `packed` self-attestation statement signed live
+	 * over `authData ‖ SHA-256(clientDataJSON)`; `$attStmtAlgOverride` declares a different `alg`
+	 * in the statement than was used to sign, and `$attStmtOverride` replaces the statement CBOR
+	 * wholesale (for the x5c / missing-field negatives).
+	 *
 	 * @param  array<int, int|string> $coseEntries
 	 * @return PublicKeyCredential<AuthenticatorAttestationResponse>
 	 */
@@ -750,6 +846,11 @@ class RelyingPartyTest extends CryptoTestCase
 		bool $includeAttestedCredentialData = true,
 		?string $topOrigin = null,
 		?string $attestationObjectOverride = null,
+		?OpenSSLAsymmetricKey $attestationKey = null,
+		?int $attestationAlg = null,
+		?int $attStmtAlgOverride = null,
+		bool $tamperAttestationSignature = false,
+		?string $attStmtOverride = null,
 	): PublicKeyCredential {
 		$flags ??= self::FLAGS_UP_UV | AuthenticatorData::FLAG_ATTESTED_CREDENTIAL_DATA;
 
@@ -758,10 +859,30 @@ class RelyingPartyTest extends CryptoTestCase
 			: null;
 
 		$authData = self::authenticatorData($rpId, $flags, $signCount, $attestedCredentialData);
+		$clientDataJson = self::clientDataJson($type, $challenge, $origin, $crossOrigin, $topOrigin);
+
+		$attStmt = $attStmtOverride ?? CborTestEncoder::map([]);
+
+		if ($attestationKey !== null && $attestationAlg !== null) {
+			$signature = self::sign(
+				$attestationKey,
+				$authData . hash('sha256', $clientDataJson, binary: true),
+				$attestationAlg,
+			)->toBinaryString();
+
+			if ($tamperAttestationSignature) {
+				$signature[0] = chr(ord($signature[0]) ^ 0x01);
+			}
+
+			$attStmt = CborTestEncoder::map([
+				[CborTestEncoder::textString('alg'), CborTestEncoder::int($attStmtAlgOverride ?? $attestationAlg)],
+				[CborTestEncoder::textString('sig'), CborTestEncoder::byteString($signature)],
+			]);
+		}
 
 		$attestationObject = $attestationObjectOverride ?? CborTestEncoder::map([
 			[CborTestEncoder::textString('fmt'), CborTestEncoder::textString($fmt)],
-			[CborTestEncoder::textString('attStmt'), CborTestEncoder::map([])],
+			[CborTestEncoder::textString('attStmt'), $attStmt],
 			[CborTestEncoder::textString('authData'), CborTestEncoder::byteString($authData)],
 		]);
 
@@ -770,7 +891,7 @@ class RelyingPartyTest extends CryptoTestCase
 			'rawId' => Base64::urlEncode($credentialId),
 			'type' => 'public-key',
 			'response' => [
-				'clientDataJSON' => Base64::urlEncode(self::clientDataJson($type, $challenge, $origin, $crossOrigin, $topOrigin)),
+				'clientDataJSON' => Base64::urlEncode($clientDataJson),
 				'attestationObject' => Base64::urlEncode($attestationObject),
 				'transports' => ['internal'],
 			],

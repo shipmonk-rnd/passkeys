@@ -9,6 +9,9 @@ use WebAuthnX\Ceremony\CredentialStore;
 use WebAuthnX\Ceremony\RegistrationExpectations;
 use WebAuthnX\Ceremony\RegistrationResult;
 use WebAuthnX\Ceremony\VerificationException;
+use WebAuthnX\Cbor\CborMapException;
+use WebAuthnX\Cose\CoseKey;
+use WebAuthnX\Credential\AttestationObject;
 use WebAuthnX\Credential\AuthenticatorAssertionResponse;
 use WebAuthnX\Credential\AuthenticatorAttestationResponse;
 use WebAuthnX\Credential\AuthenticatorData;
@@ -31,8 +34,11 @@ use function strlen;
  *
  * This implementation covers the common `attestation: "none"` deployment: it accepts the `none`
  * attestation format without evaluating a trust path (§7.1 steps 22–24 collapse to the "None
- * attestation acceptable" case) and rejects every other format as unsupported. Attestation-
- * statement verification for `packed`/`fido-u2f`/etc. is a planned later layer.
+ * attestation acceptable" case), and verifies `packed` **self** attestation (§8.2 without `x5c`)
+ * against the credential public key — which clients pass through unmodified even when the relying
+ * party asked for `attestation: "none"` (§5.1.3). Every other format, including `packed` with an
+ * `x5c` certificate chain, is rejected as unsupported; that trust-path evaluation is a planned
+ * later layer.
  *
  * The library holds no state: expectations are passed in per ceremony and credential records are
  * read through a caller-supplied {@see CredentialStore}. Persisting new records and the updated
@@ -53,8 +59,8 @@ final class RelyingParty
 	/** {@link https://w3c.github.io/webauthn/#credential-id Credential IDs} are at most 1023 bytes (§7.1 step 25). */
 	private const MAX_CREDENTIAL_ID_LENGTH = 1023;
 
-	/** Attestation formats this façade can verify. P1 supports only `none`. */
-	private const SUPPORTED_ATTESTATION_FORMATS = [RegistrationResult::ATTESTATION_NONE];
+	private const FMT_NONE = 'none';
+	private const FMT_PACKED = 'packed';
 
 	public function __construct(
 		private readonly SignatureVerifier $signatureVerifier = new SignatureVerifier(),
@@ -65,7 +71,8 @@ final class RelyingParty
 	 * Verifies a registration ceremony response (`navigator.credentials.create()`) per WebAuthn §7.1.
 	 *
 	 * @param  PublicKeyCredential<AuthenticatorAttestationResponse> $credential
-	 * @throws VerificationException on any failed §7.1 check, or if the response is malformed
+	 * @throws VerificationException on any failed §7.1 check, if the response is malformed, or if
+	 *     the attested credential key is unusable (unsupported algorithm / cannot be loaded)
 	 */
 	public function verifyRegistration(
 		PublicKeyCredential $credential,
@@ -81,6 +88,15 @@ final class RelyingParty
 				'Malformed registration response: ' . $e->getMessage(),
 				$e,
 			);
+
+		} catch (SignatureVerificationException $e) {
+			// The attested key already passed COSE parsing and the algorithm allow-list, so a
+			// verifier that still cannot use it points at the key material itself.
+			throw new VerificationException(
+				VerificationException::UNUSABLE_CREDENTIAL_KEY,
+				'Attested credential key is unusable: ' . $e->getMessage(),
+				$e,
+			);
 		}
 	}
 
@@ -88,6 +104,7 @@ final class RelyingParty
 	 * @param  PublicKeyCredential<AuthenticatorAttestationResponse> $credential
 	 * @throws VerificationException
 	 * @throws MalformedDataException
+	 * @throws SignatureVerificationException
 	 */
 	private function doVerifyRegistration(
 		PublicKeyCredential $credential,
@@ -148,14 +165,10 @@ final class RelyingParty
 			);
 		}
 
-		// §7.1 step 21: dispatch on the attestation format. P1 only accepts `none`; §7.1 steps 22–24
-		// then collapse to "None attestation is acceptable" with no statement or trust path to check.
-		if (!in_array($attestationObject->fmt, self::SUPPORTED_ATTESTATION_FORMATS, true)) {
-			throw new VerificationException(
-				VerificationException::UNSUPPORTED_ATTESTATION_FORMAT,
-				"Attestation format '{$attestationObject->fmt}' is not supported",
-			);
-		}
+		// §7.1 steps 21–24: verify the attestation statement. `none` carries no statement; `packed`
+		// self attestation is verified against the credential public key itself. Formats that need
+		// an X.509 trust path are rejected fail-closed until the attestation layer lands.
+		$attestationType = $this->verifyAttestationStatement($attestationObject, $publicKey, $response->clientDataJSON);
 
 		// §7.1 step 25: credential ids are bounded at 1023 bytes.
 		$credentialId = $attestedCredentialData->credentialId;
@@ -185,8 +198,73 @@ final class RelyingParty
 			backupState: $authData->isBackupState(),
 			aaguid: $attestedCredentialData->aaGuid,
 			transports: $response->transports,
-			attestationType: RegistrationResult::ATTESTATION_NONE,
+			attestationType: $attestationType,
 		);
+	}
+
+	/**
+	 * §7.1 steps 21–24, for the statement-less and self-attested cases.
+	 *
+	 * `none` (§8.7) conveys nothing to verify. `packed` without `x5c` is self attestation (§8.2):
+	 * `alg` must match the credential public key's algorithm and `sig` must be a valid signature by
+	 * that key over `authData ‖ SHA-256(clientDataJSON)` — clients hand this through unmodified even
+	 * under `attestation: "none"` (§5.1.3), so a relying party that ignores attestation still
+	 * receives it. Anything needing a certificate trust path stays unsupported.
+	 *
+	 * @return RegistrationResult::ATTESTATION_*
+	 * @throws VerificationException
+	 * @throws SignatureVerificationException if the attested credential key cannot be loaded
+	 */
+	private function verifyAttestationStatement(
+		AttestationObject $attestationObject,
+		CoseKey $credentialPublicKey,
+		Bytes $clientDataJSON,
+	): string {
+		if ($attestationObject->fmt === self::FMT_NONE) {
+			return RegistrationResult::ATTESTATION_NONE;
+		}
+
+		if ($attestationObject->fmt !== self::FMT_PACKED || $attestationObject->attStmt->has('x5c')) {
+			$detail = $attestationObject->fmt === self::FMT_PACKED ? ' with an x5c certificate chain' : '';
+
+			throw new VerificationException(
+				VerificationException::UNSUPPORTED_ATTESTATION_FORMAT,
+				"Attestation format '{$attestationObject->fmt}'{$detail} is not supported",
+			);
+		}
+
+		try {
+			$alg = $attestationObject->attStmt->getInt('alg');
+			$sig = $attestationObject->attStmt->getBytes('sig');
+
+		} catch (CborMapException $e) {
+			throw new VerificationException(
+				VerificationException::INVALID_ATTESTATION_STATEMENT,
+				'Malformed packed attestation statement: ' . $e->getMessage(),
+				$e,
+			);
+		}
+
+		if ($alg !== $credentialPublicKey->alg) {
+			throw new VerificationException(
+				VerificationException::INVALID_ATTESTATION_STATEMENT,
+				"Self attestation algorithm {$alg} does not match the credential public key algorithm {$credentialPublicKey->alg}",
+			);
+		}
+
+		$message = Bytes::fromBinaryString(
+			$attestationObject->authData->toBinaryString()
+			. Hash::sha256($clientDataJSON)->toBinaryString(),
+		);
+
+		if (!$this->signatureVerifier->verify($credentialPublicKey, $message, $sig)) {
+			throw new VerificationException(
+				VerificationException::INVALID_ATTESTATION_STATEMENT,
+				'Self attestation signature is invalid',
+			);
+		}
+
+		return RegistrationResult::ATTESTATION_SELF;
 	}
 
 	/**

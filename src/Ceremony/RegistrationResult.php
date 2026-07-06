@@ -18,9 +18,17 @@ final readonly class RegistrationResult
 	public const ATTESTATION_NONE = 'none';
 
 	/**
+	 * Self attestation (`fmt: "packed"` without `x5c`, §6.5.3): the statement was signed by the
+	 * credential private key itself and the signature was verified. It proves possession of that
+	 * key but says nothing about the authenticator's make or provenance — treat it with the same
+	 * (lack of) trust as {@see self::ATTESTATION_NONE}.
+	 */
+	public const ATTESTATION_SELF = 'self';
+
+	/**
 	 * @param  bool              $userVerified whether the UV flag was set (the record's `uvInitialized`)
 	 * @param  list<string>|null $transports   transports reported by the client, to seed later `allowCredentials`
-	 * @param  self::ATTESTATION_* $attestationType currently always {@see self::ATTESTATION_NONE}
+	 * @param  self::ATTESTATION_* $attestationType how the credential was attested (no conveyed trust either way)
 	 */
 	public function __construct(
 		public Bytes $credentialId,

@@ -36,11 +36,13 @@ use function substr;
  * (`crossOrigin`, `topOrigin`, a maximum-length 1023-byte credential ID) that cannot be
  * frozen with self-generated ECDSA material.
  *
- * Vectors using `packed` attestation still run the full §7.2 authentication ceremony, but for
- * registration only the parse layer is exercised (plus the check that {@see RelyingParty}
- * refuses the format rather than skipping the statement) — attestation-statement verification
- * is a planned later layer. The spec's TPM / Android Key / Apple / U2F attestation vectors
- * (§16.13–16.16) and the `prf` extension vectors (§16.17) are likewise out of scope here.
+ * Vectors using `none` attestation or `packed` **self** attestation (§16.3) run the full §7.1
+ * registration ceremony. Vectors whose `packed` statement carries an `x5c` certificate chain
+ * still run the full §7.2 authentication ceremony, but for registration only the parse layer is
+ * exercised (plus the check that {@see RelyingParty} refuses the chain rather than skipping the
+ * statement) — X.509 trust-path verification is a planned later layer. The spec's TPM / Android
+ * Key / Apple / U2F attestation vectors (§16.13–16.16) and the `prf` extension vectors (§16.17)
+ * are likewise out of scope here.
  *
  * @see https://www.w3.org/TR/webauthn-3/#sctn-test-vectors
  */
@@ -89,7 +91,7 @@ class SpecTestVectorsTest extends WebAuthnTestCase
 			allowedTopOrigins: [self::TOP_ORIGIN],
 		);
 
-		if ($fmt === RegistrationResult::ATTESTATION_NONE) {
+		if ($fmt !== 'packed-x5c') {
 			$result = $relyingParty->verifyRegistration($credential, $registrationExpectations, $store);
 
 			self::assertSame(bin2hex($credentialId->toBinaryString()), bin2hex($result->credentialId->toBinaryString()));
@@ -99,7 +101,10 @@ class SpecTestVectorsTest extends WebAuthnTestCase
 			);
 			self::assertSame(0, $result->signCount);
 			self::assertSame($alg, $result->publicKey->alg);
-			self::assertSame(RegistrationResult::ATTESTATION_NONE, $result->attestationType);
+			self::assertSame(
+				$fmt === 'packed-self' ? RegistrationResult::ATTESTATION_SELF : RegistrationResult::ATTESTATION_NONE,
+				$result->attestationType,
+			);
 
 			$store->add($result->toCredentialRecord($userHandle));
 
@@ -154,23 +159,24 @@ class SpecTestVectorsTest extends WebAuthnTestCase
 	public static function provideVectors(): iterable
 	{
 		yield '§16.2 none / ES256' => ['none-es256', CoseAlgorithmIdentifier::ES256];
-		yield '§16.3 packed self-attestation / ES256' => ['packed-self-es256', CoseAlgorithmIdentifier::ES256, 'packed'];
+		yield '§16.3 packed self-attestation / ES256' => ['packed-self-es256', CoseAlgorithmIdentifier::ES256, 'packed-self'];
 		yield '§16.4 none / ES256, crossOrigin' => ['none-es256-crossorigin', CoseAlgorithmIdentifier::ES256, 'none', true];
 		yield '§16.5 none / ES256, topOrigin' => ['none-es256-toporigin', CoseAlgorithmIdentifier::ES256, 'none', true];
 		yield '§16.6 none / ES256, 1023-byte credential ID' => ['none-es256-long-credential-id', CoseAlgorithmIdentifier::ES256];
-		yield '§16.7 packed / ES256' => ['packed-es256', CoseAlgorithmIdentifier::ES256, 'packed'];
-		yield '§16.8 packed / ES384' => ['packed-es384', CoseAlgorithmIdentifier::ES384, 'packed'];
-		yield '§16.9 packed / ES512' => ['packed-es512', CoseAlgorithmIdentifier::ES512, 'packed'];
-		yield '§16.10 packed / RS256' => ['packed-rs256', CoseAlgorithmIdentifier::RS256, 'packed'];
-		yield '§16.11 packed / EdDSA (Ed25519)' => ['packed-ed25519', CoseAlgorithmIdentifier::EdDSA, 'packed'];
-		yield '§16.12 packed / Ed448' => ['packed-ed448', CoseAlgorithmIdentifier::Ed448, 'packed'];
+		yield '§16.7 packed / ES256' => ['packed-es256', CoseAlgorithmIdentifier::ES256, 'packed-x5c'];
+		yield '§16.8 packed / ES384' => ['packed-es384', CoseAlgorithmIdentifier::ES384, 'packed-x5c'];
+		yield '§16.9 packed / ES512' => ['packed-es512', CoseAlgorithmIdentifier::ES512, 'packed-x5c'];
+		yield '§16.10 packed / RS256' => ['packed-rs256', CoseAlgorithmIdentifier::RS256, 'packed-x5c'];
+		yield '§16.11 packed / EdDSA (Ed25519)' => ['packed-ed25519', CoseAlgorithmIdentifier::EdDSA, 'packed-x5c'];
+		yield '§16.12 packed / Ed448' => ['packed-ed448', CoseAlgorithmIdentifier::Ed448, 'packed-x5c'];
 	}
 
 	/**
-	 * Registers a vector whose attestation format {@see RelyingParty} cannot verify yet: first
-	 * proves the façade refuses the format (fail-closed, §7.1 step 21), then recovers the
-	 * attested credential through the parse layer — the same data a packed-capable relying
-	 * party would persist — and stores it for the authentication half of the vector.
+	 * Registers a vector whose `packed` statement carries an `x5c` chain {@see RelyingParty}
+	 * cannot verify yet: first proves the façade refuses the chain (fail-closed, §7.1 step 21),
+	 * then recovers the attested credential through the parse layer — the same data a
+	 * packed-capable relying party would persist — and stores it for the authentication half
+	 * of the vector.
 	 *
 	 * @param  PublicKeyCredential<AuthenticatorAttestationResponse> $credential
 	 */
@@ -185,7 +191,7 @@ class SpecTestVectorsTest extends WebAuthnTestCase
 	): void {
 		self::assertException(
 			VerificationException::class,
-			"Attestation format 'packed' is not supported",
+			"Attestation format 'packed' with an x5c certificate chain is not supported",
 			static fn () => $relyingParty->verifyRegistration($credential, $expectations, $store),
 		);
 

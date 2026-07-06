@@ -128,7 +128,10 @@ Goal: verify the most common real attestation statements; build the DER-decode/X
   STRING/BIT STRING/etc., enough to read cert extension values. _(spec: X.690 / RFC 5280)_
 - **P2.2 X.509 helpers** over `ext-openssl` (`openssl_x509_parse`, `_verify`, chain build) +
   certificate-public-key extraction and extension-by-OID access (via P2.1).
-- **P2.3 `packed` verifier** (§8.2): self (no x5c — verify `sig` with the credential public key,
+- **P2.3 `packed` verifier** (§8.2): self **(✅ DONE 2026-07-06 — pulled forward into the P1
+  façade, because §5.1.3 clients pass self attestation through unmodified even under
+  `attestation: "none"`; see `RelyingParty::verifyAttestationStatement`)** (no x5c — verify
+  `sig` with the credential public key,
   `alg` match) and Basic/AttCA (x5c — verify `sig` over `authData ‖ hash` with the leaf cert,
   check the AAGUID extension OID `1.3.6.1.4.1.45724.1.1.4`, validate the chain).
 - **P2.4 Attestation result plumbing:** `AttestationType` (None/Self/Basic/AttCA/AnonCA), trust

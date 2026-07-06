@@ -34,6 +34,11 @@ readonly class CborMap
 		return new self($data);
 	}
 
+	public function has(int|string $key): bool
+	{
+		return array_key_exists($key, $this->map);
+	}
+
 	/**
 	 * @throws CborMapException
 	 */
