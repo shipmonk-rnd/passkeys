@@ -1,19 +1,15 @@
 # WebAuthnX
 
-A from-scratch, spec-compliant [WebAuthn](https://w3c.github.io/webauthn/) (passkeys) library
+A from-scratch, spec-compliant [WebAuthn](https://w3c.github.io/webauthn/) **passkey** library
 for PHP with **no third-party runtime dependencies** — only PHP itself and the bundled
 `ext-openssl`.
 
-> **Status: usable for passwordless/passkey login with `attestation: "none"`.**
-> This library serializes the options a browser consumes, parses and validates every
-> WebAuthn/COSE/CBOR structure a browser and authenticator produce, and provides a
-> `RelyingParty` façade that runs the full WebAuthn §7.1 (registration) and §7.2
-> (authentication) verification procedures. It accepts the `none` format and verifies `packed`
-> *self* attestation (which clients pass through even under `attestation: "none"`). What it does
-> **not** do yet is verify certificate-based attestation statements (`packed` with `x5c`, `tpm`,
-> `android-key`, `fido-u2f`, `apple`) — those are rejected — so it cannot yet prove *which*
-> authenticator model produced a credential. See [Scope](#scope) and
-> [`docs/ceremony-implementation-plan.md`](docs/ceremony-implementation-plan.md).
+The intended entry point is the high-level **`WebAuthnX\Passkey\PasskeyFlow`**: construct it with
+your relying party identity and two small storage interfaces, wire its four methods to four HTTP
+endpoints, and you have passkey registration and login — usernameless, two-step by email, and
+conditional-mediation (autofill), all at once. Everything beneath it (the `RelyingParty` ceremony
+engine, response parsing, COSE/CBOR primitives) is public but considered
+[low-level API](#low-level-api).
 
 ## Requirements
 
@@ -26,63 +22,153 @@ for PHP with **no third-party runtime dependencies** — only PHP itself and the
 composer require jantvrdik/webauthn
 ```
 
-## Supported signature algorithms
-
-Signatures are verified through `ext-openssl` with the COSE algorithm identifiers below:
-
-| COSE alg | Constant | Algorithm |
-|---:|---|---|
-| `-7`   | `CoseAlgorithmIdentifier::ES256` | ECDSA w/ SHA-256 (P-256) |
-| `-35`  | `CoseAlgorithmIdentifier::ES384` | ECDSA w/ SHA-384 (P-384) |
-| `-36`  | `CoseAlgorithmIdentifier::ES512` | ECDSA w/ SHA-512 (P-521) |
-| `-257` | `CoseAlgorithmIdentifier::RS256` | RSASSA-PKCS1-v1_5 w/ SHA-256 |
-| `-8`   | `CoseAlgorithmIdentifier::EdDSA` | EdDSA (Ed25519 or Ed448) |
-| `-19`  | `CoseAlgorithmIdentifier::Ed25519` | EdDSA w/ Ed25519, fully specified (RFC 9864) |
-| `-53`  | `CoseAlgorithmIdentifier::Ed448` | EdDSA w/ Ed448, fully specified (RFC 9864) |
-
 ## Usage
 
-Everything lives under the `WebAuthnX\` namespace. Binary values (challenges, credential IDs,
-user handles) are plain PHP strings holding **raw bytes** — the library base64url-encodes/decodes
-them at the JSON boundary for you, so you never pass base64url-encoded values to the API.
+Binary values (challenges, credential IDs, user handles) are plain PHP strings holding **raw
+bytes** everywhere in the API — the library base64url-encodes/decodes them at the JSON boundary
+for you.
 
-### 1. Create registration options
+### Set up the flow
 
 ```php
-use WebAuthnX\Cose\CoseAlgorithmIdentifier;
-use WebAuthnX\Enum\PublicKeyCredentialType;
-use WebAuthnX\Options\PublicKeyCredentialCreationOptions;
-use WebAuthnX\Options\PublicKeyCredentialParameters;
-use WebAuthnX\Options\PublicKeyCredentialRpEntity;
-use WebAuthnX\Options\PublicKeyCredentialUserEntity;
+use WebAuthnX\Passkey\PasskeyFlow;
 
-$options = new PublicKeyCredentialCreationOptions(
-    rp: new PublicKeyCredentialRpEntity(name: 'Example RP', id: 'example.com'),
-    user: new PublicKeyCredentialUserEntity($userId, 'alice', 'Alice Smith'),
-    challenge: random_bytes(32),
-    pubKeyCredParams: [
-        new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::ES256),
-        new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::RS256),
-    ],
+$flow = new PasskeyFlow(
+    rpId: 'example.com',                  // the domain your passkeys are scoped to
+    rpName: 'Example Corp',               // shown by authenticator UIs
+    origins: ['https://example.com'],     // exact origins your login pages are served from
+    store: $passkeyStore,                 // your PasskeyStore implementation (durable)
+    pendingCeremonyStore: $pendingStore,  // your PendingCeremonyStore implementation (session-scoped)
 );
-
-// Ready to hand to navigator.credentials.create() on the client:
-$json = $options->toJson();
 ```
 
-`PublicKeyCredentialRequestOptions` is the equivalent for the authentication (login) ceremony
-and serializes the same way via `toJson()`.
+You implement two interfaces (see [Storage](#storage) below), then expose four endpoints:
 
-Both options default `timeout` to the spec-recommended 300 000 ms ([§15.1](https://w3c.github.io/webauthn/#sctn-timeout-recommended-range));
-pass an explicit value (the recommended range is 300 000–600 000 ms) or `null` to omit it. Client
-extension inputs (e.g. `prf`, `credProps`) can be passed through verbatim in their JSON form via
-the `extensions` member.
+### Registration
 
-### 2. Verify a registration
+Registration enrols a passkey for an account **you** have already resolved and authorized —
+a signed-in user adding a passkey, or a just-created signup. Deciding *who* may enrol (verifying
+the email, requiring an authenticated session) is deliberately left in front of the flow, and the
+authorization must still hold when the ceremony *completes*, not just when the options were issued.
 
-Parse the browser's response, then hand it to the `RelyingParty` façade with your per-ceremony
-expectations. The library owns no state — it reads credentials through a `CredentialStore` you
-implement, and returns the record for you to persist.
+```php
+use WebAuthnX\Ceremony\VerificationException;
+
+// POST /register/options
+$options = $flow->registrationOptions($userHandle, $email);
+echo $options->toJson();   // hand to navigator.credentials.create() on the client
+
+// POST /register/verify — body is the PublicKeyCredential.toJSON() output posted by your page
+try {
+    $registered = $flow->register($rawRequestBody);
+    // The passkey is verified and persisted. $registered->userHandle identifies the account —
+    // e.g. sign the user in after a passkey-first signup.
+} catch (VerificationException $e) {
+    // $e->reason is a stable machine-readable code, $e->getMessage() explains it
+}
+```
+
+The user handle is an opaque, immutable, PII-free account id of at most 64 bytes (the
+spec-recommended choice is 64 random bytes stored on the account) — never the email itself. The
+options automatically list the account's existing credentials in `excludeCredentials` so the same
+authenticator cannot enrol twice, and request a discoverable credential with user verification —
+the defaults that make the credential a passkey.
+
+### Authentication
+
+One pair of endpoints covers all three ways passkey login is offered — usually together, on the
+same page:
+
+- a dedicated **"sign in with a passkey" button** and **conditional-mediation autofill**: call
+  `authenticationOptions(null)` — no username is known, a discoverable credential identifies the
+  user via its user handle;
+- a **two-step login form** (email first): pass the entered username. If the account is known, the
+  ceremony is pinned to it — an assertion by any other user's credential is rejected. An unknown
+  username silently falls back to the usernameless options, so the response does not by itself
+  confirm whether an account exists.
+
+```php
+// POST /login/options
+$options = $flow->authenticationOptions($emailOrNull);
+echo $options->toJson();   // hand to navigator.credentials.get() on the client
+
+// POST /login/verify
+try {
+    $result = $flow->authenticate($rawRequestBody);
+    // Log the user in as $result->userHandle; the credential state is already persisted.
+    if ($result->possibleClone) {
+        // The signature counter did not increase — a clone signal, not proof. Apply your risk policy.
+    }
+} catch (VerificationException $e) {
+    // malformed input, an expired/replayed challenge, a failed check — all end up here
+}
+```
+
+Both `register()` and `authenticate()` are **fail-closed**: on *any* failed check — or a malformed
+response — they throw a `VerificationException`; you either get a trustworthy result or an
+exception, never a "maybe". Because several ceremonies can run concurrently in one browser session
+(autofill starts at page load, a button click starts another), pending ceremonies are keyed by
+challenge and looked up from the response — you never juggle "the" pending ceremony yourself.
+
+### Storage
+
+The flow owns no state; you implement two small interfaces:
+
+- **`WebAuthnX\Passkey\PasskeyStore`** — the durable side: your user and credential tables.
+  Four methods: `findUserHandleByUsername()`, `findCredentialsByUserHandle()`,
+  `findCredentialByCredentialId()`, plus the two writes `saveCredential()` and
+  `updateCredential()`. Typically a thin repository over the same database that holds your users.
+- **`WebAuthnX\Passkey\PendingCeremonyStore`** — the transient side: ceremonies started but not
+  yet finished, keyed by challenge. Implement it on something browser-session-scoped (the PHP
+  session, a short-TTL cache), never on durable storage. Its consume-on-read semantics make each
+  challenge single-use — the anti-replay control the library relies on.
+
+### Policy knobs
+
+The defaults are right for passkeys: user verification `required`, discoverable credentials
+`required`, ES256/RS256/EdDSA, the spec-recommended 300 s timeout, cross-origin iframes rejected.
+To change any of them, subclass `PasskeyFlow` and override the corresponding protected method
+(`getUserVerificationRequirement()`, `getAllowedAlgorithms()`, `getResidentKeyRequirement()`,
+`getTimeout()`, `isCrossOriginAllowed()`, `getAllowedTopOrigins()`, `generateChallenge()`).
+
+## Example
+
+A runnable, single-file relying party lives in [`example/`](example/) — multiple accounts, each
+with several passkeys, all four endpoints driven through `PasskeyFlow` with a SQLite-backed
+`PasskeyStore` and a `$_SESSION`-backed `PendingCeremonyStore`:
+
+```sh
+php -S localhost:8000 example/server.php   # then open http://localhost:8000
+```
+
+See [`example/README.md`](example/README.md).
+
+## Attestation is intentionally not supported
+
+This library targets passkeys as a general-purpose authentication mechanism, and for that use case
+`attestation: "none"` — the WebAuthn default — is the right choice. Attestation — cryptographically proving
+*which authenticator model* produced a credential — is an enterprise feature for relying parties
+that must restrict enrolment to approved hardware. It adds no security to authenticating the
+general public, and supporting it properly drags in certificate-chain validation, per-vendor
+formats, trust-anchor management, and FIDO Metadata Service integration.
+
+Concretely, the library accepts the `none` format and verifies `packed` **self** attestation
+(which clients pass through even under `attestation: "none"`). Certificate-based attestation
+statements (`packed` with `x5c`, `tpm`, `android-key`, `fido-u2f`, `apple`, …) are **rejected**,
+fail-closed — never silently ignored.
+
+Attestation support may be added eventually, but not anytime soon, and definitely not for v1.0 —
+possibly never. If your deployment must verify authenticator provenance, this library is not the
+right fit today.
+
+## Low-level API
+
+Everything below `PasskeyFlow` is public and usable on its own when the flow's shape doesn't fit —
+but it puts challenge storage, single-use enforcement, and result persistence in your hands.
+
+**`WebAuthnX\RelyingParty`** runs the full WebAuthn §7.1 (registration) and §7.2 (authentication)
+verification procedures against per-ceremony expectations, reading credentials through a
+`CredentialStore` you implement:
 
 ```php
 use WebAuthnX\Ceremony\RegistrationExpectations;
@@ -96,94 +182,41 @@ $credential = PublicKeyCredential::fromRegistrationResponseJson(JsonObject::from
 $result = (new RelyingParty())->verifyRegistration(
     $credential,
     new RegistrationExpectations(
-        challenge: $challengeYouIssued,          // the raw bytes you generated for this ceremony
+        challenge: $challengeYouIssued,   // raw bytes you generated and stored for this ceremony
         rpId: 'example.com',
         origins: ['https://example.com'],
         allowedAlgorithms: [CoseAlgorithmIdentifier::ES256, CoseAlgorithmIdentifier::RS256],
         requireUserVerification: true,
     ),
-    $store,                                       // your WebAuthnX\Ceremony\CredentialStore
+    $store,   // your WebAuthnX\Ceremony\CredentialStore
 );
 
-// Persist the record against the user you just registered (user.id becomes the user handle):
 $store->save($result->toCredentialRecord($userHandle));   // your own persistence
 ```
 
-### 3. Verify an authentication
+`verifyAuthentication()` is the mirror image with `AuthenticationExpectations` and returns an
+`AuthenticationResult`. At this level *you* generate the challenge, store it, and invalidate it
+after one ceremony — single-use challenges are the anti-replay control.
 
-```php
-use WebAuthnX\Ceremony\AuthenticationExpectations;
-use WebAuthnX\Credential\PublicKeyCredential;
-use WebAuthnX\Json\JsonObject;
-use WebAuthnX\RelyingParty;
+Below that sit the building blocks: the options models with `toJson()`
+(`PublicKeyCredentialCreationOptions` / `PublicKeyCredentialRequestOptions`), full response
+parsing (`PublicKeyCredential`, `AttestationObject`, `AuthenticatorData`, `CollectedClientData`),
+COSE key parsing and signature verification (`CoseKey::verify()`), and the primitives (CBOR
+decoding, DER encoding, canonical base64url, a strict JSON accessor).
 
-$credential = PublicKeyCredential::fromAuthenticationResponseJson(JsonObject::fromString($rawJson));
+### Supported signature algorithms
 
-$result = (new RelyingParty())->verifyAuthentication(
-    $credential,
-    new AuthenticationExpectations(
-        challenge: $challengeYouIssued,
-        rpId: 'example.com',
-        origins: ['https://example.com'],
-        allowedCredentialIds: $idsFromAllowCredentials,  // or null for a usernameless flow
-        requireUserVerification: true,
-        expectedUserHandle: $userHandle,                 // set if you identified the user first
-    ),
-    $store,
-);
+Signatures are verified through `ext-openssl` with the COSE algorithm identifiers below:
 
-// Log the user in as $result->userHandle, then persist the new state:
-$store->updateSignCount($result->credentialId, $result->newSignCount);   // your own persistence
-
-if ($result->possibleClone) {
-    // The signature counter did not increase — a clone signal, not proof. Apply your risk policy.
-}
-```
-
-Both methods are **fail-closed**: on *any* failed check — or a malformed response — they throw a
-`WebAuthnX\Ceremony\VerificationException` carrying a stable, machine-readable `->reason`; you
-either get a trustworthy result or an exception, never a "maybe". You still generate and store the
-challenge yourself and invalidate it after one ceremony — single-use challenges are the anti-replay
-control the library relies on.
-
-The lower-level building blocks used above remain public for advanced use: `PublicKeyCredential`
-(generic over its response type), `parseAttestationObject()` / `parseAuthenticatorData()`, and the
-`CoseKey::verify()` signature primitive.
-
-## Example
-
-A runnable, single-file relying party lives in [`example/`](example/) — create a passkey and log in
-with it end to end:
-
-```sh
-php -S localhost:8000 example/server.php   # then open http://localhost:8000
-```
-
-It shows both ceremonies driven through `RelyingParty`, plus a file-backed `CredentialStore`. See
-[`example/README.md`](example/README.md).
-
-## Scope
-
-**Implemented:**
-
-- A `RelyingParty` façade performing the full WebAuthn §7.1 (registration) and §7.2
-  (authentication) verification procedures for the `attestation: "none"` case, including
-  `packed` self-attestation verification (§8.2 without `x5c`)
-- Caller-owned state abstractions (`CredentialStore`, per-ceremony `*Expectations`) and rich,
-  typed results (`RegistrationResult` / `AuthenticationResult`) with a fail-closed error model
-- Full response parsing: `PublicKeyCredential`, attestation/assertion responses, `AttestationObject`,
-  `AuthenticatorData` (with flag accessors) + attested credential data, `CollectedClientData`
-- Options models with JSON serialization for both ceremonies
-- COSE key parsing (`EC2`, `RSA`, `OKP`) with validation, COSE → SPKI conversion, and signature
-  verification (`CoseKey::verify()`; ES256/384/512, RS256, EdDSA) over `ext-openssl`
-- Primitives: binary reader, CBOR decoding, DER (SubjectPublicKeyInfo) encoding, canonical
-  base64url, JSON access
-
-**Not implemented yet, planned as the next layer:**
-
-- Certificate-based attestation-statement verification (`packed` with `x5c`, `tpm`, `android-key`,
-  `fido-u2f`, `apple`, …) and trust-anchor evaluation
-- FIDO Metadata Service integration
+| COSE alg | Constant | Algorithm |
+|---:|---|---|
+| `-7`   | `CoseAlgorithmIdentifier::ES256` | ECDSA w/ SHA-256 (P-256) |
+| `-35`  | `CoseAlgorithmIdentifier::ES384` | ECDSA w/ SHA-384 (P-384) |
+| `-36`  | `CoseAlgorithmIdentifier::ES512` | ECDSA w/ SHA-512 (P-521) |
+| `-257` | `CoseAlgorithmIdentifier::RS256` | RSASSA-PKCS1-v1_5 w/ SHA-256 |
+| `-8`   | `CoseAlgorithmIdentifier::EdDSA` | EdDSA (Ed25519 or Ed448) |
+| `-19`  | `CoseAlgorithmIdentifier::Ed25519` | EdDSA w/ Ed25519, fully specified (RFC 9864) |
+| `-53`  | `CoseAlgorithmIdentifier::Ed448` | EdDSA w/ Ed448, fully specified (RFC 9864) |
 
 ## Development
 
