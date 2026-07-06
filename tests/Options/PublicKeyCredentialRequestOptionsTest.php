@@ -20,7 +20,7 @@ class PublicKeyCredentialRequestOptionsTest extends WebAuthnTestCase
     {
         $options = new PublicKeyCredentialRequestOptions(
             challenge: 'challenge-bytes',
-            timeout: 60000,
+            timeout: 60_000,
             rpId: 'example.com',
             allowCredentials: [
                 new PublicKeyCredentialDescriptor(
@@ -37,7 +37,7 @@ class PublicKeyCredentialRequestOptionsTest extends WebAuthnTestCase
         self::assertSame(
             [
                 'challenge' => Base64::urlEncode('challenge-bytes'),
-                'timeout' => 60000,
+                'timeout' => 60_000,
                 'rpId' => 'example.com',
                 'allowCredentials' => [
                     [

@@ -49,17 +49,17 @@ class CborDecoderTest extends WebAuthnTestCase
         yield ['18 19', 25];
         yield ['18 64', 100];
         yield ['19 03 e8', 1000];
-        yield ['1a 00 0f 42 40', 1000000];
-        yield ['1b 00 00 00 e8 d4 a5 10 00', 1000000000000];
-        yield ['1b 7f ff ff ff ff ff ff ff', 9223372036854775807];
+        yield ['1a 00 0f 42 40', 1_000_000];
+        yield ['1b 00 00 00 e8 d4 a5 10 00', 1_000_000_000_000];
+        yield ['1b 7f ff ff ff ff ff ff ff', 9_223_372_036_854_775_807];
 
         // negative int
         yield ['20', -1];
         yield ['29', -10];
         yield ['38 63', -100];
         yield ['39 03 e7', -1000];
-        yield ['3a 00 0f 42 3f', -1000000];
-        yield ['3b 7f ff ff ff ff ff ff ff', -9223372036854775807 - 1];
+        yield ['3a 00 0f 42 3f', -1_000_000];
+        yield ['3b 7f ff ff ff ff ff ff ff', -9_223_372_036_854_775_807 - 1];
 
         // byte strings (longer length prefixes are accepted even when not minimally encoded)
         yield ['40', ''];
@@ -108,8 +108,8 @@ class CborDecoderTest extends WebAuthnTestCase
         yield ['f9 3c 00', 1.0];
         yield ['fb 3f f1 99 99 99 99 99 9a', 1.1];
         yield ['f9 3e 00', 1.5];
-        yield ['f9 7b ff', 65504.0];
-        yield ['fa 47 c3 50 00', 100000.0];
+        yield ['f9 7b ff', 65_504.0];
+        yield ['fa 47 c3 50 00', 100_000.0];
         yield ['fa 7f 7f ff ff', 3.4028234663852886e+38];
         yield ['fb 7e 37 e4 3c 88 00 75 9c', 1.0e+300];
         yield ['f9 00 01', 5.960464477539063e-8];

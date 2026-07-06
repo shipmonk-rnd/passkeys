@@ -36,7 +36,7 @@ class PublicKeyCredentialCreationOptionsTest extends WebAuthnTestCase
                 new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::ES256),
                 new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::RS256),
             ],
-            timeout: 60000,
+            timeout: 60_000,
             excludeCredentials: [
                 new PublicKeyCredentialDescriptor(
                     PublicKeyCredentialType::PUBLIC_KEY,
@@ -67,7 +67,7 @@ class PublicKeyCredentialCreationOptionsTest extends WebAuthnTestCase
                     ['type' => 'public-key', 'alg' => CoseAlgorithmIdentifier::ES256],
                     ['type' => 'public-key', 'alg' => CoseAlgorithmIdentifier::RS256],
                 ],
-                'timeout' => 60000,
+                'timeout' => 60_000,
                 'excludeCredentials' => [
                     [
                         'type' => 'public-key',

@@ -151,9 +151,7 @@ abstract class CoseKey
 
     private static function clearOpensslErrors(): void
     {
-        while (openssl_error_string() !== false) {
-            // drain the queue
-        }
+        self::opensslErrors();
     }
 
 }

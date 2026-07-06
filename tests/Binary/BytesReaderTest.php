@@ -82,7 +82,7 @@ class BytesReaderTest extends WebAuthnTestCase
     public function testU32(): void
     {
         BytesReader::read("\x00\x01\x02\x03", static function (BytesReader $reader): void {
-            self::assertSame(66051, $reader->u32());
+            self::assertSame(66_051, $reader->u32());
         });
 
         self::assertException(
@@ -99,11 +99,11 @@ class BytesReaderTest extends WebAuthnTestCase
     public function testU64(): void
     {
         BytesReader::read("\x00\x01\x02\x03\x04\x05\x06\x07", static function (BytesReader $reader): void {
-            self::assertSame(283686952306183, $reader->u64());
+            self::assertSame(283_686_952_306_183, $reader->u64());
         });
 
         BytesReader::read("\x7f\xff\xff\xff\xff\xff\xff\xff", static function (BytesReader $reader): void {
-            self::assertSame(9223372036854775807, $reader->u64());
+            self::assertSame(9_223_372_036_854_775_807, $reader->u64());
         });
 
         self::assertException(
@@ -142,7 +142,7 @@ class BytesReaderTest extends WebAuthnTestCase
         });
 
         BytesReader::read("\x7b\xff", static function (BytesReader $reader): void {
-            self::assertSame(65504.0, $reader->f16());
+            self::assertSame(65_504.0, $reader->f16());
         });
 
         BytesReader::read("\x7c\x00", static function (BytesReader $reader): void {

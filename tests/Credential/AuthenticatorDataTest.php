@@ -66,7 +66,7 @@ class AuthenticatorDataTest extends WebAuthnTestCase
     public function testBackupFlags(): void
     {
         $authenticatorData = AuthenticatorData::fromBytes(
-            self::bytesFromHex(str_repeat('00', 32) . '1d' . '00000000'),
+            self::bytesFromHex(str_repeat('00', 32) . '1d00000000'),
         );
 
         self::assertTrue($authenticatorData->isUserPresent());
@@ -86,7 +86,7 @@ class AuthenticatorDataTest extends WebAuthnTestCase
     public function testExtensionDataWithoutAttestedCredentialData(): void
     {
         $authenticatorData = AuthenticatorData::fromBytes(
-            self::bytesFromHex(str_repeat('00', 32) . '81' . '00000000' . 'a0'),
+            self::bytesFromHex(str_repeat('00', 32) . '8100000000a0'),
         );
 
         self::assertTrue($authenticatorData->isUserPresent());

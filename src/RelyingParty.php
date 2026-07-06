@@ -30,8 +30,8 @@ use function strlen;
  * any failed check, a {@see VerificationException}.
  *
  * This implementation covers the common `attestation: "none"` deployment: it accepts the `none`
- * attestation format without evaluating a trust path (§7.1 steps 22–24 collapse to the "None
- * attestation acceptable" case), and verifies `packed` **self** attestation (§8.2 without `x5c`)
+ * attestation format without evaluating a trust path (§7.1 steps 22–24 collapse to the
+ * "None attestation acceptable" case), and verifies `packed` **self** attestation (§8.2 without `x5c`)
  * against the credential public key — which clients pass through unmodified even when the relying
  * party asked for `attestation: "none"` (§5.1.3). Every other format, including `packed` with an
  * `x5c` certificate chain, is rejected as unsupported; that trust-path evaluation is a planned
@@ -66,6 +66,7 @@ final class RelyingParty
      * Verifies a registration ceremony response (`navigator.credentials.create()`) per WebAuthn §7.1.
      *
      * @param PublicKeyCredential<AuthenticatorAttestationResponse> $credential
+     *
      * @throws VerificationException on any failed §7.1 check, if the response is malformed, or if
      *     the attested credential key is unusable (unsupported algorithm / cannot be loaded)
      */
@@ -98,6 +99,7 @@ final class RelyingParty
 
     /**
      * @param PublicKeyCredential<AuthenticatorAttestationResponse> $credential
+     *
      * @throws MalformedDataException
      * @throws SignatureVerificationException
      * @throws VerificationException
@@ -209,6 +211,7 @@ final class RelyingParty
      * receives it. Anything needing a certificate trust path stays unsupported.
      *
      * @return RegistrationResult::ATTESTATION_*
+     *
      * @throws SignatureVerificationException if the attested credential key cannot be loaded
      * @throws VerificationException
      */
@@ -266,6 +269,7 @@ final class RelyingParty
      * Verifies an authentication ceremony response (`navigator.credentials.get()`) per WebAuthn §7.2.
      *
      * @param PublicKeyCredential<AuthenticatorAssertionResponse> $credential
+     *
      * @throws VerificationException on any failed §7.2 check, if the response is malformed, or if
      *     the stored credential key is unusable (unsupported algorithm / cannot be loaded)
      */
@@ -298,6 +302,7 @@ final class RelyingParty
 
     /**
      * @param PublicKeyCredential<AuthenticatorAssertionResponse> $credential
+     *
      * @throws MalformedDataException
      * @throws SignatureVerificationException
      * @throws VerificationException

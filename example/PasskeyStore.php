@@ -4,6 +4,7 @@ namespace WebAuthnXDemo;
 
 use PDO;
 use PDOStatement;
+use RuntimeException;
 use WebAuthnX\Ceremony\AuthenticationResult;
 use WebAuthnX\Ceremony\CredentialRecord;
 use WebAuthnX\Cose\CoseKey;
@@ -251,8 +252,8 @@ final class PasskeyStore implements PasskeyStoreInterface
     private function recordFromRow(array $row): CredentialRecord
     {
         return new CredentialRecord(
-            credentialId: base64_decode($row['credential_id']),
-            publicKey: CoseKey::fromBytes(base64_decode($row['public_key'])),
+            credentialId: $this->decodeBase64($row['credential_id']),
+            publicKey: CoseKey::fromBytes($this->decodeBase64($row['public_key'])),
             signCount: $row['sign_count'],
             userHandle: $row['passkey_user_handle'],
             uvInitialized: (bool) $row['uv_initialized'],
@@ -260,6 +261,17 @@ final class PasskeyStore implements PasskeyStoreInterface
             backupState: (bool) $row['backup_state'],
             transports: $row['transports'] === null ? null : json_decode($row['transports'], flags: JSON_THROW_ON_ERROR),
         );
+    }
+
+    private function decodeBase64(string $encoded): string
+    {
+        $decoded = base64_decode($encoded, strict: true);
+
+        if ($decoded === false) {
+            throw new RuntimeException('Stored value is not valid base64');
+        }
+
+        return $decoded;
     }
 
     private function bindParameter(

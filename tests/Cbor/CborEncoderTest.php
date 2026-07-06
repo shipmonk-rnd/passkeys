@@ -36,9 +36,9 @@ class CborEncoderTest extends WebAuthnTestCase
         yield 'one-byte (24)' => [24, '1818'];
         yield 'one-byte (200)' => [200, '18c8'];
         yield 'two-byte (1000)' => [1000, '1903e8'];
-        yield 'two-byte max (65535)' => [65535, '19ffff'];
-        yield 'four-byte (100000)' => [100000, '1a000186a0'];
-        yield 'eight-byte (5e9)' => [5000000000, '1b000000012a05f200'];
+        yield 'two-byte max (65535)' => [65_535, '19ffff'];
+        yield 'four-byte (100000)' => [100_000, '1a000186a0'];
+        yield 'eight-byte (5e9)' => [5_000_000_000, '1b000000012a05f200'];
         yield 'negative one' => [-1, '20'];
         yield 'negative (ES256 alg -7)' => [-7, '26'];
         yield 'negative two-byte (RS256 alg -257)' => [-257, '390100'];
@@ -59,7 +59,7 @@ class CborEncoderTest extends WebAuthnTestCase
             [CborEncoder::encodeInt(-1), CborEncoder::encodeByteString('xy')],
         ]);
 
-        self::assertSame('a2' . '0102' . '20' . '427879', bin2hex($encoded));
+        self::assertSame('a2010220427879', bin2hex($encoded));
 
         $map = BytesReader::read(
             self::bytesFromHex(bin2hex($encoded)),

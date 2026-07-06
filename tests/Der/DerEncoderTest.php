@@ -37,9 +37,9 @@ class DerEncoderTest extends WebAuthnTestCase
         yield ["\x00\x00", "\x02\x01\x00"];
 
         for ($i = 0; $i < 1000; $i++) {
-            $int = random_int(0, 1000000);
+            $int = random_int(0, 1_000_000);
             $bytes = pack('N', $int);
-            yield [$bytes, self::_der_unsignedInteger($bytes)];
+            yield [$bytes, self::derUnsignedInteger($bytes)];
         }
     }
 
@@ -122,12 +122,12 @@ class DerEncoderTest extends WebAuthnTestCase
         yield [256, "\x82\x01\x00"];
 
         for ($i = 0; $i < 1000; $i++) {
-            $int = random_int(0, 1000000);
-            yield [$int, self::_der_length($int)];
+            $int = random_int(0, 1_000_000);
+            yield [$int, self::derLength($int)];
         }
     }
 
-    private static function _der_length(int $len): string
+    private static function derLength(int $len): string
     {
         if ($len < 128) {
             return chr($len);
@@ -140,7 +140,7 @@ class DerEncoderTest extends WebAuthnTestCase
         return chr(0x80 | strlen($lenBytes)) . $lenBytes;
     }
 
-    private static function _der_unsignedInteger(string $bytes): string
+    private static function derUnsignedInteger(string $bytes): string
     {
         $len = strlen($bytes);
 
@@ -160,7 +160,7 @@ class DerEncoderTest extends WebAuthnTestCase
             $bytes = "\x00" . $bytes;
         }
 
-        return "\x02" . self::_der_length(strlen($bytes)) . $bytes;
+        return "\x02" . self::derLength(strlen($bytes)) . $bytes;
     }
 
 }

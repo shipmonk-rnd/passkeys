@@ -16,7 +16,7 @@ use const OPENSSL_ALGO_SHA256;
 class CoseKeyVerifyTest extends CryptoTestCase
 {
 
-    private const string MESSAGE = 'authenticatorData||clientDataHash ' . '0123456789abcdef';
+    private const string MESSAGE = 'authenticatorData||clientDataHash 0123456789abcdef';
 
     /**
      * @param CoseAlgorithmIdentifier::* $alg
