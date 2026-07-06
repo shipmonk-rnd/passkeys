@@ -2,7 +2,6 @@
 
 namespace WebAuthnXTests;
 
-use PHPUnit\Framework\Constraint\Exception as ExceptionConstraint;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Throwable;
@@ -68,14 +67,17 @@ abstract class WebAuthnTestCase extends TestCase
 	{
 		try {
 			$cb();
-			self::assertThat(null, new ExceptionConstraint($type));
 
 		} catch (Throwable $e) {
-			self::assertThat($e, new ExceptionConstraint($type));
+			self::assertInstanceOf($type, $e);
 
 			if ($message !== null) {
 				self::assertStringMatchesFormat($message, $e->getMessage());
 			}
+
+			return;
 		}
+
+		self::fail("Failed asserting that exception of type {$type} is thrown.");
 	}
 }

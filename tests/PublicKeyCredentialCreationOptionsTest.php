@@ -162,7 +162,7 @@ class PublicKeyCredentialCreationOptionsTest extends WebAuthnTestCase
 
 		$decoded = json_decode($options->toJson(), true, flags: JSON_THROW_ON_ERROR);
 		self::assertIsArray($decoded);
-		self::assertSame(['name' => 'Example RP'], $decoded['rp']);
+		self::assertSame(['name' => 'Example RP'], $decoded['rp'] ?? null);
 	}
 
 	/**

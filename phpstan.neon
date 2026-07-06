@@ -1,4 +1,7 @@
 includes:
+    - phar://phpstan.phar/conf/bleedingEdge.neon
+    - vendor/phpstan/phpstan-phpunit/extension.neon
+    - vendor/phpstan/phpstan-phpunit/rules.neon
     - vendor/phpstan/phpstan-strict-rules/rules.neon
     - vendor/shipmonk/phpstan-rules/rules.neon
     - vendor/shipmonk/dead-code-detector/rules.neon
@@ -12,6 +15,12 @@ parameters:
             tests:
                 enabled: true # devPaths autodetected from composer.json autoload-dev (WebAuthnXTests\ -> tests/)
     level: max
+    treatPhpDocTypesAsCertain: false
+    checkUninitializedProperties: true
+    checkMissingCallableSignature: true
+    reportAnyTypeWideningInVarTag: true
+    reportPossiblyNonexistentConstantArrayOffset: true
+    reportPossiblyNonexistentGeneralArrayOffset: true
     phpVersion:
         min: 80400
         max: 80400

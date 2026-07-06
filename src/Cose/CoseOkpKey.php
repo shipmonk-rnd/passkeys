@@ -2,6 +2,7 @@
 
 namespace WebAuthnX\Cose;
 
+use LogicException;
 use WebAuthnX\Cbor\CborEncoder;
 use WebAuthnX\Cbor\CborMap;
 use WebAuthnX\Cbor\CborMapException;
@@ -103,8 +104,11 @@ final class CoseOkpKey extends CoseKey
 
 	public function toDerSubjectPublicKeyInfo(): string
 	{
+		$curveOid = self::CURVES[$this->crv][1]
+			?? throw new LogicException("Unsupported OKP curve {$this->crv}"); // unreachable, enforced by fromCborMap()
+
 		return DerEncoder::encodeSequence(
-			DerEncoder::encodeSequence(DerEncoder::encodeObjectIdentifier(self::CURVES[$this->crv][1])),
+			DerEncoder::encodeSequence(DerEncoder::encodeObjectIdentifier($curveOid)),
 			DerEncoder::encodeBitString($this->x),
 		);
 	}

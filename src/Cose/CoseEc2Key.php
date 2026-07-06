@@ -2,6 +2,7 @@
 
 namespace WebAuthnX\Cose;
 
+use LogicException;
 use WebAuthnX\Cbor\CborEncoder;
 use WebAuthnX\Cbor\CborMap;
 use WebAuthnX\Cbor\CborMapException;
@@ -106,7 +107,8 @@ final class CoseEc2Key extends CoseKey
 
 	public function toDerSubjectPublicKeyInfo(): string
 	{
-		$curveOid = self::ALGORITHMS[$this->alg][2];
+		$curveOid = self::ALGORITHMS[$this->alg][2]
+			?? throw new LogicException("Unsupported EC2 algorithm {$this->alg}"); // unreachable, enforced by fromCborMap()
 
 		// Uncompressed point: 0x04 || X || Y (RFC 5480 §2.2).
 		$point = "\x04" . $this->x . $this->y;

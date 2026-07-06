@@ -191,7 +191,7 @@ class BytesReader
 	{
 		$value = unpack($format, $this->readRaw($length));
 
-		if ($value === false || !is_float($value[1])) {
+		if ($value === false || !isset($value[1]) || !is_float($value[1])) {
 			throw new BytesReaderException('Failed to unpack data');
 		}
 

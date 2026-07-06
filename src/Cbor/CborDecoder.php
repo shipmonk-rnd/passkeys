@@ -123,7 +123,7 @@ class CborDecoder
 	{
 		$array = [];
 
-		while ($length--) {
+		while ($length-- > 0) {
 			$array[] = self::decode($bytes);
 		}
 
@@ -138,7 +138,7 @@ class CborDecoder
 	{
 		$map = [];
 
-		while ($length--) {
+		while ($length-- > 0) {
 			$key = self::decode($bytes);
 			$value = self::decode($bytes);
 
