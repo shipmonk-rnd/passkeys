@@ -5,3 +5,4 @@
 /clover.xml
 /composer.lock
 /example/passkeys.sqlite
+/cache
