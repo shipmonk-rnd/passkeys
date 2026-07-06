@@ -1,0 +1,388 @@
+<?php declare(strict_types = 1);
+
+namespace WebAuthnXTests;
+
+use OpenSSLAsymmetricKey;
+use WebAuthnX\Base64\Base64;
+use WebAuthnX\Ceremony\CredentialRecord;
+use WebAuthnX\Ceremony\VerificationException;
+use WebAuthnX\Cose\CoseAlgorithmIdentifier;
+use WebAuthnX\Cose\CoseKey;
+use WebAuthnX\Credential\AuthenticatorData;
+use WebAuthnX\Enum\UserVerificationRequirement;
+use WebAuthnX\Options\PublicKeyCredentialRequestOptions;
+
+use function base64_encode;
+use function chr;
+use function hash;
+use function json_encode;
+use function ord;
+use function pack;
+use function strlen;
+
+use const JSON_THROW_ON_ERROR;
+
+/**
+ * Exercises the {@see \WebAuthnX\Passkey\PasskeyFlow} template against an in-memory
+ * implementation ({@see InMemoryPasskeyFlow}), covering both entry flows — usernameless
+ * (dedicated button / conditional mediation) and two-step (username first) — plus the
+ * challenge-keyed pending-ceremony state that lets them run concurrently.
+ *
+ * The §7.2 checks themselves are covered by {@see RelyingPartyTest}; here only a representative
+ * failure per layer asserts that the flow wires expectations and state correctly.
+ */
+class PasskeyFlowTest extends CryptoTestCase
+{
+	private const string RP_ID = 'example.com';
+	private const string ORIGIN = 'https://example.com';
+
+	private const string ALICE = 'alice@example.com';
+	private const string ALICE_HANDLE = 'alice-handle-0001';
+	private const string ALICE_CREDENTIAL_ID = "\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a";
+	private const string BOB_HANDLE = 'bob-handle-000002';
+	private const string BOB_CREDENTIAL_ID = "\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b";
+
+	private const int FLAGS_UP_UV = AuthenticatorData::FLAG_USER_PRESENT | AuthenticatorData::FLAG_USER_VERIFIED;
+
+	/** @var array<int, int|string> */
+	private array $coseEntries;
+
+	private OpenSSLAsymmetricKey $privateKey;
+
+	protected function setUp(): void
+	{
+		[$this->privateKey, $this->coseEntries] = self::generateKeyAndCoseEntries(CoseAlgorithmIdentifier::ES256);
+	}
+
+	// --- Flow 1: usernameless (dedicated button / conditional mediation) ------------------------
+
+	public function testUsernamelessRoundTrip(): void
+	{
+		$flow = $this->flowWithAlice();
+
+		$options = $flow->authenticationOptions();
+
+		self::assertSame(32, strlen($options->challenge));
+		self::assertSame(self::RP_ID, $options->rpId);
+		self::assertNull($options->allowCredentials);
+		self::assertSame(UserVerificationRequirement::REQUIRED, $options->userVerification);
+		self::assertSame(PublicKeyCredentialRequestOptions::RECOMMENDED_TIMEOUT, $options->timeout);
+
+		$pending = $flow->pendingAuthentications[base64_encode($options->challenge)] ?? null;
+		self::assertNotNull($pending);
+		self::assertNull($pending->userHandle);
+
+		$result = $flow->authenticate($this->aliceAssertion($options->challenge, signCount: 7));
+
+		self::assertSame(self::ALICE_HANDLE, $result->userHandle);
+		self::assertSame(self::ALICE_CREDENTIAL_ID, $result->credentialId);
+		self::assertSame(7, $result->newSignCount);
+		self::assertSame([$result], $flow->updatedCredentials);
+		self::assertSame([], $flow->pendingAuthentications);
+	}
+
+	public function testReplayedResponseIsRejected(): void
+	{
+		$flow = $this->flowWithAlice();
+		$body = $this->aliceAssertion($flow->authenticationOptions()->challenge);
+
+		$flow->authenticate($body);
+
+		$this->assertAuthenticationFails(VerificationException::CHALLENGE_MISMATCH, $flow, $body);
+		self::assertCount(1, $flow->updatedCredentials);
+	}
+
+	// --- Flow 2: two-step (username first) -------------------------------------------------------
+
+	public function testTwoStepRoundTripPinsIdentifiedUser(): void
+	{
+		$flow = $this->flowWithAlice();
+
+		$options = $flow->authenticationOptions(self::ALICE);
+
+		self::assertNotNull($options->allowCredentials);
+		self::assertCount(1, $options->allowCredentials);
+		self::assertSame(self::ALICE_CREDENTIAL_ID, $options->allowCredentials[0]->id);
+		self::assertSame(['internal', 'hybrid'], $options->allowCredentials[0]->transports);
+		self::assertSame(self::ALICE_HANDLE, $flow->pendingAuthentications[base64_encode($options->challenge)]->userHandle ?? null);
+
+		$result = $flow->authenticate($this->aliceAssertion($options->challenge));
+
+		self::assertSame(self::ALICE_HANDLE, $result->userHandle);
+	}
+
+	public function testTwoStepRejectsAnotherUsersCredential(): void
+	{
+		$flow = $this->flowWithAlice();
+		[$bobKey, $bobCoseEntries] = self::generateKeyAndCoseEntries(CoseAlgorithmIdentifier::ES256);
+		$flow->addUser('bob@example.com', self::BOB_HANDLE);
+		$flow->addCredential($this->record(self::BOB_CREDENTIAL_ID, self::BOB_HANDLE, $bobCoseEntries));
+
+		$options = $flow->authenticationOptions(self::ALICE);
+
+		$this->assertAuthenticationFails(
+			VerificationException::CREDENTIAL_NOT_ALLOWED,
+			$flow,
+			self::assertionBody($bobKey, $options->challenge, self::BOB_CREDENTIAL_ID, self::BOB_HANDLE),
+		);
+	}
+
+	public function testUnknownUsernameFallsBackToUsernamelessOptions(): void
+	{
+		$flow = $this->flowWithAlice();
+
+		$options = $flow->authenticationOptions('nobody@example.com');
+
+		self::assertNull($options->allowCredentials);
+		$pending = $flow->pendingAuthentications[base64_encode($options->challenge)] ?? null;
+		self::assertNotNull($pending);
+		self::assertNull($pending->userHandle);
+
+		// A discoverable passkey of an existing account still signs in.
+		$result = $flow->authenticate($this->aliceAssertion($options->challenge));
+		self::assertSame(self::ALICE_HANDLE, $result->userHandle);
+	}
+
+	public function testKnownUserWithoutPasskeysStaysPinned(): void
+	{
+		$flow = $this->flowWithAlice();
+		$flow->addUser('carol@example.com', 'carol-handle-0003');
+
+		$options = $flow->authenticationOptions('carol@example.com');
+
+		// Nothing to allow-list, but the ceremony still belongs to carol: alice's passkey must not pass.
+		self::assertNull($options->allowCredentials);
+		$this->assertAuthenticationFails(
+			VerificationException::USER_HANDLE_MISMATCH,
+			$flow,
+			$this->aliceAssertion($options->challenge),
+		);
+	}
+
+	// --- Combined flows: challenge-keyed pending ceremonies -------------------------------------
+
+	public function testConcurrentCeremoniesAreKeyedByChallenge(): void
+	{
+		$flow = $this->flowWithAlice();
+
+		// Page load starts a conditional-mediation ceremony, the login form a pinned one.
+		$conditionalOptions = $flow->authenticationOptions();
+		$twoStepOptions = $flow->authenticationOptions(self::ALICE);
+		self::assertCount(2, $flow->pendingAuthentications);
+
+		// Answering the earlier ceremony works and leaves the later one intact, and vice versa.
+		$flow->authenticate($this->aliceAssertion($conditionalOptions->challenge));
+		self::assertCount(1, $flow->pendingAuthentications);
+
+		$flow->authenticate($this->aliceAssertion($twoStepOptions->challenge, signCount: 2));
+		self::assertSame([], $flow->pendingAuthentications);
+		self::assertCount(2, $flow->updatedCredentials);
+	}
+
+	// --- Failure wiring ---------------------------------------------------------------------------
+
+	public function testUnknownChallengeIsRejected(): void
+	{
+		$flow = $this->flowWithAlice();
+
+		$this->assertAuthenticationFails(
+			VerificationException::CHALLENGE_MISMATCH,
+			$flow,
+			$this->aliceAssertion('never-issued-challenge-32-bytes!'),
+		);
+	}
+
+	public function testMalformedResponseIsRejected(): void
+	{
+		$flow = $this->flowWithAlice();
+		$flow->authenticationOptions();
+
+		$this->assertAuthenticationFails(VerificationException::MALFORMED_RESPONSE, $flow, 'not json');
+		$this->assertAuthenticationFails(VerificationException::MALFORMED_RESPONSE, $flow, '{}');
+
+		// A response that never parsed must not consume the pending ceremony.
+		self::assertCount(1, $flow->pendingAuthentications);
+	}
+
+	public function testFailedVerificationDoesNotUpdateCredential(): void
+	{
+		$flow = $this->flowWithAlice();
+		$options = $flow->authenticationOptions();
+
+		$this->assertAuthenticationFails(
+			VerificationException::INVALID_SIGNATURE,
+			$flow,
+			$this->aliceAssertion($options->challenge, tamperSignature: true),
+		);
+		self::assertSame([], $flow->updatedCredentials);
+	}
+
+	// --- Policy defaults and overrides -----------------------------------------------------------
+
+	public function testUserVerificationIsRequiredByDefault(): void
+	{
+		$flow = $this->flowWithAlice();
+		$options = $flow->authenticationOptions();
+
+		$this->assertAuthenticationFails(
+			VerificationException::USER_NOT_VERIFIED,
+			$flow,
+			$this->aliceAssertion($options->challenge, flags: AuthenticatorData::FLAG_USER_PRESENT),
+		);
+	}
+
+	public function testUserVerificationOverrideAcceptsUnverifiedAssertion(): void
+	{
+		$flow = $this->flowWithAlice(userVerification: UserVerificationRequirement::PREFERRED);
+		$options = $flow->authenticationOptions();
+
+		self::assertSame(UserVerificationRequirement::PREFERRED, $options->userVerification);
+
+		$result = $flow->authenticate(
+			$this->aliceAssertion($options->challenge, flags: AuthenticatorData::FLAG_USER_PRESENT),
+		);
+		self::assertFalse($result->userVerified);
+	}
+
+	public function testCrossOriginIsRejectedByDefault(): void
+	{
+		$flow = $this->flowWithAlice();
+		$options = $flow->authenticationOptions();
+
+		$this->assertAuthenticationFails(
+			VerificationException::CROSS_ORIGIN_NOT_ALLOWED,
+			$flow,
+			$this->aliceAssertion($options->challenge, crossOrigin: true),
+		);
+	}
+
+	public function testCrossOriginOverrideAcceptsCrossOriginAssertion(): void
+	{
+		$flow = $this->flowWithAlice(crossOriginAllowed: true);
+		$options = $flow->authenticationOptions();
+
+		$result = $flow->authenticate($this->aliceAssertion($options->challenge, crossOrigin: true));
+		self::assertSame(self::ALICE_HANDLE, $result->userHandle);
+	}
+
+	// --- Assertion helpers ------------------------------------------------------------------------
+
+	private function assertAuthenticationFails(string $reason, InMemoryPasskeyFlow $flow, string $body): void
+	{
+		try {
+			$flow->authenticate($body);
+			self::fail('Expected authentication to fail with ' . $reason);
+
+		} catch (VerificationException $e) {
+			self::assertSame($reason, $e->reason);
+		}
+	}
+
+	// --- Fixture builders -------------------------------------------------------------------------
+
+	/**
+	 * @param UserVerificationRequirement::*|null $userVerification
+	 */
+	private function flowWithAlice(?string $userVerification = null, bool $crossOriginAllowed = false): InMemoryPasskeyFlow
+	{
+		$flow = new InMemoryPasskeyFlow(
+			rpId: self::RP_ID,
+			origins: [self::ORIGIN],
+			userVerification: $userVerification,
+			crossOriginAllowed: $crossOriginAllowed,
+		);
+		$flow->addUser(self::ALICE, self::ALICE_HANDLE);
+		$flow->addCredential($this->record(self::ALICE_CREDENTIAL_ID, self::ALICE_HANDLE, $this->coseEntries));
+
+		return $flow;
+	}
+
+	/**
+	 * @param array<int, int|string> $coseEntries
+	 */
+	private function record(string $credentialId, string $userHandle, array $coseEntries): CredentialRecord
+	{
+		return new CredentialRecord(
+			credentialId: $credentialId,
+			publicKey: CoseKey::fromCborMap(self::cborMap($coseEntries)),
+			signCount: 0,
+			userHandle: $userHandle,
+			uvInitialized: true,
+			backupEligible: false,
+			backupState: false,
+			transports: ['internal', 'hybrid'],
+		);
+	}
+
+	private function aliceAssertion(
+		string $challenge,
+		int $signCount = 1,
+		?int $flags = null,
+		bool $tamperSignature = false,
+		?bool $crossOrigin = null,
+	): string {
+		return self::assertionBody(
+			$this->privateKey,
+			$challenge,
+			self::ALICE_CREDENTIAL_ID,
+			self::ALICE_HANDLE,
+			signCount: $signCount,
+			flags: $flags,
+			tamperSignature: $tamperSignature,
+			crossOrigin: $crossOrigin,
+		);
+	}
+
+	/**
+	 * Builds the raw request body a browser would post after `navigator.credentials.get()` —
+	 * the `PublicKeyCredential.toJSON()` output — signed live with the given key (ES256).
+	 */
+	private static function assertionBody(
+		OpenSSLAsymmetricKey $privateKey,
+		string $challenge,
+		string $credentialId,
+		string $userHandle,
+		int $signCount = 1,
+		?int $flags = null,
+		bool $tamperSignature = false,
+		?bool $crossOrigin = null,
+	): string {
+		$clientData = [
+			'type' => 'webauthn.get',
+			'challenge' => Base64::urlEncode($challenge),
+			'origin' => self::ORIGIN,
+		];
+
+		if ($crossOrigin !== null) {
+			$clientData['crossOrigin'] = $crossOrigin;
+		}
+
+		$clientDataJson = json_encode($clientData, JSON_THROW_ON_ERROR);
+
+		$authData = hash('sha256', self::RP_ID, binary: true)
+			. chr($flags ?? self::FLAGS_UP_UV)
+			. pack('N', $signCount);
+
+		$signature = self::sign(
+			$privateKey,
+			$authData . hash('sha256', $clientDataJson, binary: true),
+			CoseAlgorithmIdentifier::ES256,
+		);
+
+		if ($tamperSignature) {
+			$signature[0] = chr(ord($signature[0]) ^ 0x01);
+		}
+
+		return json_encode([
+			'id' => Base64::urlEncode($credentialId),
+			'rawId' => Base64::urlEncode($credentialId),
+			'type' => 'public-key',
+			'response' => [
+				'clientDataJSON' => Base64::urlEncode($clientDataJson),
+				'authenticatorData' => Base64::urlEncode($authData),
+				'signature' => Base64::urlEncode($signature),
+				'userHandle' => Base64::urlEncode($userHandle),
+			],
+		], JSON_THROW_ON_ERROR);
+	}
+}

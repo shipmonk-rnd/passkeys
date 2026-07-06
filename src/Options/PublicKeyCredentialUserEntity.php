@@ -12,8 +12,7 @@ use WebAuthnX\Base64\Base64;
 readonly class PublicKeyCredentialUserEntity extends PublicKeyCredentialEntity implements JsonSerializable
 {
 	/**
-	 * @param string $id raw user handle bytes (an opaque identifier, at most 64 bytes — not an
-	 *     email or username); base64url encoding happens on serialization
+	 * @param string $id raw user handle bytes (an opaque identifier, at most 64 bytes — not an email or username); base64url encoding happens on serialization
 	 */
 	public function __construct(
 		public string $id,

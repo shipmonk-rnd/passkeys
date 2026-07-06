@@ -24,7 +24,9 @@
 <body>
 	<h1>🔑 WebAuthnX passkey demo</h1>
 	<p class="lead">Multiple accounts, each identified by an email, each able to hold several passkeys.
-		Everything is verified server-side by <code>WebAuthnX\RelyingParty</code>.</p>
+		Sign in via the button (with or without typing your email first) or via autofill on the email
+		field (conditional mediation). Login is verified server-side by <code>WebAuthnX\Passkey\PasskeyFlow</code>,
+		registration by <code>WebAuthnX\RelyingParty</code>.</p>
 
 	<section id="signed-out" class="hidden">
 		<p><input id="email" type="email" placeholder="you@example.com" autocomplete="username webauthn"></p>
@@ -79,6 +81,7 @@
 			} else {
 				inn.classList.add('hidden');
 				out.classList.remove('hidden');
+				conditionalLogin();
 			}
 		}
 
@@ -98,9 +101,10 @@
 			await refresh();
 		}
 
-		async function login() {
+		// `email` empty → usernameless; filled → the two-step flow (options pinned to that account).
+		async function login(email) {
 			log('Requesting login options…');
-			const opt = await post('/login/options');
+			const opt = await post('/login/options', email ? { email } : {});
 			if (!opt.ok) return log(opt.data.message || 'Could not start login', 'err');
 
 			log('Waiting for your authenticator…');
@@ -113,11 +117,47 @@
 			await refresh();
 		}
 
-		const guard = (fn) => async () => { try { await fn(); } catch (e) { log(String(e), 'err'); } };
+		// A conditional-mediation ceremony pends in the background so a passkey can be picked from
+		// the email field's autofill. It runs concurrently with the button flows (the server keys
+		// pending ceremonies by challenge) but must be aborted before any modal WebAuthn call.
+		let conditional = null;
+
+		async function conditionalLogin() {
+			if (conditional || !PublicKeyCredential.isConditionalMediationAvailable) return;
+			if (!await PublicKeyCredential.isConditionalMediationAvailable()) return;
+
+			conditional = new AbortController();
+			try {
+				const opt = await post('/login/options', {});
+				if (!opt.ok) return;
+
+				const credential = await navigator.credentials.get({
+					mediation: 'conditional',
+					signal: conditional.signal,
+					publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(opt.data),
+				});
+
+				const res = await post('/login/verify', credential.toJSON());
+				log(JSON.stringify(res.data, null, 2), res.ok ? 'ok' : 'err');
+				await refresh();
+			} catch (e) {
+				if (e.name !== 'AbortError') log(String(e), 'err');
+			} finally {
+				conditional = null;
+			}
+		}
+
+		function cancelConditional() {
+			conditional?.abort();
+			conditional = null;
+		}
+
+		const guard = (fn) => async () => { try { cancelConditional(); await fn(); } catch (e) { log(String(e), 'err'); } };
 
 		document.getElementById('register-btn').addEventListener('click', guard(() =>
 			register(document.getElementById('email').value.trim())));
-		document.getElementById('login-btn').addEventListener('click', guard(login));
+		document.getElementById('login-btn').addEventListener('click', guard(() =>
+			login(document.getElementById('email').value.trim())));
 		document.getElementById('add-btn').addEventListener('click', guard(() => register()));
 		document.getElementById('logout-btn').addEventListener('click', guard(async () => {
 			await post('/logout');

@@ -11,17 +11,20 @@
  * then open http://localhost:8000. The RP id / origin below assume exactly that host and port;
  * change them together if you serve it elsewhere.
  *
- * Deliberately NOT production code: state lives in $_SESSION (see PasskeyStore), user verification
- * is relaxed for authenticator compatibility, and — importantly — the very first registration for
- * an email is allowed without proving ownership. A real service would verify the email (or require
- * an already-authenticated session) before enrolling the first passkey; adding *further* passkeys
- * here does require being signed in, which is the correct pattern.
+ * Login (usernameless, two-step by email, and conditional-mediation autofill) goes through the
+ * high-level {@see DemoPasskeyFlow} (a {@see \WebAuthnX\Passkey\PasskeyFlow}); registration still
+ * drives {@see RelyingParty} directly until the flow grows a registration side.
+ *
+ * Deliberately NOT production code: state lives in $_SESSION (see PasskeyStore) and — importantly —
+ * the very first registration for an email is allowed without proving ownership. A real service
+ * would verify the email (or require an already-authenticated session) before enrolling the first
+ * passkey; adding *further* passkeys here does require being signed in, which is the correct
+ * pattern.
  */
 
 namespace WebAuthnXDemo;
 
 use Throwable;
-use WebAuthnX\Ceremony\AuthenticationExpectations;
 use WebAuthnX\Ceremony\RegistrationExpectations;
 use WebAuthnX\Ceremony\VerificationException;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
@@ -34,11 +37,11 @@ use WebAuthnX\Options\AuthenticatorSelectionCriteria;
 use WebAuthnX\Options\PublicKeyCredentialCreationOptions;
 use WebAuthnX\Options\PublicKeyCredentialDescriptor;
 use WebAuthnX\Options\PublicKeyCredentialParameters;
-use WebAuthnX\Options\PublicKeyCredentialRequestOptions;
 use WebAuthnX\Options\PublicKeyCredentialRpEntity;
 use WebAuthnX\Options\PublicKeyCredentialUserEntity;
 use WebAuthnX\RelyingParty;
 
+use function array_map;
 use function base64_decode;
 use function base64_encode;
 use function file_get_contents;
@@ -57,6 +60,7 @@ use const PHP_URL_PATH;
 
 require __DIR__ . '/../vendor/autoload.php';
 require __DIR__ . '/PasskeyStore.php';
+require __DIR__ . '/DemoPasskeyFlow.php';
 
 const RP_ID = 'localhost';
 const RP_NAME = 'WebAuthnX Demo';
@@ -72,6 +76,7 @@ const ALLOWED_ALGORITHMS = [
 session_start();
 $store = new PasskeyStore();
 $rp = new RelyingParty();
+$flow = new DemoPasskeyFlow($store, RP_ID, [ORIGIN]);
 
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
 
@@ -222,17 +227,16 @@ match ($path) {
 
 			$options = new PublicKeyCredentialCreationOptions(
 				rp: new PublicKeyCredentialRpEntity(name: RP_NAME, id: RP_ID),
-				user: new PublicKeyCredentialUserEntity($handle, $email, $email),
+				user: new PublicKeyCredentialUserEntity(id: $handle, name: $email, displayName: $email),
 				challenge: $challenge,
-				pubKeyCredParams: [
-					new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::ES256),
-					new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::RS256),
-					new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::EdDSA),
-				],
+				pubKeyCredParams: array_map(
+					static fn (int $alg) => new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, $alg),
+					ALLOWED_ALGORITHMS,
+				),
 				excludeCredentials: $excludeCredentials === [] ? null : $excludeCredentials,
 				authenticatorSelection: new AuthenticatorSelectionCriteria(
 					residentKey: ResidentKeyRequirement::PREFERRED,
-					userVerification: UserVerificationRequirement::PREFERRED,
+					userVerification: UserVerificationRequirement::REQUIRED,
 				),
 			);
 
@@ -282,45 +286,24 @@ match ($path) {
 
 	// ---- Authentication (navigator.credentials.get) ----------------------------------------
 
-	'/login/options' => (static function (): void {
-		$challenge = random_bytes(32);
-		rememberChallenge($challenge);
+	// Without an email the options are usernameless (no allowCredentials — a discoverable passkey
+	// identifies the user); with one, the ceremony is pinned to that account and its credentials
+	// are listed. The same endpoint also feeds the conditional-mediation (autofill) request.
+	'/login/options' => (static function () use ($flow): void {
+		try {
+			$email = trim(body()->getOptionalString('email') ?? '');
+			$options = $flow->authenticationOptions($email === '' ? null : $email);
 
-		// No allowCredentials: a discoverable passkey identifies the user by its returned userHandle.
-		$options = new PublicKeyCredentialRequestOptions(
-			challenge: $challenge,
-			rpId: RP_ID,
-			userVerification: UserVerificationRequirement::PREFERRED,
-		);
+			respond(200, $options->toJson());
 
-		respond(200, $options->toJson());
+		} catch (Throwable $e) {
+			respond(400, ['ok' => false, 'message' => $e->getMessage()]);
+		}
 	})(),
 
-	'/login/verify' => (static function () use ($store, $rp): void {
+	'/login/verify' => (static function () use ($store, $flow): void {
 		try {
-			$credential = PublicKeyCredential::fromAuthenticationResponseJson(body());
-			$challenge = consumeChallenge();
-
-			if ($challenge === null) {
-				respond(400, ['ok' => false, 'message' => 'No login in progress — request options first']);
-
-				return;
-			}
-
-			$result = $rp->verifyAuthentication(
-				$credential,
-				new AuthenticationExpectations(
-					challenge: $challenge,
-					rpId: RP_ID,
-					origins: [ORIGIN],
-					allowedCredentialIds: null, // usernameless: any of our credentials may answer
-					requireUserVerification: false,
-					expectedUserHandle: null,   // identify the user from the assertion's userHandle
-				),
-				$store,
-			);
-
-			$store->updateSignCount($result->credentialId, $result->newSignCount);
+			$result = $flow->authenticate((string) file_get_contents('php://input'));
 			signIn($result->userHandle);
 
 			$user = $store->findUserByHandle($result->userHandle);
