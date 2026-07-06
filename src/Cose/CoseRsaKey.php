@@ -99,18 +99,16 @@ final class CoseRsaKey extends CoseKey
 	{
 		// RSAPublicKey ::= SEQUENCE { modulus INTEGER, publicExponent INTEGER } (RFC 8017 App. A.1.1).
 		$rsaPublicKey = DerEncoder::encodeSequence(
-			DerEncoder::encodeUnsignedInt($this->n)
-			. DerEncoder::encodeUnsignedInt($this->e),
+			DerEncoder::encodeUnsignedInt($this->n),
+			DerEncoder::encodeUnsignedInt($this->e),
 		);
 
-		$spki = DerEncoder::encodeSequence(
+		return DerEncoder::encodeSequence(
 			DerEncoder::encodeSequence(
-				DerEncoder::encodeObjectIdentifier(self::OID_RSA_ENCRYPTION)
-				. DerEncoder::encodeNull(),
-			)
-			. DerEncoder::encodeBitString($rsaPublicKey),
+				DerEncoder::encodeObjectIdentifier(self::OID_RSA_ENCRYPTION),
+				DerEncoder::encodeNull(),
+			),
+			DerEncoder::encodeBitString($rsaPublicKey),
 		);
-
-		return $spki;
 	}
 }

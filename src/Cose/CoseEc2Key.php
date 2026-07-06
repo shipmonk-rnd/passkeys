@@ -111,14 +111,12 @@ final class CoseEc2Key extends CoseKey
 		// Uncompressed point: 0x04 || X || Y (RFC 5480 §2.2).
 		$point = "\x04" . $this->x . $this->y;
 
-		$spki = DerEncoder::encodeSequence(
+		return DerEncoder::encodeSequence(
 			DerEncoder::encodeSequence(
-				DerEncoder::encodeObjectIdentifier(self::OID_EC_PUBLIC_KEY)
-				. DerEncoder::encodeObjectIdentifier($curveOid),
-			)
-			. DerEncoder::encodeBitString($point),
+				DerEncoder::encodeObjectIdentifier(self::OID_EC_PUBLIC_KEY),
+				DerEncoder::encodeObjectIdentifier($curveOid),
+			),
+			DerEncoder::encodeBitString($point),
 		);
-
-		return $spki;
 	}
 }

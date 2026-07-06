@@ -103,11 +103,9 @@ final class CoseOkpKey extends CoseKey
 
 	public function toDerSubjectPublicKeyInfo(): string
 	{
-		$spki = DerEncoder::encodeSequence(
-			DerEncoder::encodeSequence(DerEncoder::encodeObjectIdentifier(self::CURVES[$this->crv][1]))
-			. DerEncoder::encodeBitString($this->x),
+		return DerEncoder::encodeSequence(
+			DerEncoder::encodeSequence(DerEncoder::encodeObjectIdentifier(self::CURVES[$this->crv][1])),
+			DerEncoder::encodeBitString($this->x),
 		);
-
-		return $spki;
 	}
 }

@@ -66,6 +66,16 @@ class DerEncoderTest extends TestCase
 		yield 'negative later arc' => ['1.2.-3'];
 	}
 
+	public function testEncodeSequence(): void
+	{
+		self::assertSame("\x30\x00", DerEncoder::encodeSequence());
+		self::assertSame("\x30\x02\x05\x00", DerEncoder::encodeSequence(DerEncoder::encodeNull()));
+		self::assertSame(
+			"\x30\x06\x02\x01\x01\x02\x01\x02",
+			DerEncoder::encodeSequence(DerEncoder::encodeUnsignedInt("\x01"), DerEncoder::encodeUnsignedInt("\x02")),
+		);
+	}
+
 	public function testEncodeLengthRejectsNegative(): void
 	{
 		$this->expectException(\LogicException::class);

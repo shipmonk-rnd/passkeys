@@ -8,6 +8,7 @@ use function array_map;
 use function chr;
 use function count;
 use function explode;
+use function implode;
 use function ltrim;
 use function ord;
 use function pack;
@@ -60,9 +61,11 @@ class DerEncoder
 		return "\x06" . self::encodeLength(strlen($content)) . $content;
 	}
 
-	public static function encodeSequence(string $bytes): string
+	public static function encodeSequence(string ...$elements): string
 	{
-		return "\x30" . self::encodeLength(strlen($bytes)) . $bytes;
+		$content = implode('', $elements);
+
+		return "\x30" . self::encodeLength(strlen($content)) . $content;
 	}
 
 	public static function encodeLength(int $length): string
