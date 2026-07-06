@@ -7,6 +7,8 @@
         "ext-openssl": "*"
     },
     "require-dev": {
+        "ext-pdo": "*",
+        "ext-pdo_sqlite": "*",
         "phpunit/phpunit": "^10.0",
         "phpstan/phpstan": "^2.2",
         "shipmonk/coverage-guard": "^1.0",

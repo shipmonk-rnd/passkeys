@@ -27,23 +27,27 @@ Then open <http://localhost:8000>:
 
 ## What to look at
 
-- **`server.php`** — the routes. `/register/options` finds-or-creates the user by email and sends
-  `excludeCredentials` (so one authenticator can't enrol twice); `/register/verify`,
-  `/login/options` (usernameless) and `/login/verify` run the ceremonies through `RelyingParty`;
-  `/me` and `/logout` back a simple sign-in session. Failed checks surface the
-  `VerificationException`'s `->reason`.
-- **`PasskeyStore.php`** — a `CredentialStore` shaped like real SQL tables: `users` (user_handle PK,
-  email) and `credentials` (credential_id PK, user_handle FK, public_key, sign_count, flags,
-  transports, …). One user → many credentials via the foreign key. The public key is a single
-  `public_key` column via `CoseKey::toBytes()`, rehydrated with `CoseKey::fromBytes()` — persistence
-  is just INSERT/SELECT/UPDATE over plain columns.
+- **`server.php`** — the routes. `/register/options` finds-or-creates the user by email;
+  `/register/verify`, `/login/options` (usernameless) and `/login/verify` run the ceremonies
+  through a `PasskeyFlow` constructed with the two stores below; `/me` and `/logout` back a simple
+  sign-in session. Failed checks surface the `VerificationException`'s `->reason`.
+- **`PasskeyStore.php`** — the library's `PasskeyStore` interface implemented over a SQLite
+  database (`pdo_sqlite`, file `example/passkeys.sqlite`): `users` (integer id PK,
+  passkey_user_handle unique BLOB, email) and `credentials` (credential_id PK, user_id FK,
+  public_key, sign_count, flags, transports, …). One user → many credentials via the foreign key.
+  The WebAuthn user handle is the spec-recommended 64 opaque random bytes in its own unique
+  column — the integer primary key stays server-internal. The public key is a single `public_key`
+  column via `CoseKey::toBytes()`, rehydrated with `CoseKey::fromBytes()` — persistence is just
+  INSERT/SELECT/UPDATE over plain columns.
+- **`SessionPendingCeremonyStore.php`** — the library's `PendingCeremonyStore` on top of
+  `$_SESSION`: unfinished ceremonies keyed by challenge, consumed (deleted) on use so each
+  challenge is single-use, and capped per session.
 
 ## Not production code
 
-State is in-memory, kept in `$_SESSION` only because PHP's built-in server runs each request in a
-fresh process (so plain memory can't span requests) — there's no file or database of our own; a real
-service runs INSERT/SELECT/UPDATE against those same columns. User verification is relaxed for
-authenticator compatibility.
+Accounts and passkeys persist in `example/passkeys.sqlite` (needs `pdo_sqlite`; delete the file to
+reset the demo), while the sign-in state and pending ceremonies stay in `$_SESSION`. A real service
+would run the same INSERT/SELECT/UPDATE against its own database.
 
 Also note the **trust simplification**: the *first* passkey for an email is enrolled without proving
 ownership of that address. A real service would verify the email (or require an already-signed-in

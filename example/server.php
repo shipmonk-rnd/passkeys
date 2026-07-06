@@ -11,13 +11,17 @@
  * then open http://localhost:8000. The RP id / origin below assume exactly that host and port;
  * change them together if you serve it elsewhere.
  *
- * All four WebAuthn endpoints go through the high-level {@see DemoPasskeyFlow} (a
- * {@see \WebAuthnX\Passkey\PasskeyFlow}): login is usernameless, two-step by email, or
- * conditional-mediation autofill; registration enrols the resolved account. What remains here is
- * only what a relying party genuinely owns — resolving/creating accounts and the session.
+ * All four WebAuthn endpoints go through the high-level {@see PasskeyFlow}, constructed with the
+ * SQLite-backed {@see PasskeyStore} and the session-backed {@see SessionPendingCeremonyStore}:
+ * login is usernameless, two-step by email, or conditional-mediation autofill; registration
+ * enrols the resolved account. What remains here is only what a relying party genuinely owns —
+ * resolving/creating accounts and the session.
  *
- * Deliberately NOT production code: state lives in $_SESSION (see PasskeyStore) and — importantly —
- * the very first registration for an email is allowed without proving ownership. A real service
+ * Accounts and credentials persist in a SQLite file next to this script (see PasskeyStore); only
+ * the sign-in state and pending ceremonies live in $_SESSION.
+ *
+ * Deliberately NOT production code — importantly, the very first registration for an email is
+ * allowed without proving ownership. A real service
  * would verify the email (or require an already-authenticated session) before enrolling the first
  * passkey; adding *further* passkeys here does require being signed in, which is the correct
  * pattern. (The "email already has an account" reply also reveals account existence — fine for a
@@ -29,16 +33,14 @@ namespace WebAuthnXDemo;
 use Throwable;
 use WebAuthnX\Ceremony\VerificationException;
 use WebAuthnX\Json\JsonObject;
+use WebAuthnX\Passkey\PasskeyFlow;
 
-use function base64_decode;
-use function base64_encode;
 use function file_get_contents;
 use function filter_var;
 use function header;
 use function http_response_code;
 use function json_encode;
 use function parse_url;
-use function random_bytes;
 use function session_start;
 use function trim;
 
@@ -48,15 +50,15 @@ use const PHP_URL_PATH;
 
 require __DIR__ . '/../vendor/autoload.php';
 require __DIR__ . '/PasskeyStore.php';
-require __DIR__ . '/DemoPasskeyFlow.php';
+require __DIR__ . '/SessionPendingCeremonyStore.php';
 
 const RP_ID = 'localhost';
 const RP_NAME = 'WebAuthnX Demo';
 const ORIGIN = 'http://localhost:8000';
 
 session_start();
-$store = new PasskeyStore();
-$flow = new DemoPasskeyFlow($store, RP_ID, RP_NAME, [ORIGIN]);
+$store = new PasskeyStore(__DIR__ . '/passkeys.sqlite');
+$flow = new PasskeyFlow(RP_ID, RP_NAME, [ORIGIN], $store, new SessionPendingCeremonyStore());
 
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
 
@@ -74,18 +76,18 @@ function body(): JsonObject
 }
 
 // --- Session state: who is signed in ------------------------------------------------------------
-// (Pending ceremony state lives in DemoPasskeyFlow, also on top of $_SESSION.)
+// (Pending ceremony state lives in SessionPendingCeremonyStore, also on top of $_SESSION.)
 
-function signIn(string $handle): void
+// A ceremony yields the opaque WebAuthn user handle; the relying party resolves it to its own
+// account (PasskeyStore::findUserByHandle) and the session keys off the integer user id.
+function signIn(int $userId): void
 {
-	$_SESSION['auth_user_handle'] = base64_encode($handle);
+	$_SESSION['auth_user_id'] = $userId;
 }
 
-function currentUserHandle(): ?string
+function currentUserId(): ?int
 {
-	$handle = $_SESSION['auth_user_handle'] ?? null;
-
-	return $handle === null ? null : base64_decode($handle);
+	return $_SESSION['auth_user_id'] ?? null;
 }
 
 match ($path) {
@@ -96,10 +98,10 @@ match ($path) {
 
 	// Who is signed in, and their registered passkeys.
 	'/me' => (static function () use ($store): void {
-		$handle = currentUserHandle();
-		$user = $handle === null ? null : $store->findUserByHandle($handle);
+		$userId = currentUserId();
+		$user = $userId === null ? null : $store->findUserById($userId);
 
-		if ($handle === null || $user === null) {
+		if ($userId === null || $user === null) {
 			respond(200, ['authenticated' => false]);
 
 			return;
@@ -107,7 +109,7 @@ match ($path) {
 
 		$credentials = [];
 
-		foreach ($store->credentialsForUser($handle) as $row) {
+		foreach ($store->credentialsForUser($userId) as $row) {
 			$credentials[] = [
 				'id' => $row['credential_id'],
 				'attachment' => $row['authenticator_attachment'],
@@ -120,7 +122,7 @@ match ($path) {
 	})(),
 
 	'/logout' => (static function (): void {
-		unset($_SESSION['auth_user_handle']);
+		unset($_SESSION['auth_user_id']);
 		respond(200, ['ok' => true]);
 	})(),
 
@@ -128,11 +130,11 @@ match ($path) {
 
 	'/register/options' => (static function () use ($store, $flow): void {
 		try {
-			$current = currentUserHandle();
+			$currentId = currentUserId();
 
-			if ($current !== null) {
+			if ($currentId !== null) {
 				// Signed in: enrol an additional passkey for the current account.
-				$user = $store->findUserByHandle($current);
+				$user = $store->findUserById($currentId);
 
 				if ($user === null) {
 					respond(400, ['ok' => false, 'message' => 'Signed-in user no longer exists']);
@@ -140,8 +142,6 @@ match ($path) {
 					return;
 				}
 
-				$handle = $current;
-				$email = $user['email'];
 			} else {
 				// Not signed in: register a brand-new account by email. An existing account must
 				// never be enrollable while signed out — that would let anyone who knows the email
@@ -154,19 +154,23 @@ match ($path) {
 					return;
 				}
 
-				if ($store->findUserByEmail($email) !== null) {
+				$existing = $store->findUserByEmail($email);
+
+				if ($existing !== null && $store->credentialsForUser($existing['id']) !== []) {
 					respond(400, ['ok' => false, 'message' => 'This email already has an account — sign in with its passkey to add another one.']);
 
 					return;
 				}
 
-				$handle = random_bytes(16);
-				$store->insertUser($handle, $email);
+				// A user row without any credential is an abandoned first registration (the row
+				// outlives the browser session in SQLite). No passkey guards the account yet, so
+				// resuming the enrolment is as safe as the first attempt was.
+				$user = $existing ?? $store->insertUser($email);
 			}
 
 			// The flow issues the challenge, excludes already-enrolled authenticators, and asks
 			// for a discoverable (resident) credential with user verification — the passkey defaults.
-			$options = $flow->registrationOptions($handle, $email);
+			$options = $flow->registrationOptions($user['passkey_user_handle'], $user['email']);
 
 			respond(200, $options->toJson());
 
@@ -177,17 +181,18 @@ match ($path) {
 
 	'/register/verify' => (static function () use ($store, $flow): void {
 		try {
-			// The flow verifies the ceremony and persists the credential (DemoPasskeyFlow::saveCredential).
+			// The flow verifies the ceremony and persists the credential (PasskeyStore::saveCredential).
 			$registered = $flow->register((string) file_get_contents('php://input'));
-			signIn($registered->userHandle);
-
 			$user = $store->findUserByHandle($registered->userHandle);
+
+			if ($user !== null) {
+				signIn($user['id']);
+			}
+
 			respond(200, ['ok' => true, 'email' => $user['email'] ?? 'unknown']);
 
 		} catch (VerificationException $e) {
 			respond(400, ['ok' => false, 'reason' => $e->reason, 'message' => $e->getMessage()]);
-		} catch (Throwable $e) {
-			respond(400, ['ok' => false, 'message' => $e->getMessage()]);
 		}
 	})(),
 
@@ -198,9 +203,9 @@ match ($path) {
 	// are listed. The same endpoint also feeds the conditional-mediation (autofill) request.
 	'/login/options' => (static function () use ($flow): void {
 		try {
-			$email = trim(body()->getOptionalString('email') ?? '');
-			$options = $flow->authenticationOptions($email === '' ? null : $email);
-
+			$body = JsonObject::fromString((string) file_get_contents('php://input'));
+			$email = $body->getOptionalString('email');
+			$options = $flow->authenticationOptions($email);
 			respond(200, $options->toJson());
 
 		} catch (Throwable $e) {
@@ -211,9 +216,12 @@ match ($path) {
 	'/login/verify' => (static function () use ($store, $flow): void {
 		try {
 			$result = $flow->authenticate((string) file_get_contents('php://input'));
-			signIn($result->userHandle);
-
 			$user = $store->findUserByHandle($result->userHandle);
+
+			if ($user !== null) {
+				signIn($user['id']);
+			}
+
 			respond(200, [
 				'ok' => true,
 				'email' => $user['email'] ?? 'unknown',
@@ -223,8 +231,6 @@ match ($path) {
 
 		} catch (VerificationException $e) {
 			respond(400, ['ok' => false, 'reason' => $e->reason, 'message' => $e->getMessage()]);
-		} catch (Throwable $e) {
-			respond(400, ['ok' => false, 'message' => $e->getMessage()]);
 		}
 	})(),
 
