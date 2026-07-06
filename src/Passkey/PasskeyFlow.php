@@ -53,7 +53,11 @@ use function random_bytes;
  * Registration is the same pair of calls — {@see self::registrationOptions()} /
  * {@see self::register()} — for an account the caller has already resolved (the signed-in user
  * adding a passkey, or a just-created signup). Deciding *who* may enrol — verifying the email,
- * requiring an authenticated session — is deliberately left in front of the flow.
+ * requiring an authenticated session — is deliberately left in front of the flow. Mind that a
+ * pending registration stays completable for as long as the {@see PendingCeremonyStore} keeps it:
+ * the enrolment authorization must still hold when {@see self::register()} is called, not just
+ * when the options were issued, or a stale ceremony can attach a passkey to an account whose
+ * ownership has since changed.
  *
  * Policy knobs (user verification, algorithms, timeout…) are protected methods with defaults that
  * are right for passkeys; subclass only to override those.

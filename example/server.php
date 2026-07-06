@@ -21,11 +21,12 @@
  * the sign-in state and pending ceremonies live in $_SESSION.
  *
  * Deliberately NOT production code — importantly, the very first registration for an email is
- * allowed without proving ownership. A real service
- * would verify the email (or require an already-authenticated session) before enrolling the first
- * passkey; adding *further* passkeys here does require being signed in, which is the correct
- * pattern. (The "email already has an account" reply also reveals account existence — fine for a
- * demo, something to obscure in production.)
+ * allowed without proving ownership, so anyone can squat any email (first come, first served). A
+ * real service gates every enrolment path — signup, adding a passkey, account recovery — on a live
+ * proof: an authenticated session or a fresh email-control token, still valid when the ceremony
+ * *completes*, not just when its options were issued. Adding *further* passkeys here does require
+ * being signed in, which is the correct pattern. (The "email already has an account" reply also
+ * reveals account existence — fine for a demo, something to obscure in production.)
  */
 
 namespace WebAuthnXDemo;
@@ -48,17 +49,21 @@ use const FILTER_VALIDATE_EMAIL;
 use const JSON_THROW_ON_ERROR;
 use const PHP_URL_PATH;
 
+
 require __DIR__ . '/../vendor/autoload.php';
 require __DIR__ . '/PasskeyStore.php';
 require __DIR__ . '/SessionPendingCeremonyStore.php';
 
-const RP_ID = 'localhost';
-const RP_NAME = 'WebAuthnX Demo';
-const ORIGIN = 'http://localhost:8000';
-
 session_start();
 $store = new PasskeyStore(__DIR__ . '/passkeys.sqlite');
-$flow = new PasskeyFlow(RP_ID, RP_NAME, [ORIGIN], $store, new SessionPendingCeremonyStore());
+
+$flow = new PasskeyFlow(
+	rpId: 'localhost',
+	rpName: 'WebAuthnX Demo',
+	origins: ['http://localhost:8000'],
+	store: $store,
+	pendingCeremonyStore: new SessionPendingCeremonyStore(),
+);
 
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
 
@@ -103,7 +108,6 @@ match ($path) {
 
 		if ($userId === null || $user === null) {
 			respond(200, ['authenticated' => false]);
-
 			return;
 		}
 
@@ -138,7 +142,6 @@ match ($path) {
 
 				if ($user === null) {
 					respond(400, ['ok' => false, 'message' => 'Signed-in user no longer exists']);
-
 					return;
 				}
 
@@ -146,26 +149,28 @@ match ($path) {
 				// Not signed in: register a brand-new account by email. An existing account must
 				// never be enrollable while signed out — that would let anyone who knows the email
 				// attach their own passkey to it and take it over.
-				$email = trim(body()->getOptionalString('email') ?? '');
+				$email = body()->getString('email');
 
 				if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
 					respond(400, ['ok' => false, 'message' => 'A valid email is required to register.']);
-
 					return;
 				}
 
 				$existing = $store->findUserByEmail($email);
 
-				if ($existing !== null && $store->credentialsForUser($existing['id']) !== []) {
+				if ($existing !== null) {
 					respond(400, ['ok' => false, 'message' => 'This email already has an account — sign in with its passkey to add another one.']);
-
 					return;
 				}
 
-				// A user row without any credential is an abandoned first registration (the row
-				// outlives the browser session in SQLite). No passkey guards the account yet, so
-				// resuming the enrolment is as safe as the first attempt was.
-				$user = $existing ?? $store->insertUser($email);
+				// The email is free: create the account and enrol its first passkey in one go. A
+				// cancelled prompt leaves a credential-less row that blocks the email for good
+				// (delete the row to retry). That is deliberate, not resumed: a pending ceremony
+				// stays completable for as long as the session keeps it, so whoever requested
+				// options for this email first could still attach their passkey to the account
+				// after the real user enrolled. A real service side-steps the whole problem by
+				// gating first enrolment on email verification.
+				$user = $store->insertUser($email);
 			}
 
 			// The flow issues the challenge, excludes already-enrolled authenticators, and asks
