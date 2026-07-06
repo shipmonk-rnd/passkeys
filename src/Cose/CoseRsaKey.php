@@ -19,6 +19,7 @@ use const OPENSSL_ALGO_SHA256;
  * COSE key of type RSA, e.g. RS256.
  *
  * @see https://www.rfc-editor.org/rfc/rfc8230.html#section-4 RSA key parameters
+ * @extends CoseKey<value-of<self::ALGORITHMS>>
  * @api
  */
 final class CoseRsaKey extends CoseKey
@@ -44,6 +45,7 @@ final class CoseRsaKey extends CoseKey
 	private const int MIN_MODULUS_BYTES = 256;
 
 	/**
+	 * @param value-of<self::ALGORITHMS> $alg
 	 * @param string $n modulus as raw big-endian bytes
 	 * @param string $e public exponent as raw big-endian bytes
 	 */

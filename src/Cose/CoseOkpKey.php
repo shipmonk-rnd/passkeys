@@ -2,7 +2,6 @@
 
 namespace WebAuthnX\Cose;
 
-use LogicException;
 use WebAuthnX\Cbor\CborEncoder;
 use WebAuthnX\Cbor\CborMap;
 use WebAuthnX\Cbor\CborMapException;
@@ -16,6 +15,7 @@ use function strlen;
  *
  * @see https://www.rfc-editor.org/rfc/rfc9053.html#section-2.2 EdDSA
  * @see https://www.rfc-editor.org/rfc/rfc9053.html#section-7.2 OKP key parameters
+ * @extends CoseKey<key-of<self::ALGORITHMS>>
  * @api
  */
 final class CoseOkpKey extends CoseKey
@@ -55,6 +55,8 @@ final class CoseOkpKey extends CoseKey
 	];
 
 	/**
+	 * @param key-of<self::ALGORITHMS> $alg
+	 * @param key-of<self::CURVES> $crv
 	 * @param string $x raw public key bytes (fixed length for the curve)
 	 */
 	private function __construct(
@@ -104,8 +106,7 @@ final class CoseOkpKey extends CoseKey
 
 	public function toDerSubjectPublicKeyInfo(): string
 	{
-		$curveOid = self::CURVES[$this->crv][1]
-			?? throw new LogicException("Unsupported OKP curve {$this->crv}"); // unreachable, enforced by fromCborMap()
+		$curveOid = self::CURVES[$this->crv][1];
 
 		return DerEncoder::encodeSequence(
 			DerEncoder::encodeSequence(DerEncoder::encodeObjectIdentifier($curveOid)),

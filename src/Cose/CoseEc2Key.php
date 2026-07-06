@@ -2,7 +2,6 @@
 
 namespace WebAuthnX\Cose;
 
-use LogicException;
 use WebAuthnX\Cbor\CborEncoder;
 use WebAuthnX\Cbor\CborMap;
 use WebAuthnX\Cbor\CborMapException;
@@ -18,6 +17,7 @@ use const OPENSSL_ALGO_SHA512;
  * COSE key of type EC2 (two-coordinate elliptic curve), e.g. ES256.
  *
  * @see https://www.rfc-editor.org/rfc/rfc9053.html#section-7.1 EC2 key parameters
+ * @extends CoseKey<key-of<self::ALGORITHMS>>
  * @api
  */
 final class CoseEc2Key extends CoseKey
@@ -59,6 +59,8 @@ final class CoseEc2Key extends CoseKey
 	];
 
 	/**
+	 * @param key-of<self::ALGORITHMS> $alg
+	 * @param self::CRV_* $crv
 	 * @param string $x raw x-coordinate bytes (fixed length for the curve)
 	 * @param string $y raw y-coordinate bytes (fixed length for the curve)
 	 */
@@ -112,8 +114,7 @@ final class CoseEc2Key extends CoseKey
 
 	public function toDerSubjectPublicKeyInfo(): string
 	{
-		$curveOid = self::ALGORITHMS[$this->alg][2]
-			?? throw new LogicException("Unsupported EC2 algorithm {$this->alg}"); // unreachable, enforced by fromCborMap()
+		$curveOid = self::ALGORITHMS[$this->alg][2];
 
 		// Uncompressed point: 0x04 || X || Y (RFC 5480 §2.2).
 		$point = "\x04" . $this->x . $this->y;
@@ -129,7 +130,6 @@ final class CoseEc2Key extends CoseKey
 
 	protected function opensslAlgorithm(): int
 	{
-		return self::ALGORITHMS[$this->alg][3]
-			?? throw new LogicException("Unsupported EC2 algorithm {$this->alg}"); // unreachable, enforced by fromCborMap()
+		return self::ALGORITHMS[$this->alg][3];
 	}
 }

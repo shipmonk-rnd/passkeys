@@ -20,6 +20,7 @@ use function openssl_verify;
  *
  * @see https://www.rfc-editor.org/rfc/rfc9052.html#section-7 COSE key structure
  * @see https://www.rfc-editor.org/rfc/rfc9053.html key type / algorithm parameters
+ * @template-covariant TAlg of CoseAlgorithmIdentifier::* = CoseAlgorithmIdentifier::* the COSE algorithm identifiers the key type supports
  * @api
  */
 abstract class CoseKey
@@ -30,6 +31,9 @@ abstract class CoseKey
 	/** Common COSE key label: algorithm (alg). */
 	protected const int LABEL_ALG = 3;
 
+	/**
+	 * @param TAlg $alg
+	 */
 	protected function __construct(
 		public readonly int $alg,
 	) {
