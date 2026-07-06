@@ -9,7 +9,7 @@
     "require-dev": {
         "ext-pdo": "*",
         "ext-pdo_sqlite": "*",
-        "phpunit/phpunit": "^10.0",
+        "phpunit/phpunit": "^13.0",
         "phpstan/phpstan": "^2.2",
         "shipmonk/coverage-guard": "^1.0",
         "shipmonk/dead-code-detector": "^1.3",
