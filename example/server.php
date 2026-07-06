@@ -20,7 +20,8 @@
  * the very first registration for an email is allowed without proving ownership. A real service
  * would verify the email (or require an already-authenticated session) before enrolling the first
  * passkey; adding *further* passkeys here does require being signed in, which is the correct
- * pattern.
+ * pattern. (The "email already has an account" reply also reveals account existence — fine for a
+ * demo, something to obscure in production.)
  */
 
 namespace WebAuthnXDemo;
@@ -142,7 +143,9 @@ match ($path) {
 				$handle = $current;
 				$email = $user['email'];
 			} else {
-				// Not signed in: register a new (or returning) account by email.
+				// Not signed in: register a brand-new account by email. An existing account must
+				// never be enrollable while signed out — that would let anyone who knows the email
+				// attach their own passkey to it and take it over.
 				$email = trim(body()->getOptionalString('email') ?? '');
 
 				if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
@@ -151,14 +154,14 @@ match ($path) {
 					return;
 				}
 
-				$existing = $store->findUserByEmail($email);
-				$handle = $existing !== null
-					? base64_decode($existing['user_handle'])
-					: random_bytes(16);
+				if ($store->findUserByEmail($email) !== null) {
+					respond(400, ['ok' => false, 'message' => 'This email already has an account — sign in with its passkey to add another one.']);
 
-				if ($existing === null) {
-					$store->insertUser($handle, $email);
+					return;
 				}
+
+				$handle = random_bytes(16);
+				$store->insertUser($handle, $email);
 			}
 
 			// The flow issues the challenge, excludes already-enrolled authenticators, and asks

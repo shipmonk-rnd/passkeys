@@ -21,7 +21,9 @@ final readonly class RegisteredPasskey
 {
 	/**
 	 * @param string      $userHandle              raw user handle bytes of the account the passkey was registered to
-	 * @param string|null $authenticatorAttachment `platform` / `cross-platform`, as reported by the client
+	 * @param string|null $authenticatorAttachment the client-asserted attachment, passed through
+	 *     unvalidated (well-behaved clients send `platform` / `cross-platform`, see
+	 *     {@see \WebAuthnX\Enum\AuthenticatorAttachment}) — a display hint, not a trusted value
 	 */
 	public function __construct(
 		public string $userHandle,

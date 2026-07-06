@@ -2,6 +2,7 @@
 
 namespace WebAuthnXTests;
 
+use InvalidArgumentException;
 use WebAuthnX\Enum\AuthenticatorAttachment;
 use WebAuthnX\Options\AuthenticatorSelectionCriteria;
 use WebAuthnX\Enum\AuthenticatorTransport;
@@ -18,6 +19,8 @@ use WebAuthnX\Enum\ResidentKeyRequirement;
 use WebAuthnX\Enum\UserVerificationRequirement;
 
 use function json_decode;
+use function str_repeat;
+use function strlen;
 
 use const JSON_THROW_ON_ERROR;
 
@@ -181,6 +184,28 @@ class PublicKeyCredentialCreationOptionsTest extends WebAuthnTestCase
 		$json = $options->toJson();
 		self::assertStringNotContainsString('</script>', $json);
 		self::assertStringContainsString('a<\/script>b', $json);
+	}
+
+	public function testUserEntityRejectsEmptyUserHandle(): void
+	{
+		$this->expectException(InvalidArgumentException::class);
+		$this->expectExceptionMessage('User handle must be 1 to 64 bytes');
+
+		new PublicKeyCredentialUserEntity('', 'alice', 'Alice Smith');
+	}
+
+	public function testUserEntityRejectsOverlongUserHandle(): void
+	{
+		$this->expectException(InvalidArgumentException::class);
+		$this->expectExceptionMessage('User handle must be 1 to 64 bytes');
+
+		new PublicKeyCredentialUserEntity(str_repeat('a', 65), 'alice', 'Alice Smith');
+	}
+
+	public function testUserEntityAcceptsBoundaryUserHandles(): void
+	{
+		self::assertSame('a', (new PublicKeyCredentialUserEntity('a', 'alice', 'Alice Smith'))->id);
+		self::assertSame(64, strlen((new PublicKeyCredentialUserEntity(str_repeat('a', 64), 'alice', 'Alice Smith'))->id));
 	}
 
 	public function testDescriptorOmitsTransportsWhenNull(): void
