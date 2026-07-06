@@ -5,7 +5,6 @@ namespace WebAuthnXTests;
 use WebAuthnX\Credential\AuthenticatorAssertionResponse;
 use WebAuthnX\Base64\Base64;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
-use WebAuthnX\Crypto\SignatureVerifier;
 
 use function hash;
 use function is_string;
@@ -53,6 +52,6 @@ class AssertionSignatureTest extends CryptoTestCase
 		$message = $response->authenticatorData
 			. hash('sha256', $response->clientDataJSON, binary: true);
 
-		self::assertTrue((new SignatureVerifier())->verify($coseKey, $message, $response->signature));
+		self::assertTrue($coseKey->verify($message, $response->signature));
 	}
 }

@@ -112,4 +112,10 @@ final class CoseOkpKey extends CoseKey
 			DerEncoder::encodeBitString($this->x),
 		);
 	}
+
+	protected function opensslAlgorithm(): int
+	{
+		// EdDSA is a pure signature scheme; OpenSSL takes no separate message digest.
+		return 0;
+	}
 }

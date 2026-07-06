@@ -7,8 +7,8 @@ use WebAuthnX\Credential\AuthenticatorAttestationResponse;
 use WebAuthnX\Credential\AuthenticatorData;
 use WebAuthnX\Base64\Base64;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
+use WebAuthnX\Cose\CoseKey;
 use WebAuthnX\Cose\CoseOkpKey;
-use WebAuthnX\Crypto\SignatureVerifier;
 use WebAuthnX\Json\JsonObject;
 use WebAuthnX\Credential\PublicKeyCredential;
 
@@ -26,7 +26,7 @@ use const JSON_THROW_ON_ERROR;
  * Acceptance test that walks a full WebAuthn ceremony for every supported algorithm using
  * real cryptographic material: an authenticator's outputs are assembled into spec-shaped,
  * browser-style JSON, fed through the public parsers, and the resulting COSE key + assertion
- * are checked with {@see SignatureVerifier} exactly as a relying party would (§7.2 step 19).
+ * are checked with {@see CoseKey::verify()} exactly as a relying party would (§7.2 step 19).
  *
  * Unlike the unit tests it exercises no piece in isolation — it proves the whole plumbing
  * composes: base64url boundaries, the CBOR/COSE decode inside attested credential data, the
@@ -94,13 +94,12 @@ class CeremonyEndToEndTest extends CryptoTestCase
 		$message = $assertionResponse->authenticatorData
 			. hash('sha256', $assertionResponse->clientDataJSON, binary: true);
 
-		$verifier = new SignatureVerifier();
-		self::assertTrue($verifier->verify($registeredKey, $message, $assertionResponse->signature));
+		self::assertTrue($registeredKey->verify($message, $assertionResponse->signature));
 
 		// A single flipped signature byte must not verify against the registered key.
 		$tampered = $assertionResponse->signature;
 		$tampered[0] = chr(ord($tampered[0]) ^ 0x01);
-		self::assertFalse($verifier->verify($registeredKey, $message, $tampered));
+		self::assertFalse($registeredKey->verify($message, $tampered));
 	}
 
 	/**

@@ -1,20 +1,21 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests\Crypto;
+namespace WebAuthnXTests\Cose;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 use WebAuthnX\Cose\CoseKey;
 use WebAuthnX\Cose\CoseOkpKey;
-use WebAuthnX\Crypto\SignatureVerificationException;
-use WebAuthnX\Crypto\SignatureVerifier;
+use WebAuthnX\Cose\SignatureVerificationException;
 use WebAuthnXTests\CryptoTestCase;
 
 use function chr;
 use function ord;
 use function substr;
 
-class SignatureVerifierTest extends CryptoTestCase
+use const OPENSSL_ALGO_SHA256;
+
+class CoseKeyVerifyTest extends CryptoTestCase
 {
 	private const string MESSAGE = 'authenticatorData||clientDataHash ' . '0123456789abcdef';
 
@@ -24,9 +25,7 @@ class SignatureVerifierTest extends CryptoTestCase
 		[$coseKey, $privateKey] = self::generateCoseKeyPair($alg, $okpCrv);
 		$signature = self::sign($privateKey, self::MESSAGE, $alg);
 
-		self::assertTrue(
-			(new SignatureVerifier())->verify($coseKey, self::MESSAGE, $signature),
-		);
+		self::assertTrue($coseKey->verify(self::MESSAGE, $signature));
 	}
 
 	#[DataProvider('provideAlgorithms')]
@@ -35,9 +34,7 @@ class SignatureVerifierTest extends CryptoTestCase
 		[$coseKey, $privateKey] = self::generateCoseKeyPair($alg, $okpCrv);
 		$signature = self::sign($privateKey, self::MESSAGE, $alg);
 
-		self::assertFalse(
-			(new SignatureVerifier())->verify($coseKey, self::MESSAGE . '!', $signature),
-		);
+		self::assertFalse($coseKey->verify(self::MESSAGE . '!', $signature));
 	}
 
 	#[DataProvider('provideAlgorithms')]
@@ -47,9 +44,7 @@ class SignatureVerifierTest extends CryptoTestCase
 		[$otherCoseKey] = self::generateCoseKeyPair($alg, $okpCrv);
 		$signature = self::sign($privateKey, self::MESSAGE, $alg);
 
-		self::assertFalse(
-			(new SignatureVerifier())->verify($otherCoseKey, self::MESSAGE, $signature),
-		);
+		self::assertFalse($otherCoseKey->verify(self::MESSAGE, $signature));
 	}
 
 	/**
@@ -65,32 +60,6 @@ class SignatureVerifierTest extends CryptoTestCase
 		yield 'EdDSA / Ed448' => [CoseAlgorithmIdentifier::EdDSA, CoseOkpKey::CRV_ED448];
 		yield 'Ed25519' => [CoseAlgorithmIdentifier::Ed25519];
 		yield 'Ed448' => [CoseAlgorithmIdentifier::Ed448];
-	}
-
-	public function testThrowsOnUnsupportedAlgorithm(): void
-	{
-		$key = new class (9999) extends CoseKey {
-			public function __construct(int $alg)
-			{
-				parent::__construct($alg);
-			}
-
-			public function toDerSubjectPublicKeyInfo(): string
-			{
-				return '';
-			}
-
-			public function toBytes(): string
-			{
-				return '';
-			}
-		};
-
-		self::assertException(
-			SignatureVerificationException::class,
-			'Unsupported algorithm 9999',
-			static fn () => (new SignatureVerifier())->verify($key, 'x', 'y'),
-		);
 	}
 
 	public function testThrowsWhenPublicKeyCannotBeLoaded(): void
@@ -110,12 +79,17 @@ class SignatureVerifierTest extends CryptoTestCase
 			{
 				return "\x00\x01\x02";
 			}
+
+			protected function opensslAlgorithm(): int
+			{
+				return OPENSSL_ALGO_SHA256;
+			}
 		};
 
 		self::assertException(
 			SignatureVerificationException::class,
 			'Failed to load public key%A',
-			static fn () => (new SignatureVerifier())->verify($key, 'x', 'y'),
+			static fn () => $key->verify('x', 'y'),
 		);
 	}
 
@@ -130,9 +104,7 @@ class SignatureVerifierTest extends CryptoTestCase
 		$signature = self::sign($privateKey, self::MESSAGE, $alg);
 		$malformed = substr($signature, 0, 5);
 
-		self::assertFalse(
-			(new SignatureVerifier())->verify($coseKey, self::MESSAGE, $malformed),
-		);
+		self::assertFalse($coseKey->verify(self::MESSAGE, $malformed));
 	}
 
 	/**
@@ -154,11 +126,10 @@ class SignatureVerifierTest extends CryptoTestCase
 			-2 => $publicKey,
 		]));
 
-		$verifier = new SignatureVerifier();
-		self::assertTrue($verifier->verify($coseKey, '', $signature));
+		self::assertTrue($coseKey->verify('', $signature));
 
 		$tampered = $signature;
 		$tampered[0] = chr(ord($tampered[0]) ^ 0x01);
-		self::assertFalse($verifier->verify($coseKey, '', $tampered));
+		self::assertFalse($coseKey->verify('', $tampered));
 	}
 }

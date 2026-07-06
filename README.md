@@ -148,7 +148,7 @@ control the library relies on.
 
 The lower-level building blocks used above remain public for advanced use: `PublicKeyCredential`
 (generic over its response type), `parseAttestationObject()` / `parseAuthenticatorData()`, and the
-`SignatureVerifier` primitive.
+`CoseKey::verify()` signature primitive.
 
 ## Example
 
@@ -174,8 +174,8 @@ It shows both ceremonies driven through `RelyingParty`, plus a file-backed `Cred
 - Full response parsing: `PublicKeyCredential`, attestation/assertion responses, `AttestationObject`,
   `AuthenticatorData` (with flag accessors) + attested credential data, `CollectedClientData`
 - Options models with JSON serialization for both ceremonies
-- COSE key parsing (`EC2`, `RSA`, `OKP`) with validation, COSE → SPKI conversion, and a
-  `SignatureVerifier` (ES256/384/512, RS256, EdDSA) over `ext-openssl`
+- COSE key parsing (`EC2`, `RSA`, `OKP`) with validation, COSE → SPKI conversion, and signature
+  verification (`CoseKey::verify()`; ES256/384/512, RS256, EdDSA) over `ext-openssl`
 - Primitives: binary reader, CBOR decoding, DER (SubjectPublicKeyInfo) encoding, canonical
   base64url, JSON access
 

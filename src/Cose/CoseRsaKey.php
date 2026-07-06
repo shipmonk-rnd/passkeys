@@ -13,6 +13,8 @@ use function ord;
 use function strlen;
 use function substr;
 
+use const OPENSSL_ALGO_SHA256;
+
 /**
  * COSE key of type RSA, e.g. RS256.
  *
@@ -110,5 +112,10 @@ final class CoseRsaKey extends CoseKey
 			),
 			DerEncoder::encodeBitString($rsaPublicKey),
 		);
+	}
+
+	protected function opensslAlgorithm(): int
+	{
+		return OPENSSL_ALGO_SHA256; // RS256 is the only supported RSA algorithm
 	}
 }

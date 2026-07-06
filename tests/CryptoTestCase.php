@@ -112,7 +112,7 @@ abstract class CryptoTestCase extends WebAuthnTestCase
 
 	/**
 	 * Signs a message with the OpenSSL private key using the digest the given COSE algorithm
-	 * mandates, producing exactly the signature encoding {@see \WebAuthnX\Crypto\SignatureVerifier}
+	 * mandates, producing exactly the signature encoding {@see \WebAuthnX\Cose\CoseKey::verify()}
 	 * expects (ASN.1 DER for ECDSA, raw PKCS#1 for RSA, raw 64-byte for Ed25519).
 	 */
 	protected static function sign(OpenSSLAsymmetricKey $privateKey, string $message, int $alg): string

@@ -10,6 +10,10 @@ use WebAuthnX\Der\DerEncoder;
 
 use function strlen;
 
+use const OPENSSL_ALGO_SHA256;
+use const OPENSSL_ALGO_SHA384;
+use const OPENSSL_ALGO_SHA512;
+
 /**
  * COSE key of type EC2 (two-coordinate elliptic curve), e.g. ES256.
  *
@@ -43,14 +47,15 @@ final class CoseEc2Key extends CoseKey
 	private const string OID_EC_PUBLIC_KEY = '1.2.840.10045.2.1';
 
 	/**
-	 * Maps each supported algorithm to its mandated curve and coordinate length in bytes.
+	 * Maps each supported algorithm to its mandated curve, coordinate length in bytes,
+	 * curve OID, and OpenSSL message-digest algorithm.
 	 *
 	 * @see https://www.rfc-editor.org/rfc/rfc9053.html#section-2.1 ECDSA
 	 */
 	private const array ALGORITHMS = [
-		CoseAlgorithmIdentifier::ES256 => [self::CRV_P256, 32, '1.2.840.10045.3.1.7'],
-		CoseAlgorithmIdentifier::ES384 => [self::CRV_P384, 48, '1.3.132.0.34'],
-		CoseAlgorithmIdentifier::ES512 => [self::CRV_P521, 66, '1.3.132.0.35'],
+		CoseAlgorithmIdentifier::ES256 => [self::CRV_P256, 32, '1.2.840.10045.3.1.7', OPENSSL_ALGO_SHA256],
+		CoseAlgorithmIdentifier::ES384 => [self::CRV_P384, 48, '1.3.132.0.34', OPENSSL_ALGO_SHA384],
+		CoseAlgorithmIdentifier::ES512 => [self::CRV_P521, 66, '1.3.132.0.35', OPENSSL_ALGO_SHA512],
 	];
 
 	/**
@@ -120,5 +125,11 @@ final class CoseEc2Key extends CoseKey
 			),
 			DerEncoder::encodeBitString($point),
 		);
+	}
+
+	protected function opensslAlgorithm(): int
+	{
+		return self::ALGORITHMS[$this->alg][3]
+			?? throw new LogicException("Unsupported EC2 algorithm {$this->alg}"); // unreachable, enforced by fromCborMap()
 	}
 }

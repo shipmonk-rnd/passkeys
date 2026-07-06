@@ -17,8 +17,7 @@ use WebAuthnX\Credential\AuthenticatorData;
 use WebAuthnX\Credential\CollectedClientData;
 use WebAuthnX\Credential\MalformedDataException;
 use WebAuthnX\Credential\PublicKeyCredential;
-use WebAuthnX\Crypto\SignatureVerificationException;
-use WebAuthnX\Crypto\SignatureVerifier;
+use WebAuthnX\Cose\SignatureVerificationException;
 
 use function hash;
 use function hash_equals;
@@ -61,11 +60,6 @@ final class RelyingParty
 	private const string FMT_NONE = 'none';
 	private const string FMT_PACKED = 'packed';
 
-	public function __construct(
-		private readonly SignatureVerifier $signatureVerifier = new SignatureVerifier(),
-	) {
-	}
-
 	/**
 	 * Verifies a registration ceremony response (`navigator.credentials.create()`) per WebAuthn §7.1.
 	 *
@@ -89,8 +83,8 @@ final class RelyingParty
 			);
 
 		} catch (SignatureVerificationException $e) {
-			// The attested key already passed COSE parsing and the algorithm allow-list, so a
-			// verifier that still cannot use it points at the key material itself.
+			// The attested key already passed COSE parsing and the algorithm allow-list, so
+			// if OpenSSL still cannot load it, the key material itself is at fault.
 			throw new VerificationException(
 				VerificationException::UNUSABLE_CREDENTIAL_KEY,
 				'Attested credential key is unusable: ' . $e->getMessage(),
@@ -253,7 +247,7 @@ final class RelyingParty
 
 		$message = $attestationObject->authData . hash('sha256', $clientDataJSON, binary: true);
 
-		if (!$this->signatureVerifier->verify($credentialPublicKey, $message, $sig)) {
+		if (!$credentialPublicKey->verify($message, $sig)) {
 			throw new VerificationException(
 				VerificationException::INVALID_ATTESTATION_STATEMENT,
 				'Self attestation signature is invalid',
@@ -369,7 +363,7 @@ final class RelyingParty
 		// §7.2 steps 20–21: verify the signature over authenticatorData || SHA-256(clientDataJSON).
 		$message = $response->authenticatorData . hash('sha256', $response->clientDataJSON, binary: true);
 
-		if (!$this->signatureVerifier->verify($record->publicKey, $message, $response->signature)) {
+		if (!$record->publicKey->verify($message, $response->signature)) {
 			throw new VerificationException(VerificationException::INVALID_SIGNATURE, 'Assertion signature is invalid');
 		}
 
