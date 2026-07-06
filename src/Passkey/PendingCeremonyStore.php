@@ -13,10 +13,11 @@ namespace WebAuthnX\Passkey;
 interface PendingCeremonyStore
 {
 	/**
-	 * Stores a pending ceremony, keyed by its challenge (encode {@see PendingAuthentication::$challenge}
-	 * before using it as an array/cache key — it is raw bytes). Scope the storage to the browser
-	 * session, and bound it: cap the number of concurrently pending ceremonies (a handful is
-	 * plenty) or expire them, since a page may start several without finishing any.
+	 * Stores a pending ceremony, keyed by its challenge. The challenge is raw bytes — fine as a
+	 * PHP array key (arrays and session serialization are binary-safe), but encode it for a
+	 * backend whose keys are not. Scope the storage to the browser session, and bound it: cap the
+	 * number of concurrently pending ceremonies (a handful is plenty) or expire them, since a page
+	 * may start several without finishing any.
 	 */
 	public function rememberPendingAuthentication(PendingAuthentication $pending): void;
 
