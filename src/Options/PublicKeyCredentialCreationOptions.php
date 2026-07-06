@@ -33,12 +33,12 @@ readonly class PublicKeyCredentialCreationOptions implements JsonSerializable
      * AuthenticationExtensionsClientInputsJSON}), passed through verbatim — binary values must
      * already be base64url-encoded strings, e.g. `['credProps' => true]`.
      *
-     * @param string $challenge raw challenge bytes (e.g. from
-     *     {@see \random_bytes()}); base64url encoding happens on serialization
-     * @param list<PublicKeyCredentialParameters> $pubKeyCredParams
+     * @param string                                   $challenge          raw challenge bytes (e.g. from
+     *                                                {@see \random_bytes()}); base64url encoding happens on serialization
+     * @param list<PublicKeyCredentialParameters>      $pubKeyCredParams
      * @param list<PublicKeyCredentialDescriptor>|null $excludeCredentials
-     * @param list<PublicKeyCredentialHint>|null $hints
-     * @param array<string, mixed>|null $extensions
+     * @param list<PublicKeyCredentialHint>|null       $hints
+     * @param array<string, mixed>|null                $extensions
      */
     public function __construct(
         public PublicKeyCredentialRpEntity $rp,

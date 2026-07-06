@@ -21,8 +21,8 @@ final readonly class PublicKeyCredential
 {
 
     /**
-     * @param T $response
-     * @param string $rawId raw credential id bytes ({@see $id} is its base64url form)
+     * @param T                            $response
+     * @param string                       $rawId                   raw credential id bytes ({@see $id} is its base64url form)
      * @param AuthenticatorAttachment|null $authenticatorAttachment null when the client sent none
      *     or an unknown value (the spec instructs relying parties to treat unknown values as null)
      */

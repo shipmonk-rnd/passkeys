@@ -14,9 +14,9 @@ final readonly class AuthenticatorAssertionResponse extends AuthenticatorRespons
 {
 
     /**
-     * @param string $authenticatorData raw authenticator data bytes; parse with {@see AuthenticatorData::fromBytes()}
-     * @param string $signature raw assertion signature bytes
-     * @param string|null $userHandle raw user handle bytes, if the authenticator returned one
+     * @param string      $authenticatorData raw authenticator data bytes; parse with {@see AuthenticatorData::fromBytes()}
+     * @param string      $signature         raw assertion signature bytes
+     * @param string|null $userHandle        raw user handle bytes, if the authenticator returned one
      */
     private function __construct(
         string $clientDataJSON,

@@ -36,7 +36,7 @@ class BytesReader
     }
 
     /**
-     * @param string $bytes binary string to read from
+     * @param string           $bytes    binary string to read from
      * @param Closure(self): T $callback
      * @return T
      *

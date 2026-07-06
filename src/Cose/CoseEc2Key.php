@@ -76,9 +76,9 @@ final class CoseEc2Key extends CoseKey
 
     /**
      * @param key-of<self::ALGORITHMS> $alg
-     * @param self::CRV_* $crv
-     * @param string $x raw x-coordinate bytes (fixed length for the curve)
-     * @param string $y raw y-coordinate bytes (fixed length for the curve)
+     * @param self::CRV_*              $crv
+     * @param string                   $x   raw x-coordinate bytes (fixed length for the curve)
+     * @param string                   $y   raw y-coordinate bytes (fixed length for the curve)
      */
     private function __construct(
         int $alg,

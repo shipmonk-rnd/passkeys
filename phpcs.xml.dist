@@ -18,4 +18,18 @@
         <!-- example/server.php is deliberately a flat single-file script -->
         <exclude name="Squiz.Functions.GlobalFunction"/>
     </rule>
+
+    <!-- align @param annotations to columns; severity must be restored explicitly
+         because ShipMonkCodingStandard excludes these codes -->
+    <rule ref="Squiz.Commenting.FunctionComment.SpacingAfterParamType">
+        <severity>5</severity>
+    </rule>
+    <rule ref="Squiz.Commenting.FunctionComment.SpacingAfterParamName">
+        <severity>5</severity>
+    </rule>
+    <rule ref="SlevomatCodingStandard.Whitespaces.DuplicateSpaces">
+        <properties>
+            <property name="ignoreSpacesInAnnotation" value="true"/>
+        </properties>
+    </rule>
 </ruleset>

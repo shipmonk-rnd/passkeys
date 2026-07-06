@@ -15,11 +15,11 @@ readonly class PublicKeyCredentialDescriptor implements JsonSerializable
 
     /**
      * @param PublicKeyCredentialType::* $type
-     * @param string $id raw credential id bytes; base64url encoding
-     *     happens on serialization
-     * @param list<string>|null $transports usually {@see AuthenticatorTransport} values,
-     *     but a relying party should echo whatever it stored at registration — clients ignore
-     *     unknown values
+     * @param string                     $id         raw credential id bytes; base64url encoding
+     *                                 happens on serialization
+     * @param list<string>|null          $transports usually {@see AuthenticatorTransport} values,
+     *              but a relying party should echo whatever it stored at registration — clients ignore
+     *              unknown values
      */
     public function __construct(
         public string $type,

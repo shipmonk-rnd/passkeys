@@ -67,11 +67,11 @@ class PasskeyFlow
 {
 
     /**
-     * @param string $rpId the {@link https://w3c.github.io/webauthn/#rp-id RP ID} — the
-     *     domain your passkeys are scoped to, e.g. `example.com` (it must be a registrable-suffix
-     *     match of your origins)
-     * @param string $rpName the human-readable relying party name, e.g. `Example Corp` —
-     *     shown by authenticator UIs when a passkey is created
+     * @param string       $rpId    the {@link https://w3c.github.io/webauthn/#rp-id RP ID} — the
+     *              domain your passkeys are scoped to, e.g. `example.com` (it must be a registrable-suffix
+     *              match of your origins)
+     * @param string       $rpName  the human-readable relying party name, e.g. `Example Corp` —
+     *            shown by authenticator UIs when a passkey is created
      * @param list<string> $origins the exact origins your login pages are served from,
      *     e.g. `['https://example.com']`
      */
@@ -186,10 +186,10 @@ class PasskeyFlow
      * browser's `navigator.credentials.create()`. Credentials the account already has are listed
      * in `excludeCredentials` so the same authenticator cannot enrol twice.
      *
-     * @param string $userHandle raw user handle bytes (an opaque, immutable, PII-free
-     *     account id, at most 64 bytes — never the email itself)
-     * @param string $username the human-readable account identifier (email/username),
-     *     shown by authenticator UIs to label the passkey
+     * @param string      $userHandle  raw user handle bytes (an opaque, immutable, PII-free
+     *      account id, at most 64 bytes — never the email itself)
+     * @param string      $username    the human-readable account identifier (email/username),
+     *        shown by authenticator UIs to label the passkey
      * @param string|null $displayName a friendlier account label ("Alice Doe"), defaulting to the username
      */
     public function registrationOptions(

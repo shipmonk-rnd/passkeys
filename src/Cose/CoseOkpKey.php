@@ -67,8 +67,8 @@ final class CoseOkpKey extends CoseKey
 
     /**
      * @param key-of<self::ALGORITHMS> $alg
-     * @param key-of<self::CURVES> $crv
-     * @param string $x raw public key bytes (fixed length for the curve)
+     * @param key-of<self::CURVES>     $crv
+     * @param string                   $x   raw public key bytes (fixed length for the curve)
      */
     private function __construct(
         int $alg,

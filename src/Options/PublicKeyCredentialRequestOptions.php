@@ -34,11 +34,11 @@ readonly class PublicKeyCredentialRequestOptions implements JsonSerializable
      * AuthenticationExtensionsClientInputsJSON}), passed through verbatim — binary values must
      * already be base64url-encoded strings, e.g. `['appid' => 'https://example.com/appid.json']`.
      *
-     * @param string $challenge raw challenge bytes (e.g. from
-     *     {@see \random_bytes()}); base64url encoding happens on serialization
+     * @param string                                   $challenge        raw challenge bytes (e.g. from
+     *                                              {@see \random_bytes()}); base64url encoding happens on serialization
      * @param list<PublicKeyCredentialDescriptor>|null $allowCredentials
-     * @param list<PublicKeyCredentialHint>|null $hints
-     * @param array<string, mixed>|null $extensions
+     * @param list<PublicKeyCredentialHint>|null       $hints
+     * @param array<string, mixed>|null                $extensions
      */
     public function __construct(
         public string $challenge,

@@ -58,8 +58,8 @@ final class CoseRsaKey extends CoseKey
 
     /**
      * @param value-of<self::ALGORITHMS> $alg
-     * @param string $n modulus as raw big-endian bytes
-     * @param string $e public exponent as raw big-endian bytes
+     * @param string                     $n   modulus as raw big-endian bytes
+     * @param string                     $e   public exponent as raw big-endian bytes
      */
     private function __construct(
         int $alg,

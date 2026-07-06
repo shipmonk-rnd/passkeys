@@ -725,7 +725,7 @@ class RelyingPartyTest extends CryptoTestCase
     // --- Assertion helpers ----------------------------------------------------------------------
 
     /**
-     * @param VerificationException::* $reason
+     * @param VerificationException::*                              $reason
      * @param PublicKeyCredential<AuthenticatorAttestationResponse> $credential
      */
     private function assertRegistrationFails(
@@ -738,7 +738,7 @@ class RelyingPartyTest extends CryptoTestCase
     }
 
     /**
-     * @param VerificationException::* $reason
+     * @param VerificationException::*                            $reason
      * @param PublicKeyCredential<AuthenticatorAssertionResponse> $credential
      */
     private function assertAuthenticationFails(
@@ -753,7 +753,7 @@ class RelyingPartyTest extends CryptoTestCase
 
     /**
      * @param VerificationException::* $expectedReason
-     * @param callable(): mixed $cb
+     * @param callable(): mixed        $cb
      *
      * @param-immediately-invoked-callable $cb
      */
@@ -775,7 +775,7 @@ class RelyingPartyTest extends CryptoTestCase
 
     /**
      * @param list<CoseAlgorithmIdentifier::*> $allowedAlgorithms
-     * @param list<string> $allowedTopOrigins
+     * @param list<string>                     $allowedTopOrigins
      */
     private static function registrationExpectations(
         array $allowedAlgorithms = [CoseAlgorithmIdentifier::ES256],
@@ -799,7 +799,7 @@ class RelyingPartyTest extends CryptoTestCase
 
     /**
      * @param list<string>|null $allowedCredentialIds
-     * @param list<string> $allowedTopOrigins
+     * @param list<string>      $allowedTopOrigins
      */
     private static function authenticationExpectations(
         ?array $allowedCredentialIds = null,
@@ -852,7 +852,7 @@ class RelyingPartyTest extends CryptoTestCase
      * in the statement than was used to sign, and `$attStmtOverride` replaces the statement CBOR
      * wholesale (for the x5c / missing-field negatives).
      *
-     * @param array<int, int|string> $coseEntries
+     * @param array<int, int|string>          $coseEntries
      * @param CoseAlgorithmIdentifier::*|null $attestationAlg
      * @return PublicKeyCredential<AuthenticatorAttestationResponse>
      */

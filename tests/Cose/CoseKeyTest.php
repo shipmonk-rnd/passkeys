@@ -21,7 +21,7 @@ class CoseKeyTest extends CryptoTestCase
      * identical to what OpenSSL emits for the same key.
      *
      * @param CoseAlgorithmIdentifier::* $alg
-     * @param class-string<CoseKey> $expectedClass
+     * @param class-string<CoseKey>      $expectedClass
      */
     #[DataProvider('provideAlgorithms')]
     public function testSubjectPublicKeyInfoMatchesOpenssl(
@@ -81,7 +81,7 @@ class CoseKeyTest extends CryptoTestCase
      * relying party relies on to persist and later load a credential's public key.
      *
      * @param CoseAlgorithmIdentifier::* $alg
-     * @param class-string<CoseKey> $expectedClass
+     * @param class-string<CoseKey>      $expectedClass
      */
     #[DataProvider('provideAlgorithms')]
     public function testToBytesRoundTrips(

@@ -58,7 +58,7 @@ abstract class WebAuthnTestCase extends TestCase
     }
 
     /**
-     * @param class-string<T> $type
+     * @param class-string<T>   $type
      * @param callable(): mixed $cb
      *
      * @template T of Throwable

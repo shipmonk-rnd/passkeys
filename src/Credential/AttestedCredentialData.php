@@ -17,7 +17,7 @@ readonly class AttestedCredentialData
 {
 
     /**
-     * @param string $aaGuid raw AAGUID bytes (16 bytes)
+     * @param string $aaGuid       raw AAGUID bytes (16 bytes)
      * @param string $credentialId raw credential id bytes
      */
     private function __construct(
