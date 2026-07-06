@@ -3,10 +3,10 @@
 namespace WebAuthnXTests\Der;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\TestCase;
 use WebAuthnX\Der\DerEncoder;
+use WebAuthnXTests\WebAuthnTestCase;
 
-class DerEncoderTest extends TestCase
+class DerEncoderTest extends WebAuthnTestCase
 {
 	#[DataProvider('provideEncodeIntData')]
 	public function testEncodeInt(string $bytes, string $expected): void
