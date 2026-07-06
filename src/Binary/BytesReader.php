@@ -58,42 +58,50 @@ class BytesReader
     }
 
     /**
+     * @return int<0, 255>
+     *
      * @throws BytesReaderException
      */
     public function u8(): int
     {
-        return ord($this->readRaw(1));
+        return ord($this->bytes(1));
     }
 
     /**
+     * @return int<0, 65535>
+     *
      * @throws BytesReaderException
      */
     public function u16(): int
     {
-        $bytes = $this->readRaw(2);
+        $bytes = $this->bytes(2);
 
-        return (ord($bytes[0]) << 8) | ord($bytes[1]);
+        return (ord($bytes[0]) << 8) + ord($bytes[1]);
     }
 
     /**
+     * @return int<0, 4294967295>
+     *
      * @throws BytesReaderException
      */
     public function u32(): int
     {
-        $bytes = $this->readRaw(4);
+        $bytes = $this->bytes(4);
 
         return (ord($bytes[0]) << 24)
-            | (ord($bytes[1]) << 16)
-            | (ord($bytes[2]) << 8)
-            | ord($bytes[3]);
+            + (ord($bytes[1]) << 16)
+            + (ord($bytes[2]) << 8)
+            + (ord($bytes[3]));
     }
 
     /**
+     * @return non-negative-int
+     *
      * @throws BytesReaderException
      */
     public function u64(): int
     {
-        $bytes = $this->readRaw(8);
+        $bytes = $this->bytes(8);
 
         $value = 0;
         for ($i = 0; $i < 8; $i++) {
@@ -143,43 +151,12 @@ class BytesReader
     }
 
     /**
+     * @param  non-negative-int $length
      * @return string raw bytes, without any validation
      *
      * @throws BytesReaderException
      */
     public function bytes(int $length): string
-    {
-        if ($length < 0) {
-            throw new LogicException('Length must be non-negative');
-        }
-
-        return $this->readRaw($length);
-    }
-
-    /**
-     * @return string validated UTF-8 string
-     *
-     * @throws BytesReaderException
-     */
-    public function utf8(int $length): string
-    {
-        if ($length < 0) {
-            throw new LogicException('Length must be non-negative');
-        }
-
-        $binaryString = $this->readRaw($length);
-
-        if (preg_match('//u', $binaryString) !== 1) {
-            throw new BytesReaderException('Invalid UTF-8 string');
-        }
-
-        return $binaryString;
-    }
-
-    /**
-     * @throws BytesReaderException
-     */
-    private function readRaw(int $length): string
     {
         if ($this->offset + $length > $this->length) {
             throw new BytesReaderException('Unexpected end of data');
@@ -192,6 +169,25 @@ class BytesReader
     }
 
     /**
+     * @param  non-negative-int $length
+     * @return string validated UTF-8 string
+     *
+     * @throws BytesReaderException
+     */
+    public function utf8(int $length): string
+    {
+        $binaryString = $this->bytes($length);
+
+        if (preg_match('//u', $binaryString) !== 1) {
+            throw new BytesReaderException('Invalid UTF-8 string');
+        }
+
+        return $binaryString;
+    }
+
+    /**
+     * @param  non-negative-int $length
+     *
      * @throws BytesReaderException
      */
     private function unpackFloat(
@@ -199,7 +195,7 @@ class BytesReader
         int $length,
     ): float
     {
-        $value = unpack($format, $this->readRaw($length));
+        $value = unpack($format, $this->bytes($length));
 
         if ($value === false || !isset($value[1]) || !is_float($value[1])) {
             throw new LogicException('Failed to unpack data'); // unreachable, every 4/8-byte sequence is a valid IEEE 754 float

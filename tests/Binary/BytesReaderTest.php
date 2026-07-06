@@ -2,7 +2,6 @@
 
 namespace ShipMonk\WebAuthnTests\Binary;
 
-use LogicException;
 use ShipMonk\WebAuthn\Binary\BytesReader;
 use ShipMonk\WebAuthn\Binary\BytesReaderException;
 use ShipMonk\WebAuthnTests\WebAuthnTestCase;
@@ -242,16 +241,6 @@ class BytesReaderTest extends WebAuthnTestCase
                 });
             },
         );
-
-        self::assertException(
-            LogicException::class,
-            'Length must be non-negative',
-            static function (): void {
-                BytesReader::read('ABC', static function (BytesReader $reader): void {
-                    $reader->bytes(-1);
-                });
-            },
-        );
     }
 
     public function testUtf8(): void
@@ -300,16 +289,6 @@ class BytesReaderTest extends WebAuthnTestCase
             static function (): void {
                 BytesReader::read('A', static function (BytesReader $reader): void {
                     $reader->utf8(2);
-                });
-            },
-        );
-
-        self::assertException(
-            LogicException::class,
-            'Length must be non-negative',
-            static function (): void {
-                BytesReader::read('ABC', static function (BytesReader $reader): void {
-                    $reader->utf8(-1);
                 });
             },
         );

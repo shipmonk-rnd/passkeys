@@ -68,12 +68,11 @@ class DerEncoder
         return "\x30" . self::encodeLength(strlen($content)) . $content;
     }
 
+    /**
+     * @param non-negative-int $length
+     */
     public static function encodeLength(int $length): string
     {
-        if ($length < 0) {
-            throw new LogicException('Length cannot be negative');
-        }
-
         if ($length < 0x80) {
             return chr($length);
         }

@@ -92,12 +92,9 @@ class DerEncoderTest extends WebAuthnTestCase
         );
     }
 
-    public function testEncodeLengthRejectsNegative(): void
-    {
-        $this->expectException(LogicException::class);
-        DerEncoder::encodeLength(-1);
-    }
-
+    /**
+     * @param non-negative-int $length
+     */
     #[DataProvider('provideEncodeLengthData')]
     public function testEncodeLength(
         int $length,
@@ -108,7 +105,7 @@ class DerEncoderTest extends WebAuthnTestCase
     }
 
     /**
-     * @return iterable<array{int, string}>
+     * @return iterable<array{non-negative-int, string}>
      */
     public static function provideEncodeLengthData(): iterable
     {
