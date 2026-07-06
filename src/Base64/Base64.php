@@ -2,16 +2,24 @@
 
 namespace WebAuthnX\Base64;
 
+use function base64_decode;
+use function base64_encode;
+use function preg_match;
+use function rtrim;
+use function str_repeat;
+use function strlen;
+use function strtr;
+
 /**
  * @see https://www.rfc-editor.org/rfc/rfc4648.html#section-5
  */
 class Base64
 {
+
     public static function urlEncode(string $data): string
     {
         return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
     }
-
 
     /**
      * @throws InvalidBase64Exception
@@ -40,4 +48,5 @@ class Base64
 
         return $decoded;
     }
+
 }

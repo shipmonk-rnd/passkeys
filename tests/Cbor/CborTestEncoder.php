@@ -3,7 +3,6 @@
 namespace WebAuthnXTests\Cbor;
 
 use WebAuthnX\Cbor\CborEncoder;
-
 use function chr;
 use function is_int;
 use function ord;
@@ -15,6 +14,7 @@ use function substr;
  */
 final class CborTestEncoder
 {
+
     /**
      * Major type 0/1: a (signed) integer.
      */
@@ -45,7 +45,7 @@ final class CborTestEncoder
     /**
      * Major type 5: a map of already-encoded (key, value) byte pairs, kept in the given order.
      *
-     * @param  list<array{string, string}> $pairs
+     * @param list<array{string, string}> $pairs
      */
     public static function map(array $pairs): string
     {
@@ -56,7 +56,7 @@ final class CborTestEncoder
      * An integer-keyed map, as used by COSE keys: integer values encode as CBOR
      * integers, string values as CBOR byte strings.
      *
-     * @param  array<int, int|string> $entries
+     * @param array<int, int|string> $entries
      */
     public static function intMap(array $entries): string
     {
@@ -68,4 +68,5 @@ final class CborTestEncoder
 
         return self::map($pairs);
     }
+
 }

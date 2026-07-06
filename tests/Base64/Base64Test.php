@@ -9,14 +9,21 @@ use WebAuthnXTests\WebAuthnTestCase;
 
 class Base64Test extends WebAuthnTestCase
 {
+
     #[DataProvider('provideRoundtrip')]
-    public function testEncode(string $binary, string $encoded): void
+    public function testEncode(
+        string $binary,
+        string $encoded,
+    ): void
     {
         self::assertSame($encoded, Base64::urlEncode($binary));
     }
 
     #[DataProvider('provideRoundtrip')]
-    public function testDecode(string $binary, string $encoded): void
+    public function testDecode(
+        string $binary,
+        string $encoded,
+    ): void
     {
         self::assertSame($binary, Base64::urlDecode($encoded));
     }
@@ -79,4 +86,5 @@ class Base64Test extends WebAuthnTestCase
         yield 'two-char group' => ['QR'];
         yield 'three-char group' => ['Zm9vYmF'];
     }
+
 }

@@ -10,25 +10,26 @@ use WebAuthnX\Cose\CoseKeyException;
 use WebAuthnX\Cose\CoseOkpKey;
 use WebAuthnX\Cose\CoseRsaKey;
 use WebAuthnXTests\CryptoTestCase;
-
 use function bin2hex;
 use function str_pad;
 
 class CoseKeyTest extends CryptoTestCase
 {
+
     /**
      * The DER SubjectPublicKeyInfo we build from a COSE key must be byte-for-byte
      * identical to what OpenSSL emits for the same key.
      *
-     * @param  CoseAlgorithmIdentifier::* $alg
-     * @param  class-string<CoseKey> $expectedClass
+     * @param CoseAlgorithmIdentifier::* $alg
+     * @param class-string<CoseKey> $expectedClass
      */
     #[DataProvider('provideAlgorithms')]
     public function testSubjectPublicKeyInfoMatchesOpenssl(
         int $alg,
         string $expectedClass,
         int $okpCrv = CoseOkpKey::CRV_ED25519,
-    ): void {
+    ): void
+    {
         [$coseKey, $privateKey] = self::generateCoseKeyPair($alg, $okpCrv);
 
         self::assertInstanceOf($expectedClass, $coseKey);
@@ -79,15 +80,16 @@ class CoseKeyTest extends CryptoTestCase
      * (same type, same key material) and re-encode to the same bytes — this is the round-trip a
      * relying party relies on to persist and later load a credential's public key.
      *
-     * @param  CoseAlgorithmIdentifier::* $alg
-     * @param  class-string<CoseKey> $expectedClass
+     * @param CoseAlgorithmIdentifier::* $alg
+     * @param class-string<CoseKey> $expectedClass
      */
     #[DataProvider('provideAlgorithms')]
     public function testToBytesRoundTrips(
         int $alg,
         string $expectedClass,
         int $okpCrv = CoseOkpKey::CRV_ED25519,
-    ): void {
+    ): void
+    {
         [$coseKey] = self::generateCoseKeyPair($alg, $okpCrv);
 
         $restored = CoseKey::fromBytes($coseKey->toBytes());
@@ -125,10 +127,13 @@ class CoseKeyTest extends CryptoTestCase
     }
 
     /**
-     * @param  array<int, int|string> $entries
+     * @param array<int, int|string> $entries
      */
     #[DataProvider('provideInvalidKeys')]
-    public function testFromCborMapRejectsInvalidKeys(string $expectedMessage, array $entries): void
+    public function testFromCborMapRejectsInvalidKeys(
+        string $expectedMessage,
+        array $entries,
+    ): void
     {
         self::assertException(
             CoseKeyException::class,
@@ -222,4 +227,5 @@ class CoseKeyTest extends CryptoTestCase
             [1 => CoseOkpKey::KTY, 3 => CoseAlgorithmIdentifier::EdDSA, -1 => CoseOkpKey::CRV_ED448, -2 => $x],
         ];
     }
+
 }

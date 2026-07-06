@@ -9,7 +9,6 @@ use WebAuthnX\Ceremony\CredentialRecord;
 use WebAuthnX\Cose\CoseKey;
 use WebAuthnX\Passkey\PasskeyStore as PasskeyStoreInterface;
 use WebAuthnX\Passkey\RegisteredPasskey;
-
 use function array_map;
 use function base64_decode;
 use function base64_encode;
@@ -17,7 +16,6 @@ use function date;
 use function json_decode;
 use function json_encode;
 use function random_bytes;
-
 use const JSON_THROW_ON_ERROR;
 
 /**
@@ -27,8 +25,8 @@ use const JSON_THROW_ON_ERROR;
  * demo's own endpoints need (insertUser, findUserByEmail, …). One user (identified by email) has
  * many credentials (a user_id foreign key):
  *
- *   table `users`        — id (integer PK), passkey_user_handle (BLOB, unique), email (unique)
- *   table `credentials`  — credential_id (PK, base64), user_id (FK),
+ *   table `users` — id (integer PK), passkey_user_handle (BLOB, unique), email (unique)
+ *   table `credentials` — credential_id (PK, base64), user_id (FK),
  *                          public_key (base64 of CoseKey::toBytes()), sign_count,
  *                          uv_initialized, backup_eligible, backup_state, transports,
  *                          authenticator_attachment, created_at
@@ -46,6 +44,7 @@ use const JSON_THROW_ON_ERROR;
  */
 final class PasskeyStore implements PasskeyStoreInterface
 {
+
     private readonly PDO $db;
 
     public function __construct(string $databaseFile)
@@ -263,8 +262,14 @@ final class PasskeyStore implements PasskeyStoreInterface
         );
     }
 
-    private function bindParameter(PDOStatement $statement, string $parameterName, mixed $value, int $type = PDO::PARAM_STR): void
+    private function bindParameter(
+        PDOStatement $statement,
+        string $parameterName,
+        mixed $value,
+        int $type = PDO::PARAM_STR,
+    ): void
     {
         $statement->bindValue($parameterName, $value, $type);
     }
+
 }

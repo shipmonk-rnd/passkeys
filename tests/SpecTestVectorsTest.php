@@ -11,12 +11,12 @@ use WebAuthnX\Ceremony\RegistrationExpectations;
 use WebAuthnX\Ceremony\RegistrationResult;
 use WebAuthnX\Ceremony\VerificationException;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
+use WebAuthnX\Credential\AuthenticatorAssertionResponse;
 use WebAuthnX\Credential\AuthenticatorAttestationResponse;
 use WebAuthnX\Credential\PublicKeyCredential;
 use WebAuthnX\Json\JsonObject;
 use WebAuthnX\RelyingParty;
 use WebAuthnXTests\Ceremony\InMemoryCredentialStore;
-
 use function bin2hex;
 use function chr;
 use function file_get_contents;
@@ -47,11 +47,14 @@ use function substr;
  */
 class SpecTestVectorsTest extends WebAuthnTestCase
 {
+
     private const string RP_ID = 'example.org';
     private const string ORIGIN = 'https://example.org';
     private const string TOP_ORIGIN = 'https://example.com';
 
-    /** The vectors carry no user handle; the relying party assigns one at registration. */
+    /**
+     * The vectors carry no user handle; the relying party assigns one at registration.
+     */
     private const string USER_HANDLE = 'spec-vector-user';
 
     /**
@@ -63,7 +66,8 @@ class SpecTestVectorsTest extends WebAuthnTestCase
         int $alg,
         string $fmt = 'none',
         bool $crossOrigin = false,
-    ): void {
+    ): void
+    {
         $vector = self::loadVector($fixture);
         $registration = $vector->getObject('registration');
         $authentication = $vector->getObject('authentication');
@@ -180,7 +184,7 @@ class SpecTestVectorsTest extends WebAuthnTestCase
      * packed-capable relying party would persist — and stores it for the authentication half
      * of the vector.
      *
-     * @param  PublicKeyCredential<AuthenticatorAttestationResponse> $credential
+     * @param PublicKeyCredential<AuthenticatorAttestationResponse> $credential
      */
     private static function registerPackedCredential(
         RelyingParty $relyingParty,
@@ -190,7 +194,8 @@ class SpecTestVectorsTest extends WebAuthnTestCase
         JsonObject $registration,
         int $alg,
         string $userHandle,
-    ): void {
+    ): void
+    {
         self::assertException(
             VerificationException::class,
             "Attestation format 'packed' with an x5c certificate chain is not supported",
@@ -226,14 +231,15 @@ class SpecTestVectorsTest extends WebAuthnTestCase
     }
 
     /**
-     * @return PublicKeyCredential<\WebAuthnX\Credential\AuthenticatorAssertionResponse>
+     * @return PublicKeyCredential<AuthenticatorAssertionResponse>
      */
     private static function assertionCredential(
         string $credentialId,
         JsonObject $authentication,
         string $signature,
         string $userHandle,
-    ): PublicKeyCredential {
+    ): PublicKeyCredential
+    {
         return PublicKeyCredential::fromAuthenticationResponseJson(self::jsonObject([
             'id' => Base64::urlEncode($credentialId),
             'rawId' => Base64::urlEncode($credentialId),
@@ -258,8 +264,12 @@ class SpecTestVectorsTest extends WebAuthnTestCase
         return JsonObject::fromString($content);
     }
 
-    private static function hexField(JsonObject $object, string $field): string
+    private static function hexField(
+        JsonObject $object,
+        string $field,
+    ): string
     {
         return self::bytesFromHex($object->getString($field));
     }
+
 }

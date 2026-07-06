@@ -8,7 +8,6 @@ use WebAuthnX\Cose\CoseEc2Key;
 use WebAuthnX\Cose\CoseKey;
 use WebAuthnX\Cose\CoseOkpKey;
 use WebAuthnX\Cose\CoseRsaKey;
-
 use function array_key_exists;
 use function base64_decode;
 use function implode;
@@ -20,7 +19,6 @@ use function openssl_pkey_new;
 use function openssl_sign;
 use function preg_replace;
 use function str_pad;
-
 use const OPENSSL_ALGO_SHA256;
 use const OPENSSL_ALGO_SHA384;
 use const OPENSSL_ALGO_SHA512;
@@ -36,14 +34,18 @@ use const STR_PAD_LEFT;
  */
 abstract class CryptoTestCase extends WebAuthnTestCase
 {
+
     /**
      * Generates a fresh key pair for the given COSE algorithm and returns both the
      * parsed COSE public key and the OpenSSL private key (for signing in tests).
      *
-     * @param  CoseAlgorithmIdentifier::* $alg
+     * @param CoseAlgorithmIdentifier::* $alg
      * @return array{CoseKey, OpenSSLAsymmetricKey}
      */
-    protected static function generateCoseKeyPair(int $alg, int $okpCrv = CoseOkpKey::CRV_ED25519): array
+    protected static function generateCoseKeyPair(
+        int $alg,
+        int $okpCrv = CoseOkpKey::CRV_ED25519,
+    ): array
     {
         [$privateKey, $entries] = self::generateKeyAndCoseEntries($alg, $okpCrv);
 
@@ -56,10 +58,13 @@ abstract class CryptoTestCase extends WebAuthnTestCase
      * authenticator embeds in attested credential data. EdDSA is the only COSE algorithm
      * spanning two curves, so those need the extra `$okpCrv` discriminator.
      *
-     * @param  CoseAlgorithmIdentifier::* $alg
+     * @param CoseAlgorithmIdentifier::* $alg
      * @return array{OpenSSLAsymmetricKey, array<int, int|string>}
      */
-    protected static function generateKeyAndCoseEntries(int $alg, int $okpCrv = CoseOkpKey::CRV_ED25519): array
+    protected static function generateKeyAndCoseEntries(
+        int $alg,
+        int $okpCrv = CoseOkpKey::CRV_ED25519,
+    ): array
     {
         if ($alg === CoseAlgorithmIdentifier::RS256) {
             $privateKey = self::generateKey(['private_key_type' => OPENSSL_KEYTYPE_RSA, 'private_key_bits' => 2048]);
@@ -119,7 +124,11 @@ abstract class CryptoTestCase extends WebAuthnTestCase
      *
      * @param CoseAlgorithmIdentifier::* $alg
      */
-    protected static function sign(OpenSSLAsymmetricKey $privateKey, string $message, int $alg): string
+    protected static function sign(
+        OpenSSLAsymmetricKey $privateKey,
+        string $message,
+        int $alg,
+    ): string
     {
         if (!openssl_sign($message, $signature, $privateKey, self::opensslDigest($alg)) || !is_string($signature)) {
             self::fail('Failed to sign: ' . openssl_error_string());
@@ -143,7 +152,7 @@ abstract class CryptoTestCase extends WebAuthnTestCase
     }
 
     /**
-     * @param  CoseAlgorithmIdentifier::ES256|CoseAlgorithmIdentifier::ES384|CoseAlgorithmIdentifier::ES512 $alg
+     * @param CoseAlgorithmIdentifier::ES256|CoseAlgorithmIdentifier::ES384|CoseAlgorithmIdentifier::ES512 $alg
      * @return array{string, int, int} OpenSSL curve name, COSE curve id, coordinate length
      */
     protected static function ec2Spec(int $alg): array
@@ -156,7 +165,7 @@ abstract class CryptoTestCase extends WebAuthnTestCase
     }
 
     /**
-     * @param  array<string, int|string> $config
+     * @param array<string, int|string> $config
      */
     protected static function generateKey(array $config): OpenSSLAsymmetricKey
     {
@@ -184,9 +193,12 @@ abstract class CryptoTestCase extends WebAuthnTestCase
     }
 
     /**
-     * @param  array<array-key, mixed> $data
+     * @param array<array-key, mixed> $data
      */
-    protected static function stringField(array $data, string ...$path): string
+    protected static function stringField(
+        array $data,
+        string ...$path,
+    ): string
     {
         $value = $data;
 
@@ -216,4 +228,5 @@ abstract class CryptoTestCase extends WebAuthnTestCase
 
         return $der;
     }
+
 }

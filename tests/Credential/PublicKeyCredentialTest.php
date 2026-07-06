@@ -2,23 +2,22 @@
 
 namespace WebAuthnXTests\Credential;
 
+use WebAuthnX\Base64\Base64;
 use WebAuthnX\Credential\AuthenticatorAssertionResponse;
 use WebAuthnX\Credential\AuthenticatorAttestationResponse;
-use WebAuthnX\Base64\Base64;
 use WebAuthnX\Credential\MalformedDataException;
-use WebAuthnX\Json\JsonObject;
-use WebAuthnX\Json\JsonObjectException;
 use WebAuthnX\Credential\PublicKeyCredential;
 use WebAuthnX\Enum\AuthenticatorAttachment;
 use WebAuthnX\Enum\PublicKeyCredentialType;
+use WebAuthnX\Json\JsonObject;
+use WebAuthnX\Json\JsonObjectException;
 use WebAuthnXTests\WebAuthnTestCase;
-
 use function json_encode;
-
 use const JSON_THROW_ON_ERROR;
 
 class PublicKeyCredentialTest extends WebAuthnTestCase
 {
+
     private const string ATTESTATION_OBJECT = 'o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikdKbqkhPJnC90siSSsyDPQCYql'
         . 'MGpUKA5fyklC2CEHvBFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIPicKuaB2QMLvuZJAXn8nWNe4Y2iZKLDmWiYb0qo0l5fpQEC'
         . 'AyYgASFYICAFU4dQcXT_GH1hZV2JoHHdVUCU_AkgGFd20UpKqAM0IlggJQzogT8UjnN7-tKvzIGk8e5OdWX1xurwC_sffQKh1a0';
@@ -27,10 +26,14 @@ class PublicKeyCredentialTest extends WebAuthnTestCase
      * The parse boundary repacks the underlying decode failure into a single
      * {@see MalformedDataException}; the specific cause is preserved as its previous exception.
      *
-     * @param  callable(): mixed $cb
+     * @param callable(): mixed $cb
+     *
      * @param-immediately-invoked-callable $cb
      */
-    private static function assertMalformedData(string $previousMessage, callable $cb): void
+    private static function assertMalformedData(
+        string $previousMessage,
+        callable $cb,
+    ): void
     {
         try {
             $cb();
@@ -326,4 +329,5 @@ class PublicKeyCredentialTest extends WebAuthnTestCase
             ], JSON_THROW_ON_ERROR))),
         );
     }
+
 }

@@ -10,6 +10,7 @@ use JsonSerializable;
  */
 readonly class PublicKeyCredentialRpEntity extends PublicKeyCredentialEntity implements JsonSerializable
 {
+
     /**
      * `$id` is optional: when null it is omitted from the serialized options and the browser
      * defaults the RP ID to the caller's effective domain.
@@ -17,7 +18,8 @@ readonly class PublicKeyCredentialRpEntity extends PublicKeyCredentialEntity imp
     public function __construct(
         string $name,
         public ?string $id = null,
-    ) {
+    )
+    {
         parent::__construct($name);
     }
 
@@ -34,4 +36,5 @@ readonly class PublicKeyCredentialRpEntity extends PublicKeyCredentialEntity imp
 
         return $data;
     }
+
 }

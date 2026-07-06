@@ -9,4 +9,5 @@ use RuntimeException;
  */
 class SignatureVerificationException extends RuntimeException
 {
+
 }

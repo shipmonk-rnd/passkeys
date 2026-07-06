@@ -19,6 +19,7 @@ use WebAuthnX\Ceremony\CredentialStore;
  */
 interface PasskeyStore extends CredentialStore
 {
+
     /**
      * Maps a login-form identifier (email/username) to the account's user handle, or null when no
      * such account exists. Only consulted for the two-step flow.
@@ -31,7 +32,7 @@ interface PasskeyStore extends CredentialStore
      * Every credential registered to the given account — used to build `allowCredentials` /
      * `excludeCredentials` and to enforce the former at verification.
      *
-     * @param  string $userHandle raw user handle bytes
+     * @param string $userHandle raw user handle bytes
      * @return list<CredentialRecord>
      */
     public function findCredentialsByUserHandle(string $userHandle): array;
@@ -50,4 +51,5 @@ interface PasskeyStore extends CredentialStore
      * This is also the place to react to {@see AuthenticationResult::$possibleClone} if you want to.
      */
     public function updateCredential(AuthenticationResult $result): void;
+
 }

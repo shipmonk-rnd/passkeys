@@ -4,7 +4,6 @@ namespace WebAuthnX\Cbor;
 
 use WebAuthnX\Binary\BytesReader;
 use WebAuthnX\Binary\BytesReaderException;
-
 use function array_key_exists;
 use function dechex;
 use function is_int;
@@ -117,9 +116,13 @@ class CborDecoder
 
     /**
      * @return list<mixed>
+     *
      * @throws InvalidCborException
      */
-    private static function decodeArray(BytesReader $bytes, int $length): array
+    private static function decodeArray(
+        BytesReader $bytes,
+        int $length,
+    ): array
     {
         $array = [];
 
@@ -132,9 +135,13 @@ class CborDecoder
 
     /**
      * @return array<mixed>
+     *
      * @throws InvalidCborException
      */
-    private static function decodeMap(BytesReader $bytes, int $length): array
+    private static function decodeMap(
+        BytesReader $bytes,
+        int $length,
+    ): array
     {
         $map = [];
 
@@ -155,4 +162,5 @@ class CborDecoder
 
         return $map;
     }
+
 }

@@ -2,21 +2,20 @@
 
 namespace WebAuthnXTests\Options;
 
-use WebAuthnX\Enum\AuthenticatorTransport;
 use WebAuthnX\Base64\Base64;
-use WebAuthnX\Options\PublicKeyCredentialDescriptor;
+use WebAuthnX\Enum\AuthenticatorTransport;
 use WebAuthnX\Enum\PublicKeyCredentialHint;
-use WebAuthnX\Options\PublicKeyCredentialRequestOptions;
 use WebAuthnX\Enum\PublicKeyCredentialType;
 use WebAuthnX\Enum\UserVerificationRequirement;
+use WebAuthnX\Options\PublicKeyCredentialDescriptor;
+use WebAuthnX\Options\PublicKeyCredentialRequestOptions;
 use WebAuthnXTests\WebAuthnTestCase;
-
 use function json_decode;
-
 use const JSON_THROW_ON_ERROR;
 
 class PublicKeyCredentialRequestOptionsTest extends WebAuthnTestCase
 {
+
     public function testSerializesAllMembers(): void
     {
         $options = new PublicKeyCredentialRequestOptions(
@@ -92,4 +91,5 @@ class PublicKeyCredentialRequestOptionsTest extends WebAuthnTestCase
 
         self::assertStringContainsString('"extensions":{}', $options->toJson());
     }
+
 }

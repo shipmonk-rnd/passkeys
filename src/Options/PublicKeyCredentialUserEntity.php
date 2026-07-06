@@ -5,7 +5,6 @@ namespace WebAuthnX\Options;
 use InvalidArgumentException;
 use JsonSerializable;
 use WebAuthnX\Base64\Base64;
-
 use function strlen;
 
 /**
@@ -14,18 +13,23 @@ use function strlen;
  */
 readonly class PublicKeyCredentialUserEntity extends PublicKeyCredentialEntity implements JsonSerializable
 {
-    /** The {@link https://w3c.github.io/webauthn/#user-handle user handle} must be 1 to 64 bytes. */
+
+    /**
+     * The {@link https://w3c.github.io/webauthn/#user-handle user handle} must be 1 to 64 bytes.
+     */
     private const int MAX_ID_LENGTH = 64;
 
     /**
-     * @param  string $id raw user handle bytes (an opaque identifier — not an email or username); base64url encoding happens on serialization
+     * @param string $id raw user handle bytes (an opaque identifier — not an email or username); base64url encoding happens on serialization
+     *
      * @throws InvalidArgumentException if the id is empty or longer than 64 bytes
      */
     public function __construct(
         public string $id,
         string $name,
         public string $displayName,
-    ) {
+    )
+    {
         if ($id === '' || strlen($id) > self::MAX_ID_LENGTH) {
             throw new InvalidArgumentException('User handle must be 1 to ' . self::MAX_ID_LENGTH . ' bytes');
         }
@@ -44,4 +48,5 @@ readonly class PublicKeyCredentialUserEntity extends PublicKeyCredentialEntity i
             'displayName' => $this->displayName,
         ];
     }
+
 }

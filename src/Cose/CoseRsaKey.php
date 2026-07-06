@@ -6,42 +6,54 @@ use WebAuthnX\Cbor\CborEncoder;
 use WebAuthnX\Cbor\CborMap;
 use WebAuthnX\Cbor\CborMapException;
 use WebAuthnX\Der\DerEncoder;
-
 use function in_array;
 use function ltrim;
 use function ord;
 use function strlen;
 use function substr;
-
 use const OPENSSL_ALGO_SHA256;
 
 /**
  * COSE key of type RSA, e.g. RS256.
  *
- * @see https://www.rfc-editor.org/rfc/rfc8230.html#section-4 RSA key parameters
  * @extends CoseKey<value-of<self::ALGORITHMS>>
+ *
+ * @see https://www.rfc-editor.org/rfc/rfc8230.html#section-4 RSA key parameters
  * @api
  */
 final class CoseRsaKey extends CoseKey
 {
-    /** Key type value for RSA keys. */
+
+    /**
+     * Key type value for RSA keys.
+     */
     public const int KTY = 3;
 
-    /** RSA key label: modulus (n). */
+    /**
+     * RSA key label: modulus (n).
+     */
     private const int LABEL_N = -1;
 
-    /** RSA key label: public exponent (e). */
+    /**
+     * RSA key label: public exponent (e).
+     */
     private const int LABEL_E = -2;
 
-    /** OID for rsaEncryption (RFC 8017 App. C / RFC 3279 §2.3.1). */
+    /**
+     * OID for rsaEncryption (RFC 8017 App. C / RFC 3279 §2.3.1).
+     */
     private const string OID_RSA_ENCRYPTION = '1.2.840.113549.1.1.1';
 
-    /** Algorithms that use an RSA key. */
+    /**
+     * Algorithms that use an RSA key.
+     */
     private const array ALGORITHMS = [
         CoseAlgorithmIdentifier::RS256,
     ];
 
-    /** Minimum accepted modulus size in bytes (2048 bits; RFC 8230 §6.1). */
+    /**
+     * Minimum accepted modulus size in bytes (2048 bits; RFC 8230 §6.1).
+     */
     private const int MIN_MODULUS_BYTES = 256;
 
     /**
@@ -53,13 +65,14 @@ final class CoseRsaKey extends CoseKey
         int $alg,
         public readonly string $n,
         public readonly string $e,
-    ) {
+    )
+    {
         parent::__construct($alg);
     }
 
     /**
-     * @throws CoseKeyException
      * @throws CborMapException
+     * @throws CoseKeyException
      */
     public static function fromCborMap(CborMap $map): self
     {
@@ -120,4 +133,5 @@ final class CoseRsaKey extends CoseKey
     {
         return OPENSSL_ALGO_SHA256; // RS256 is the only supported RSA algorithm
     }
+
 }

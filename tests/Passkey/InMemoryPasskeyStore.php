@@ -6,7 +6,6 @@ use WebAuthnX\Ceremony\AuthenticationResult;
 use WebAuthnX\Ceremony\CredentialRecord;
 use WebAuthnX\Passkey\PasskeyStore;
 use WebAuthnX\Passkey\RegisteredPasskey;
-
 use function base64_encode;
 
 /**
@@ -16,19 +15,31 @@ use function base64_encode;
  */
 final class InMemoryPasskeyStore implements PasskeyStore
 {
-    /** @var array<string, string> username → raw user handle */
+
+    /**
+     * @var array<string, string> username → raw user handle
+     */
     private array $users = [];
 
-    /** @var array<string, CredentialRecord> base64(credential id) → record */
+    /**
+     * @var array<string, CredentialRecord> base64(credential id) → record
+     */
     private array $credentials = [];
 
-    /** @var list<AuthenticationResult> everything passed to updateCredential() */
+    /**
+     * @var list<AuthenticationResult> everything passed to updateCredential()
+     */
     public private(set) array $updatedCredentials = [];
 
-    /** @var list<RegisteredPasskey> everything passed to saveCredential() */
+    /**
+     * @var list<RegisteredPasskey> everything passed to saveCredential()
+     */
     public private(set) array $savedPasskeys = [];
 
-    public function addUser(string $username, string $userHandle): void
+    public function addUser(
+        string $username,
+        string $userHandle,
+    ): void
     {
         $this->users[$username] = $userHandle;
     }
@@ -71,4 +82,5 @@ final class InMemoryPasskeyStore implements PasskeyStore
     {
         $this->updatedCredentials[] = $result;
     }
+
 }

@@ -9,13 +9,14 @@ use WebAuthnXTests\WebAuthnTestCase;
 
 class CborMapTest extends WebAuthnTestCase
 {
+
     /**
      * A CBOR map with mixed key and value types:
-     *   1       => 2                       (int)
-     *   3       => "abc"                   (text string)
-     *   4       => h'01020304'             (byte string)
-     *   5       => {1: 2}                   (nested map)
-     *   "neg"   => -1                      (int, text key)
+     *   1 => 2 (int)
+     *   3 => "abc" (text string)
+     *   4 => h'01020304' (byte string)
+     *   5 => {1: 2} (nested map)
+     *   "neg" => -1 (int, text key)
      */
     private const string SAMPLE_MAP_HEX = 'a5 01 02 03 63 61 62 63 04 44 01 02 03 04 05 a1 01 02 63 6e 65 67 20';
 
@@ -67,4 +68,5 @@ class CborMapTest extends WebAuthnTestCase
             ),
         );
     }
+
 }

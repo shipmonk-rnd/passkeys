@@ -19,7 +19,6 @@ use WebAuthnX\Passkey\PasskeyStore;
 use WebAuthnX\Passkey\PendingCeremonyStore;
 use WebAuthnXTests\Cbor\CborTestEncoder;
 use WebAuthnXTests\CryptoTestCase;
-
 use function array_map;
 use function base64_encode;
 use function chr;
@@ -28,7 +27,6 @@ use function json_encode;
 use function ord;
 use function pack;
 use function strlen;
-
 use const JSON_THROW_ON_ERROR;
 
 /**
@@ -42,6 +40,7 @@ use const JSON_THROW_ON_ERROR;
  */
 class PasskeyFlowTest extends CryptoTestCase
 {
+
     private const string RP_ID = 'example.com';
     private const string ORIGIN = 'https://example.com';
 
@@ -57,7 +56,9 @@ class PasskeyFlowTest extends CryptoTestCase
 
     private const int FLAGS_UP_UV = AuthenticatorData::FLAG_USER_PRESENT | AuthenticatorData::FLAG_USER_VERIFIED;
 
-    /** @var array<int, int|string> */
+    /**
+     * @var array<int, int|string>
+     */
     private array $coseEntries;
 
     private OpenSSLAsymmetricKey $privateKey;
@@ -399,7 +400,11 @@ class PasskeyFlowTest extends CryptoTestCase
 
     // --- Assertion helpers ------------------------------------------------------------------------
 
-    private function assertAuthenticationFails(string $reason, PasskeyFlow $flow, string $body): void
+    private function assertAuthenticationFails(
+        string $reason,
+        PasskeyFlow $flow,
+        string $body,
+    ): void
     {
         try {
             $flow->authenticate($body);
@@ -410,7 +415,11 @@ class PasskeyFlowTest extends CryptoTestCase
         }
     }
 
-    private function assertRegistrationFails(string $reason, PasskeyFlow $flow, string $body): void
+    private function assertRegistrationFails(
+        string $reason,
+        PasskeyFlow $flow,
+        string $body,
+    ): void
     {
         try {
             $flow->register($body);
@@ -423,7 +432,10 @@ class PasskeyFlowTest extends CryptoTestCase
 
     // --- Fixture builders -------------------------------------------------------------------------
 
-    private function flowWithAlice(?UserVerificationRequirement $userVerification = null, bool $crossOriginAllowed = false): PasskeyFlow
+    private function flowWithAlice(
+        ?UserVerificationRequirement $userVerification = null,
+        bool $crossOriginAllowed = false,
+    ): PasskeyFlow
     {
         $flow = $this->createFlow($userVerification, $crossOriginAllowed);
         $this->store->addUser(self::ALICE, self::ALICE_HANDLE);
@@ -436,13 +448,17 @@ class PasskeyFlowTest extends CryptoTestCase
      * With the passkey defaults, the concrete {@see PasskeyFlow} is used as-is; a policy override
      * exercises the intended customisation path — a subclass overriding the protected hook.
      */
-    private function createFlow(?UserVerificationRequirement $userVerification = null, bool $crossOriginAllowed = false): PasskeyFlow
+    private function createFlow(
+        ?UserVerificationRequirement $userVerification = null,
+        bool $crossOriginAllowed = false,
+    ): PasskeyFlow
     {
         if ($userVerification === null && !$crossOriginAllowed) {
             return new PasskeyFlow(self::RP_ID, 'Example RP', [self::ORIGIN], $this->store, $this->pending);
         }
 
         return new class (self::RP_ID, [self::ORIGIN], $this->store, $this->pending, $userVerification, $crossOriginAllowed) extends PasskeyFlow {
+
             /**
              * @param list<string> $origins
              */
@@ -453,7 +469,8 @@ class PasskeyFlowTest extends CryptoTestCase
                 PendingCeremonyStore $pendingStore,
                 private readonly ?UserVerificationRequirement $userVerification,
                 private readonly bool $crossOriginAllowed,
-            ) {
+            )
+            {
                 parent::__construct($rpId, 'Example RP', $origins, $store, $pendingStore);
             }
 
@@ -466,13 +483,18 @@ class PasskeyFlowTest extends CryptoTestCase
             {
                 return $this->crossOriginAllowed || parent::isCrossOriginAllowed();
             }
+
         };
     }
 
     /**
      * @param array<int, int|string> $coseEntries
      */
-    private function record(string $credentialId, string $userHandle, array $coseEntries): CredentialRecord
+    private function record(
+        string $credentialId,
+        string $userHandle,
+        array $coseEntries,
+    ): CredentialRecord
     {
         return new CredentialRecord(
             credentialId: $credentialId,
@@ -492,7 +514,8 @@ class PasskeyFlowTest extends CryptoTestCase
         ?int $flags = null,
         bool $tamperSignature = false,
         ?bool $crossOrigin = null,
-    ): string {
+    ): string
+    {
         return self::assertionBody(
             $this->privateKey,
             $challenge,
@@ -515,7 +538,8 @@ class PasskeyFlowTest extends CryptoTestCase
         string $challenge,
         string $credentialId = self::NEW_CREDENTIAL_ID,
         ?array $coseEntries = null,
-    ): string {
+    ): string
+    {
         $clientDataJson = json_encode([
             'type' => 'webauthn.create',
             'challenge' => Base64::urlEncode($challenge),
@@ -564,7 +588,8 @@ class PasskeyFlowTest extends CryptoTestCase
         ?int $flags = null,
         bool $tamperSignature = false,
         ?bool $crossOrigin = null,
-    ): string {
+    ): string
+    {
         $clientData = [
             'type' => 'webauthn.get',
             'challenge' => Base64::urlEncode($challenge),
@@ -603,4 +628,5 @@ class PasskeyFlowTest extends CryptoTestCase
             ],
         ], JSON_THROW_ON_ERROR);
     }
+
 }

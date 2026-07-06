@@ -4,14 +4,12 @@ namespace WebAuthnX\Binary;
 
 use Closure;
 use LogicException;
-
 use function is_float;
 use function ord;
 use function preg_match;
 use function strlen;
 use function substr;
 use function unpack;
-
 use const INF;
 use const NAN;
 
@@ -22,6 +20,7 @@ use const NAN;
  */
 class BytesReader
 {
+
     private readonly int $length;
 
     private int $offset = 0;
@@ -31,20 +30,25 @@ class BytesReader
      */
     private function __construct(
         private readonly string $data,
-    ) {
+    )
+    {
         $this->length = strlen($data);
     }
 
     /**
+     * @param string $bytes binary string to read from
+     * @param Closure(self): T $callback
+     * @return T
+     *
      * @template T
      *
-     * @param  string $bytes binary string to read from
-     * @param  Closure(self): T $callback
      * @param-immediately-invoked-callable $callback
-     * @return T
      * @throws BytesReaderException
      */
-    public static function read(string $bytes, Closure $callback): mixed
+    public static function read(
+        string $bytes,
+        Closure $callback,
+    ): mixed
     {
         $reader = new self($bytes);
         $result = $callback($reader);
@@ -140,6 +144,7 @@ class BytesReader
 
     /**
      * @return string raw bytes, without any validation
+     *
      * @throws BytesReaderException
      */
     public function bytes(int $length): string
@@ -153,6 +158,7 @@ class BytesReader
 
     /**
      * @return string validated UTF-8 string
+     *
      * @throws BytesReaderException
      */
     public function utf8(int $length): string
@@ -188,7 +194,10 @@ class BytesReader
     /**
      * @throws BytesReaderException
      */
-    private function unpackFloat(string $format, int $length): float
+    private function unpackFloat(
+        string $format,
+        int $length,
+    ): float
     {
         $value = unpack($format, $this->readRaw($length));
 
@@ -208,4 +217,5 @@ class BytesReader
             throw new BytesReaderException('Unexpected data after end');
         }
     }
+
 }

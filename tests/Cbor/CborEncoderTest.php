@@ -7,18 +7,21 @@ use WebAuthnX\Binary\BytesReader;
 use WebAuthnX\Cbor\CborEncoder;
 use WebAuthnX\Cbor\CborMap;
 use WebAuthnXTests\WebAuthnTestCase;
-
 use function bin2hex;
 use function str_repeat;
 
 class CborEncoderTest extends WebAuthnTestCase
 {
+
     /**
      * Exercises every head-byte width: inline (< 24), 1-, 2-, 4- and 8-byte arguments, plus the
      * negative-integer major type.
      */
     #[DataProvider('provideIntegers')]
-    public function testEncodeInt(int $value, string $expectedHex): void
+    public function testEncodeInt(
+        int $value,
+        string $expectedHex,
+    ): void
     {
         self::assertSame($expectedHex, bin2hex(CborEncoder::encodeInt($value)));
     }
@@ -71,4 +74,5 @@ class CborEncoderTest extends WebAuthnTestCase
     {
         self::assertSame('a0', bin2hex(CborEncoder::encodeMap([])));
     }
+
 }

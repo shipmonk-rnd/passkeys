@@ -9,8 +9,8 @@ use WebAuthnX\Base64\Base64;
 use WebAuthnX\Ceremony\AuthenticationExpectations;
 use WebAuthnX\Ceremony\CredentialRecord;
 use WebAuthnX\Ceremony\RegistrationExpectations;
-use WebAuthnX\Ceremony\VerificationException;
 use WebAuthnX\Ceremony\RegistrationResult;
+use WebAuthnX\Ceremony\VerificationException;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 use WebAuthnX\Cose\CoseKey;
 use WebAuthnX\Credential\AuthenticatorAssertionResponse;
@@ -21,7 +21,6 @@ use WebAuthnX\Json\JsonObject;
 use WebAuthnX\RelyingParty;
 use WebAuthnXTests\Cbor\CborTestEncoder;
 use WebAuthnXTests\Ceremony\InMemoryCredentialStore;
-
 use function chr;
 use function hash;
 use function json_encode;
@@ -29,7 +28,6 @@ use function ord;
 use function pack;
 use function str_repeat;
 use function strlen;
-
 use const JSON_THROW_ON_ERROR;
 
 /**
@@ -42,6 +40,7 @@ use const JSON_THROW_ON_ERROR;
  */
 class RelyingPartyTest extends CryptoTestCase
 {
+
     private const string RP_ID = 'example.com';
     private const string ORIGIN = 'https://example.com';
     private const string CHALLENGE = 'a-fixed-32-byte-challenge-value!';
@@ -51,7 +50,9 @@ class RelyingPartyTest extends CryptoTestCase
 
     private const int FLAGS_UP_UV = AuthenticatorData::FLAG_USER_PRESENT | AuthenticatorData::FLAG_USER_VERIFIED;
 
-    /** @var array<int, int|string> */
+    /**
+     * @var array<int, int|string>
+     */
     private array $coseEntries;
 
     private OpenSSLAsymmetricKey $privateKey;
@@ -724,31 +725,42 @@ class RelyingPartyTest extends CryptoTestCase
     // --- Assertion helpers ----------------------------------------------------------------------
 
     /**
-     * @param  VerificationException::*                              $reason
-     * @param  PublicKeyCredential<AuthenticatorAttestationResponse> $credential
+     * @param VerificationException::* $reason
+     * @param PublicKeyCredential<AuthenticatorAttestationResponse> $credential
      */
-    private function assertRegistrationFails(string $reason, PublicKeyCredential $credential): void
+    private function assertRegistrationFails(
+        string $reason,
+        PublicKeyCredential $credential,
+    ): void
     {
         $this->assertVerificationFailure($reason, static fn () =>
             (new RelyingParty())->verifyRegistration($credential, self::registrationExpectations(), new InMemoryCredentialStore()));
     }
 
     /**
-     * @param  VerificationException::*                           $reason
-     * @param  PublicKeyCredential<AuthenticatorAssertionResponse> $credential
+     * @param VerificationException::* $reason
+     * @param PublicKeyCredential<AuthenticatorAssertionResponse> $credential
      */
-    private function assertAuthenticationFails(string $reason, PublicKeyCredential $credential, InMemoryCredentialStore $store): void
+    private function assertAuthenticationFails(
+        string $reason,
+        PublicKeyCredential $credential,
+        InMemoryCredentialStore $store,
+    ): void
     {
         $this->assertVerificationFailure($reason, static fn () =>
             (new RelyingParty())->verifyAuthentication($credential, self::authenticationExpectations(), $store));
     }
 
     /**
-     * @param  VerificationException::* $expectedReason
-     * @param  callable(): mixed        $cb
+     * @param VerificationException::* $expectedReason
+     * @param callable(): mixed $cb
+     *
      * @param-immediately-invoked-callable $cb
      */
-    private function assertVerificationFailure(string $expectedReason, callable $cb): void
+    private function assertVerificationFailure(
+        string $expectedReason,
+        callable $cb,
+    ): void
     {
         try {
             $cb();
@@ -762,8 +774,8 @@ class RelyingPartyTest extends CryptoTestCase
     // --- Fixture builders -----------------------------------------------------------------------
 
     /**
-     * @param  list<CoseAlgorithmIdentifier::*> $allowedAlgorithms
-     * @param  list<string> $allowedTopOrigins
+     * @param list<CoseAlgorithmIdentifier::*> $allowedAlgorithms
+     * @param list<string> $allowedTopOrigins
      */
     private static function registrationExpectations(
         array $allowedAlgorithms = [CoseAlgorithmIdentifier::ES256],
@@ -771,7 +783,8 @@ class RelyingPartyTest extends CryptoTestCase
         bool $allowCrossOrigin = false,
         array $allowedTopOrigins = [],
         bool $conditionalMediation = false,
-    ): RegistrationExpectations {
+    ): RegistrationExpectations
+    {
         return new RegistrationExpectations(
             challenge: self::CHALLENGE,
             rpId: self::RP_ID,
@@ -785,8 +798,8 @@ class RelyingPartyTest extends CryptoTestCase
     }
 
     /**
-     * @param  list<string>|null $allowedCredentialIds
-     * @param  list<string>     $allowedTopOrigins
+     * @param list<string>|null $allowedCredentialIds
+     * @param list<string> $allowedTopOrigins
      */
     private static function authenticationExpectations(
         ?array $allowedCredentialIds = null,
@@ -794,7 +807,8 @@ class RelyingPartyTest extends CryptoTestCase
         bool $allowCrossOrigin = false,
         array $allowedTopOrigins = [],
         ?string $expectedUserHandle = null,
-    ): AuthenticationExpectations {
+    ): AuthenticationExpectations
+    {
         return new AuthenticationExpectations(
             challenge: self::CHALLENGE,
             rpId: self::RP_ID,
@@ -811,7 +825,8 @@ class RelyingPartyTest extends CryptoTestCase
         int $signCount = 0,
         string $userHandle = self::USER_HANDLE,
         bool $backupEligible = false,
-    ): CredentialRecord {
+    ): CredentialRecord
+    {
         return new CredentialRecord(
             credentialId: self::CREDENTIAL_ID,
             publicKey: CoseKey::fromCborMap(self::cborMap($this->coseEntries)),
@@ -837,8 +852,8 @@ class RelyingPartyTest extends CryptoTestCase
      * in the statement than was used to sign, and `$attStmtOverride` replaces the statement CBOR
      * wholesale (for the x5c / missing-field negatives).
      *
-     * @param  array<int, int|string> $coseEntries
-     * @param  CoseAlgorithmIdentifier::*|null $attestationAlg
+     * @param array<int, int|string> $coseEntries
+     * @param CoseAlgorithmIdentifier::*|null $attestationAlg
      * @return PublicKeyCredential<AuthenticatorAttestationResponse>
      */
     private static function registrationCredential(
@@ -860,7 +875,8 @@ class RelyingPartyTest extends CryptoTestCase
         ?int $attStmtAlgOverride = null,
         bool $tamperAttestationSignature = false,
         ?string $attStmtOverride = null,
-    ): PublicKeyCredential {
+    ): PublicKeyCredential
+    {
         $flags ??= self::FLAGS_UP_UV | AuthenticatorData::FLAG_ATTESTED_CREDENTIAL_DATA;
 
         $attestedCredentialData = $includeAttestedCredentialData
@@ -908,7 +924,7 @@ class RelyingPartyTest extends CryptoTestCase
     }
 
     /**
-     * @param  CoseAlgorithmIdentifier::* $alg
+     * @param CoseAlgorithmIdentifier::* $alg
      * @return PublicKeyCredential<AuthenticatorAssertionResponse>
      */
     private static function authenticationCredential(
@@ -926,7 +942,8 @@ class RelyingPartyTest extends CryptoTestCase
         bool $tamperSignature = false,
         ?string $topOrigin = null,
         ?string $authDataOverride = null,
-    ): PublicKeyCredential {
+    ): PublicKeyCredential
+    {
         $flags ??= self::FLAGS_UP_UV;
         $authData = $authDataOverride ?? self::authenticatorData($rpId, $flags, $signCount, null);
         $clientDataJson = self::clientDataJson($type, $challenge, $origin, $crossOrigin, $topOrigin);
@@ -955,7 +972,12 @@ class RelyingPartyTest extends CryptoTestCase
         ], JSON_THROW_ON_ERROR)));
     }
 
-    private static function authenticatorData(string $rpId, int $flags, int $signCount, ?string $attestedCredentialData): string
+    private static function authenticatorData(
+        string $rpId,
+        int $flags,
+        int $signCount,
+        ?string $attestedCredentialData,
+    ): string
     {
         return hash('sha256', $rpId, binary: true)
             . chr($flags)
@@ -963,7 +985,13 @@ class RelyingPartyTest extends CryptoTestCase
             . ($attestedCredentialData ?? '');
     }
 
-    private static function clientDataJson(string $type, string $challenge, string $origin, ?bool $crossOrigin, ?string $topOrigin): string
+    private static function clientDataJson(
+        string $type,
+        string $challenge,
+        string $origin,
+        ?bool $crossOrigin,
+        ?string $topOrigin,
+    ): string
     {
         $data = [
             'type' => $type,
@@ -981,4 +1009,5 @@ class RelyingPartyTest extends CryptoTestCase
 
         return json_encode($data, JSON_THROW_ON_ERROR);
     }
+
 }

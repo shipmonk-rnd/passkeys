@@ -2,14 +2,27 @@
 
 namespace WebAuthnXTests\Der;
 
+use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use WebAuthnX\Der\DerEncoder;
 use WebAuthnXTests\WebAuthnTestCase;
+use function bin2hex;
+use function chr;
+use function intdiv;
+use function ord;
+use function pack;
+use function random_int;
+use function strlen;
+use function substr;
 
 class DerEncoderTest extends WebAuthnTestCase
 {
+
     #[DataProvider('provideEncodeIntData')]
-    public function testEncodeInt(string $bytes, string $expected): void
+    public function testEncodeInt(
+        string $bytes,
+        string $expected,
+    ): void
     {
         self::assertSame($expected, DerEncoder::encodeUnsignedInt($bytes));
     }
@@ -31,9 +44,12 @@ class DerEncoderTest extends WebAuthnTestCase
     }
 
     #[DataProvider('provideEncodeObjectIdentifierData')]
-    public function testEncodeObjectIdentifier(string $oid, string $expectedHex): void
+    public function testEncodeObjectIdentifier(
+        string $oid,
+        string $expectedHex,
+    ): void
     {
-        self::assertSame($expectedHex, \bin2hex(DerEncoder::encodeObjectIdentifier($oid)));
+        self::assertSame($expectedHex, bin2hex(DerEncoder::encodeObjectIdentifier($oid)));
     }
 
     /**
@@ -51,7 +67,7 @@ class DerEncoderTest extends WebAuthnTestCase
     #[DataProvider('provideInvalidObjectIdentifierData')]
     public function testEncodeInvalidObjectIdentifier(string $oid): void
     {
-        $this->expectException(\LogicException::class);
+        $this->expectException(LogicException::class);
         DerEncoder::encodeObjectIdentifier($oid);
     }
 
@@ -78,12 +94,15 @@ class DerEncoderTest extends WebAuthnTestCase
 
     public function testEncodeLengthRejectsNegative(): void
     {
-        $this->expectException(\LogicException::class);
+        $this->expectException(LogicException::class);
         DerEncoder::encodeLength(-1);
     }
 
     #[DataProvider('provideEncodeLengthData')]
-    public function testEncodeLength(int $length, string $expected): void
+    public function testEncodeLength(
+        int $length,
+        string $expected,
+    ): void
     {
         self::assertSame($expected, DerEncoder::encodeLength($length));
     }
@@ -111,36 +130,37 @@ class DerEncoderTest extends WebAuthnTestCase
     private static function _der_length(int $len): string
     {
         if ($len < 128) {
-            return \chr($len);
+            return chr($len);
         }
         $lenBytes = '';
         while ($len > 0) {
-            $lenBytes = \chr($len % 256) . $lenBytes;
-            $len = \intdiv($len, 256);
+            $lenBytes = chr($len % 256) . $lenBytes;
+            $len = intdiv($len, 256);
         }
-        return \chr(0x80 | \strlen($lenBytes)) . $lenBytes;
+        return chr(0x80 | strlen($lenBytes)) . $lenBytes;
     }
 
     private static function _der_unsignedInteger(string $bytes): string
     {
-        $len = \strlen($bytes);
+        $len = strlen($bytes);
 
         // Remove leading zero bytes
         $i = 0;
         for (; $i < ($len - 1); $i++) {
-            if (\ord($bytes[$i]) !== 0) {
+            if (ord($bytes[$i]) !== 0) {
                 break;
             }
         }
         if ($i !== 0) {
-            $bytes = \substr($bytes, $i);
+            $bytes = substr($bytes, $i);
         }
 
         // If most significant bit is set, prefix with another zero to prevent it being seen as negative number
-        if ((\ord($bytes[0]) & 0x80) !== 0) {
+        if ((ord($bytes[0]) & 0x80) !== 0) {
             $bytes = "\x00" . $bytes;
         }
 
-        return "\x02" . self::_der_length(\strlen($bytes)) . $bytes;
+        return "\x02" . self::_der_length(strlen($bytes)) . $bytes;
     }
+
 }

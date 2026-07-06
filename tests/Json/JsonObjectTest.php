@@ -8,6 +8,7 @@ use WebAuthnXTests\WebAuthnTestCase;
 
 class JsonObjectTest extends WebAuthnTestCase
 {
+
     public function testFromStringRejectsInvalidJson(): void
     {
         self::assertException(
@@ -47,4 +48,5 @@ class JsonObjectTest extends WebAuthnTestCase
             static fn () => self::jsonObject(['flag' => 'true'])->getOptionalBoolean('flag'),
         );
     }
+
 }

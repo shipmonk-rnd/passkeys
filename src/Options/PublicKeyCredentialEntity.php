@@ -5,10 +5,13 @@ namespace WebAuthnX\Options;
 /**
  * @api
  */
-readonly abstract class PublicKeyCredentialEntity
+abstract readonly class PublicKeyCredentialEntity
 {
+
     public function __construct(
         public string $name,
-    ) {
+    )
+    {
     }
+
 }

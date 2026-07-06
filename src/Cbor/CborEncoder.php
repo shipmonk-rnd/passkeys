@@ -18,6 +18,7 @@ use function strlen;
  */
 final class CborEncoder
 {
+
     /**
      * Major type 0/1: a signed integer.
      */
@@ -39,7 +40,7 @@ final class CborEncoder
     /**
      * Major type 5: a map of already-encoded (key, value) byte pairs, in the given order.
      *
-     * @param  list<array{string, string}> $pairs
+     * @param list<array{string, string}> $pairs
      */
     public static function encodeMap(array $pairs): string
     {
@@ -57,9 +58,12 @@ final class CborEncoder
      * (< 24) or in a following 1/2/4/8-byte big-endian field. The argument is always non-negative
      * (a length, count, or the unsigned magnitude of an integer).
      *
-     * @param  int<0, 7> $majorType
+     * @param int<0, 7> $majorType
      */
-    private static function head(int $majorType, int $value): string
+    private static function head(
+        int $majorType,
+        int $value,
+    ): string
     {
         $initialByte = $majorType << 5;
 
@@ -81,4 +85,5 @@ final class CborEncoder
 
         return chr($initialByte | 27) . pack('J', $value);
     }
+
 }

@@ -6,4 +6,5 @@ use RuntimeException;
 
 class BytesReaderException extends RuntimeException
 {
+
 }

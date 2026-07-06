@@ -7,7 +7,9 @@ namespace WebAuthnX\Enum;
  */
 enum ResidentKeyRequirement: string
 {
+
     case DISCOURAGED = 'discouraged';
     case PREFERRED = 'preferred';
     case REQUIRED = 'required';
+
 }

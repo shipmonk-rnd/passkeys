@@ -3,30 +3,29 @@
 namespace WebAuthnXTests\Options;
 
 use InvalidArgumentException;
-use WebAuthnX\Enum\AuthenticatorAttachment;
-use WebAuthnX\Options\AuthenticatorSelectionCriteria;
-use WebAuthnX\Enum\AuthenticatorTransport;
 use WebAuthnX\Base64\Base64;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
-use WebAuthnX\Options\PublicKeyCredentialCreationOptions;
-use WebAuthnX\Options\PublicKeyCredentialDescriptor;
+use WebAuthnX\Enum\AuthenticatorAttachment;
+use WebAuthnX\Enum\AuthenticatorTransport;
 use WebAuthnX\Enum\PublicKeyCredentialHint;
-use WebAuthnX\Options\PublicKeyCredentialParameters;
-use WebAuthnX\Options\PublicKeyCredentialRpEntity;
 use WebAuthnX\Enum\PublicKeyCredentialType;
-use WebAuthnX\Options\PublicKeyCredentialUserEntity;
 use WebAuthnX\Enum\ResidentKeyRequirement;
 use WebAuthnX\Enum\UserVerificationRequirement;
+use WebAuthnX\Options\AuthenticatorSelectionCriteria;
+use WebAuthnX\Options\PublicKeyCredentialCreationOptions;
+use WebAuthnX\Options\PublicKeyCredentialDescriptor;
+use WebAuthnX\Options\PublicKeyCredentialParameters;
+use WebAuthnX\Options\PublicKeyCredentialRpEntity;
+use WebAuthnX\Options\PublicKeyCredentialUserEntity;
 use WebAuthnXTests\WebAuthnTestCase;
-
 use function json_decode;
 use function str_repeat;
 use function strlen;
-
 use const JSON_THROW_ON_ERROR;
 
 class PublicKeyCredentialCreationOptionsTest extends WebAuthnTestCase
 {
+
     public function testSerializesAllMembers(): void
     {
         $options = new PublicKeyCredentialCreationOptions(
@@ -221,4 +220,5 @@ class PublicKeyCredentialCreationOptionsTest extends WebAuthnTestCase
             $descriptor->jsonSerialize(),
         );
     }
+
 }

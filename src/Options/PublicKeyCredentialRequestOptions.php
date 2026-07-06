@@ -6,9 +6,7 @@ use JsonSerializable;
 use WebAuthnX\Base64\Base64;
 use WebAuthnX\Enum\PublicKeyCredentialHint;
 use WebAuthnX\Enum\UserVerificationRequirement;
-
 use function json_encode;
-
 use const JSON_THROW_ON_ERROR;
 
 /**
@@ -21,6 +19,7 @@ use const JSON_THROW_ON_ERROR;
  */
 readonly class PublicKeyCredentialRequestOptions implements JsonSerializable
 {
+
     /**
      * The recommended default ceremony timeout (§15.1: recommended range 300 000–600 000 ms).
      *
@@ -35,11 +34,11 @@ readonly class PublicKeyCredentialRequestOptions implements JsonSerializable
      * AuthenticationExtensionsClientInputsJSON}), passed through verbatim — binary values must
      * already be base64url-encoded strings, e.g. `['appid' => 'https://example.com/appid.json']`.
      *
-     * @param  string                                   $challenge raw challenge bytes (e.g. from
+     * @param string $challenge raw challenge bytes (e.g. from
      *     {@see \random_bytes()}); base64url encoding happens on serialization
-     * @param  list<PublicKeyCredentialDescriptor>|null $allowCredentials
-     * @param  list<PublicKeyCredentialHint>|null       $hints
-     * @param  array<string, mixed>|null                $extensions
+     * @param list<PublicKeyCredentialDescriptor>|null $allowCredentials
+     * @param list<PublicKeyCredentialHint>|null $hints
+     * @param array<string, mixed>|null $extensions
      */
     public function __construct(
         public string $challenge,
@@ -49,7 +48,8 @@ readonly class PublicKeyCredentialRequestOptions implements JsonSerializable
         public ?UserVerificationRequirement $userVerification = null,
         public ?array $hints = null,
         public ?array $extensions = null,
-    ) {
+    )
+    {
     }
 
     /**
@@ -95,4 +95,5 @@ readonly class PublicKeyCredentialRequestOptions implements JsonSerializable
         // "</script>" breakout if a relying party inlines this JSON into an HTML <script> block.
         return json_encode($this, JSON_THROW_ON_ERROR);
     }
+
 }

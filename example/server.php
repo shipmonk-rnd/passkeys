@@ -35,20 +35,17 @@ use Throwable;
 use WebAuthnX\Ceremony\VerificationException;
 use WebAuthnX\Json\JsonObject;
 use WebAuthnX\Passkey\PasskeyFlow;
-
 use function file_get_contents;
 use function filter_var;
 use function header;
 use function http_response_code;
+use function is_string;
 use function json_encode;
 use function parse_url;
 use function session_start;
-use function trim;
-
 use const FILTER_VALIDATE_EMAIL;
 use const JSON_THROW_ON_ERROR;
 use const PHP_URL_PATH;
-
 
 require __DIR__ . '/../vendor/autoload.php';
 require __DIR__ . '/PasskeyStore.php';
@@ -67,7 +64,9 @@ $flow = new PasskeyFlow(
 
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
 
-/** @param array<string, mixed>|string $body */
+/**
+ * @param array<string, mixed>|string $body
+ */
 function respond(int $status, array|string $body): void
 {
     http_response_code($status);

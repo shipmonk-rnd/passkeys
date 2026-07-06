@@ -23,7 +23,6 @@ use WebAuthnX\Options\PublicKeyCredentialRequestOptions;
 use WebAuthnX\Options\PublicKeyCredentialRpEntity;
 use WebAuthnX\Options\PublicKeyCredentialUserEntity;
 use WebAuthnX\RelyingParty;
-
 use function array_map;
 use function random_bytes;
 
@@ -66,11 +65,12 @@ use function random_bytes;
  */
 class PasskeyFlow
 {
+
     /**
-     * @param string       $rpId    the {@link https://w3c.github.io/webauthn/#rp-id RP ID} — the
+     * @param string $rpId the {@link https://w3c.github.io/webauthn/#rp-id RP ID} — the
      *     domain your passkeys are scoped to, e.g. `example.com` (it must be a registrable-suffix
      *     match of your origins)
-     * @param string       $rpName  the human-readable relying party name, e.g. `Example Corp` —
+     * @param string $rpName the human-readable relying party name, e.g. `Example Corp` —
      *     shown by authenticator UIs when a passkey is created
      * @param list<string> $origins the exact origins your login pages are served from,
      *     e.g. `['https://example.com']`
@@ -82,7 +82,8 @@ class PasskeyFlow
         private readonly PasskeyStore $store,
         private readonly PendingCeremonyStore $pendingCeremonyStore,
         private readonly RelyingParty $relyingParty = new RelyingParty(),
-    ) {
+    )
+    {
     }
 
     // --- The flow: wire these two methods to your endpoints -------------------------------------
@@ -123,6 +124,7 @@ class PasskeyFlow
      * throws, so a passkey login endpoint reduces to one call and one catch.
      *
      * @param string $responseJson raw request body containing the authentication response JSON
+     *
      * @throws VerificationException
      */
     public function authenticate(string $responseJson): AuthenticationResult
@@ -184,9 +186,9 @@ class PasskeyFlow
      * browser's `navigator.credentials.create()`. Credentials the account already has are listed
      * in `excludeCredentials` so the same authenticator cannot enrol twice.
      *
-     * @param string      $userHandle  raw user handle bytes (an opaque, immutable, PII-free
+     * @param string $userHandle raw user handle bytes (an opaque, immutable, PII-free
      *     account id, at most 64 bytes — never the email itself)
-     * @param string      $username    the human-readable account identifier (email/username),
+     * @param string $username the human-readable account identifier (email/username),
      *     shown by authenticator UIs to label the passkey
      * @param string|null $displayName a friendlier account label ("Alice Doe"), defaulting to the username
      */
@@ -194,7 +196,8 @@ class PasskeyFlow
         string $userHandle,
         string $username,
         ?string $displayName = null,
-    ): PublicKeyCredentialCreationOptions {
+    ): PublicKeyCredentialCreationOptions
+    {
         $challenge = $this->generateChallenge();
         $this->pendingCeremonyStore->rememberPendingRegistration(new PendingRegistration($challenge, $userHandle));
 
@@ -224,6 +227,7 @@ class PasskeyFlow
      * in after a passkey-first signup); failures throw, exactly as in {@see self::authenticate()}.
      *
      * @param string $responseJson raw request body containing the registration response JSON
+     *
      * @throws VerificationException
      */
     public function register(string $responseJson): RegisteredPasskey
@@ -273,7 +277,7 @@ class PasskeyFlow
      * The account's registered credentials as descriptors for `allowCredentials` /
      * `excludeCredentials`, or null (omit the member) when it has none.
      *
-     * @param  string $userHandle raw user handle bytes
+     * @param string $userHandle raw user handle bytes
      * @return list<PublicKeyCredentialDescriptor>|null
      */
     private function credentialDescriptorsFor(string $userHandle): ?array
@@ -371,4 +375,5 @@ class PasskeyFlow
     {
         return random_bytes(32);
     }
+
 }

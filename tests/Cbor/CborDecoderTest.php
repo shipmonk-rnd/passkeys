@@ -7,14 +7,19 @@ use WebAuthnX\Binary\BytesReader;
 use WebAuthnX\Cbor\CborDecoder;
 use WebAuthnX\Cbor\InvalidCborException;
 use WebAuthnXTests\WebAuthnTestCase;
-
 use function is_float;
 use function is_nan;
+use const INF;
+use const NAN;
 
 class CborDecoderTest extends WebAuthnTestCase
 {
+
     #[DataProvider('provideDecodeData')]
-    public function testDecode(string $data, mixed $expected): void
+    public function testDecode(
+        string $data,
+        mixed $expected,
+    ): void
     {
         $bytes = self::bytesFromHex($data);
 
@@ -68,7 +73,7 @@ class CborDecoderTest extends WebAuthnTestCase
         yield ['60', ''];
         yield ['61 61', 'a'];
         yield ['64 49 45 54 46', 'IETF'];
-        yield ['62 22 5c', "\"\\"];
+        yield ['62 22 5c', '"\\'];
         yield ['62 c3 bc', "\u{00fc}"];
         yield ['63 e6 b0 b4', "\u{6c34}"];
         yield ['64 f0 90 85 91', "\u{10151}"];
@@ -128,7 +133,10 @@ class CborDecoderTest extends WebAuthnTestCase
     }
 
     #[DataProvider('provideDecodeInvalid')]
-    public function testDecodeInvalid(string $data, string $message): void
+    public function testDecodeInvalid(
+        string $data,
+        string $message,
+    ): void
     {
         $bytes = self::bytesFromHex($data);
 
@@ -184,4 +192,5 @@ class CborDecoderTest extends WebAuthnTestCase
         yield ['82 61 61 bf 61 62 61 63 ff', 'Indefinite-length values are not supported'];
         yield ['bf 63 46 75 6e f5 63 41 6d 74 21 ff', 'Indefinite-length values are not supported'];
     }
+
 }

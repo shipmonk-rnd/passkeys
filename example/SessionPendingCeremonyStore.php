@@ -5,7 +5,6 @@ namespace WebAuthnXDemo;
 use WebAuthnX\Passkey\PendingAuthentication;
 use WebAuthnX\Passkey\PendingCeremonyStore;
 use WebAuthnX\Passkey\PendingRegistration;
-
 use function array_key_exists;
 use function array_shift;
 use function count;
@@ -18,7 +17,10 @@ use function count;
  */
 final class SessionPendingCeremonyStore implements PendingCeremonyStore
 {
-    /** How many unfinished ceremonies to keep per browser session (oldest dropped first). */
+
+    /**
+     * How many unfinished ceremonies to keep per browser session (oldest dropped first).
+     */
     private const int MAX_PENDING = 8;
 
     public function rememberPendingAuthentication(PendingAuthentication $pending): void
@@ -62,4 +64,5 @@ final class SessionPendingCeremonyStore implements PendingCeremonyStore
 
         return new PendingRegistration($challenge, $userHandle);
     }
+
 }

@@ -13,7 +13,10 @@ use WebAuthnX\Cose\CoseKey;
  */
 final readonly class RegistrationResult
 {
-    /** Attestation conveyed no statement (`fmt: "none"`); no trust path was evaluated. */
+
+    /**
+     * Attestation conveyed no statement (`fmt: "none"`); no trust path was evaluated.
+     */
     public const string ATTESTATION_NONE = 'none';
 
     /**
@@ -25,11 +28,11 @@ final readonly class RegistrationResult
     public const string ATTESTATION_SELF = 'self';
 
     /**
-     * @param  string            $credentialId raw credential id bytes (encode before embedding in JSON/HTML)
-     * @param  bool              $userVerified whether the UV flag was set (the record's `uvInitialized`)
-     * @param  string            $aaguid       raw AAGUID bytes (16 bytes) identifying the authenticator model
-     * @param  list<string>|null $transports   transports reported by the client, to seed later `allowCredentials`
-     * @param  self::ATTESTATION_* $attestationType how the credential was attested (no conveyed trust either way)
+     * @param string $credentialId raw credential id bytes (encode before embedding in JSON/HTML)
+     * @param bool $userVerified whether the UV flag was set (the record's `uvInitialized`)
+     * @param string $aaguid raw AAGUID bytes (16 bytes) identifying the authenticator model
+     * @param list<string>|null $transports transports reported by the client, to seed later `allowCredentials`
+     * @param self::ATTESTATION_* $attestationType how the credential was attested (no conveyed trust either way)
      */
     public function __construct(
         public string $credentialId,
@@ -41,7 +44,8 @@ final readonly class RegistrationResult
         public string $aaguid,
         public ?array $transports,
         public string $attestationType,
-    ) {
+    )
+    {
     }
 
     /**
@@ -63,4 +67,5 @@ final readonly class RegistrationResult
             transports: $this->transports,
         );
     }
+
 }

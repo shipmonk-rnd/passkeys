@@ -6,9 +6,7 @@ use WebAuthnX\Cbor\CborEncoder;
 use WebAuthnX\Cbor\CborMap;
 use WebAuthnX\Cbor\CborMapException;
 use WebAuthnX\Der\DerEncoder;
-
 use function strlen;
-
 use const OPENSSL_ALGO_SHA256;
 use const OPENSSL_ALGO_SHA384;
 use const OPENSSL_ALGO_SHA512;
@@ -16,34 +14,52 @@ use const OPENSSL_ALGO_SHA512;
 /**
  * COSE key of type EC2 (two-coordinate elliptic curve), e.g. ES256.
  *
- * @see https://www.rfc-editor.org/rfc/rfc9053.html#section-7.1 EC2 key parameters
  * @extends CoseKey<key-of<self::ALGORITHMS>>
+ *
+ * @see https://www.rfc-editor.org/rfc/rfc9053.html#section-7.1 EC2 key parameters
  * @api
  */
 final class CoseEc2Key extends CoseKey
 {
-    /** Key type value for EC2 keys. */
+
+    /**
+     * Key type value for EC2 keys.
+     */
     public const int KTY = 2;
 
-    /** COSE curve identifier: NIST P-256. */
+    /**
+     * COSE curve identifier: NIST P-256.
+     */
     public const int CRV_P256 = 1;
 
-    /** COSE curve identifier: NIST P-384. */
+    /**
+     * COSE curve identifier: NIST P-384.
+     */
     public const int CRV_P384 = 2;
 
-    /** COSE curve identifier: NIST P-521. */
+    /**
+     * COSE curve identifier: NIST P-521.
+     */
     public const int CRV_P521 = 3;
 
-    /** EC2 key label: curve (crv). */
+    /**
+     * EC2 key label: curve (crv).
+     */
     private const int LABEL_CRV = -1;
 
-    /** EC2 key label: x-coordinate. */
+    /**
+     * EC2 key label: x-coordinate.
+     */
     private const int LABEL_X = -2;
 
-    /** EC2 key label: y-coordinate. */
+    /**
+     * EC2 key label: y-coordinate.
+     */
     private const int LABEL_Y = -3;
 
-    /** OID for id-ecPublicKey (RFC 5480 §2.1.1). */
+    /**
+     * OID for id-ecPublicKey (RFC 5480 §2.1.1).
+     */
     private const string OID_EC_PUBLIC_KEY = '1.2.840.10045.2.1';
 
     /**
@@ -69,13 +85,14 @@ final class CoseEc2Key extends CoseKey
         public readonly int $crv,
         public readonly string $x,
         public readonly string $y,
-    ) {
+    )
+    {
         parent::__construct($alg);
     }
 
     /**
-     * @throws CoseKeyException
      * @throws CborMapException
+     * @throws CoseKeyException
      */
     public static function fromCborMap(CborMap $map): self
     {
@@ -132,4 +149,5 @@ final class CoseEc2Key extends CoseKey
     {
         return self::ALGORITHMS[$this->alg][3];
     }
+
 }

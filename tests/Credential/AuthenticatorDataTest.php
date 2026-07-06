@@ -2,19 +2,20 @@
 
 namespace WebAuthnXTests\Credential;
 
-use WebAuthnX\Credential\AttestationObject;
-use WebAuthnX\Credential\AuthenticatorData;
 use WebAuthnX\Base64\Base64;
 use WebAuthnX\Binary\BytesReader;
 use WebAuthnX\Cbor\CborMap;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 use WebAuthnX\Cose\CoseEc2Key;
+use WebAuthnX\Credential\AttestationObject;
+use WebAuthnX\Credential\AuthenticatorData;
 use WebAuthnXTests\WebAuthnTestCase;
-
+use function str_repeat;
 use function strlen;
 
 class AuthenticatorDataTest extends WebAuthnTestCase
 {
+
     public function testFromBytes(): void
     {
         $attestationObjectBase64Url = 'o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikdKbqkhPJnC90siSSsyDPQCYqlMGpUKA5fyklC2CEHvBFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIPicKuaB2QMLvuZJAXn8nWNe4Y2iZKLDmWiYb0qo0l5fpQECAyYgASFYICAFU4dQcXT_GH1hZV2JoHHdVUCU_AkgGFd20UpKqAM0IlggJQzogT8UjnN7-tKvzIGk8e5OdWX1xurwC_sffQKh1a0';
@@ -94,4 +95,5 @@ class AuthenticatorDataTest extends WebAuthnTestCase
         self::assertTrue($authenticatorData->hasExtensionData());
         self::assertNotNull($authenticatorData->extensions);
     }
+
 }

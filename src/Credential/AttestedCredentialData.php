@@ -15,22 +15,24 @@ use WebAuthnX\Cose\CoseKeyException;
  */
 readonly class AttestedCredentialData
 {
+
     /**
-     * @param string $aaGuid       raw AAGUID bytes (16 bytes)
+     * @param string $aaGuid raw AAGUID bytes (16 bytes)
      * @param string $credentialId raw credential id bytes
      */
     private function __construct(
         public string $aaGuid,
         public string $credentialId,
         public CoseKey $credentialPublicKey,
-    ) {
+    )
+    {
     }
 
     /**
      * @throws BytesReaderException
-     * @throws InvalidCborException
      * @throws CborMapException
      * @throws CoseKeyException
+     * @throws InvalidCborException
      */
     public static function fromBytesReader(BytesReader $bytesReader): AttestedCredentialData
     {
@@ -41,4 +43,5 @@ readonly class AttestedCredentialData
 
         return new AttestedCredentialData($aaGuid, $credentialId, $credentialPublicKey);
     }
+
 }

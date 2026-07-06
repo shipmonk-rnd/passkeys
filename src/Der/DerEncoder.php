@@ -3,7 +3,6 @@
 namespace WebAuthnX\Der;
 
 use LogicException;
-
 use function array_map;
 use function chr;
 use function count;
@@ -16,6 +15,7 @@ use function strlen;
 
 class DerEncoder
 {
+
     public static function encodeUnsignedInt(string $bytes): string
     {
         $bytes = ltrim($bytes, "\x00");
@@ -98,4 +98,5 @@ class DerEncoder
 
         return $bytes;
     }
+
 }

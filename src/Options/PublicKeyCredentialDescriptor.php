@@ -4,7 +4,6 @@ namespace WebAuthnX\Options;
 
 use JsonSerializable;
 use WebAuthnX\Base64\Base64;
-use WebAuthnX\Enum\AuthenticatorTransport;
 use WebAuthnX\Enum\PublicKeyCredentialType;
 
 /**
@@ -13,11 +12,12 @@ use WebAuthnX\Enum\PublicKeyCredentialType;
  */
 readonly class PublicKeyCredentialDescriptor implements JsonSerializable
 {
+
     /**
-     * @param  PublicKeyCredentialType::* $type
-     * @param  string                     $id raw credential id bytes; base64url encoding
+     * @param PublicKeyCredentialType::* $type
+     * @param string $id raw credential id bytes; base64url encoding
      *     happens on serialization
-     * @param  list<string>|null          $transports usually {@see AuthenticatorTransport} values,
+     * @param list<string>|null $transports usually {@see AuthenticatorTransport} values,
      *     but a relying party should echo whatever it stored at registration — clients ignore
      *     unknown values
      */
@@ -25,7 +25,8 @@ readonly class PublicKeyCredentialDescriptor implements JsonSerializable
         public string $type,
         public string $id,
         public ?array $transports = null,
-    ) {
+    )
+    {
     }
 
     /**
@@ -44,4 +45,5 @@ readonly class PublicKeyCredentialDescriptor implements JsonSerializable
 
         return $data;
     }
+
 }

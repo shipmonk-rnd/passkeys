@@ -23,6 +23,7 @@ use Throwable;
  */
 final class VerificationException extends RuntimeException
 {
+
     public const string MALFORMED_RESPONSE = 'malformed_response';
     public const string INVALID_CLIENT_DATA_TYPE = 'invalid_client_data_type';
     public const string CHALLENGE_MISMATCH = 'challenge_mismatch';
@@ -48,13 +49,15 @@ final class VerificationException extends RuntimeException
     public const string UNUSABLE_CREDENTIAL_KEY = 'unusable_credential_key';
 
     /**
-     * @param  self::* $reason
+     * @param self::* $reason
      */
     public function __construct(
         public readonly string $reason,
         string $message,
         ?Throwable $previous = null,
-    ) {
+    )
+    {
         parent::__construct($message, previous: $previous);
     }
+
 }

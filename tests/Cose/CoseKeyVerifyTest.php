@@ -8,22 +8,24 @@ use WebAuthnX\Cose\CoseKey;
 use WebAuthnX\Cose\CoseOkpKey;
 use WebAuthnX\Cose\SignatureVerificationException;
 use WebAuthnXTests\CryptoTestCase;
-
 use function chr;
 use function ord;
 use function substr;
-
 use const OPENSSL_ALGO_SHA256;
 
 class CoseKeyVerifyTest extends CryptoTestCase
 {
+
     private const string MESSAGE = 'authenticatorData||clientDataHash ' . '0123456789abcdef';
 
     /**
      * @param CoseAlgorithmIdentifier::* $alg
      */
     #[DataProvider('provideAlgorithms')]
-    public function testVerifiesValidSignature(int $alg, int $okpCrv = CoseOkpKey::CRV_ED25519): void
+    public function testVerifiesValidSignature(
+        int $alg,
+        int $okpCrv = CoseOkpKey::CRV_ED25519,
+    ): void
     {
         [$coseKey, $privateKey] = self::generateCoseKeyPair($alg, $okpCrv);
         $signature = self::sign($privateKey, self::MESSAGE, $alg);
@@ -35,7 +37,10 @@ class CoseKeyVerifyTest extends CryptoTestCase
      * @param CoseAlgorithmIdentifier::* $alg
      */
     #[DataProvider('provideAlgorithms')]
-    public function testRejectsSignatureOverDifferentData(int $alg, int $okpCrv = CoseOkpKey::CRV_ED25519): void
+    public function testRejectsSignatureOverDifferentData(
+        int $alg,
+        int $okpCrv = CoseOkpKey::CRV_ED25519,
+    ): void
     {
         [$coseKey, $privateKey] = self::generateCoseKeyPair($alg, $okpCrv);
         $signature = self::sign($privateKey, self::MESSAGE, $alg);
@@ -47,7 +52,10 @@ class CoseKeyVerifyTest extends CryptoTestCase
      * @param CoseAlgorithmIdentifier::* $alg
      */
     #[DataProvider('provideAlgorithms')]
-    public function testRejectsSignatureFromDifferentKey(int $alg, int $okpCrv = CoseOkpKey::CRV_ED25519): void
+    public function testRejectsSignatureFromDifferentKey(
+        int $alg,
+        int $okpCrv = CoseOkpKey::CRV_ED25519,
+    ): void
     {
         [, $privateKey] = self::generateCoseKeyPair($alg, $okpCrv);
         [$otherCoseKey] = self::generateCoseKeyPair($alg, $okpCrv);
@@ -74,6 +82,7 @@ class CoseKeyVerifyTest extends CryptoTestCase
     public function testThrowsWhenPublicKeyCannotBeLoaded(): void
     {
         $key = new class (CoseAlgorithmIdentifier::ES256) extends CoseKey {
+
             public function __construct(int $alg)
             {
                 parent::__construct($alg);
@@ -93,6 +102,7 @@ class CoseKeyVerifyTest extends CryptoTestCase
             {
                 return OPENSSL_ALGO_SHA256;
             }
+
         };
 
         self::assertException(
@@ -110,7 +120,10 @@ class CoseKeyVerifyTest extends CryptoTestCase
      * @param CoseAlgorithmIdentifier::* $alg
      */
     #[DataProvider('provideAlgorithms')]
-    public function testRejectsMalformedSignature(int $alg, int $okpCrv = CoseOkpKey::CRV_ED25519): void
+    public function testRejectsMalformedSignature(
+        int $alg,
+        int $okpCrv = CoseOkpKey::CRV_ED25519,
+    ): void
     {
         [$coseKey, $privateKey] = self::generateCoseKeyPair($alg, $okpCrv);
         $signature = self::sign($privateKey, self::MESSAGE, $alg);
@@ -144,4 +157,5 @@ class CoseKeyVerifyTest extends CryptoTestCase
         $tampered[0] = chr(ord($tampered[0]) ^ 0x01);
         self::assertFalse($coseKey->verify('', $tampered));
     }
+
 }

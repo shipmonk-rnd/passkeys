@@ -17,10 +17,11 @@ use WebAuthnX\Json\JsonObjectException;
  */
 final readonly class AuthenticatorAttestationResponse extends AuthenticatorResponse
 {
+
     /**
-     * @param  string            $attestationObject raw CBOR bytes of the attestation object; parse
+     * @param string $attestationObject raw CBOR bytes of the attestation object; parse
      *     with {@see self::parseAttestationObject()}
-     * @param  list<string>|null $transports the authenticator's transports as reported by the
+     * @param list<string>|null $transports the authenticator's transports as reported by the
      *     client; unlike the rest of the response it cannot be recovered from the attestation
      *     object, and a relying party stores it to seed `allowCredentials` on later assertions.
      */
@@ -28,13 +29,14 @@ final readonly class AuthenticatorAttestationResponse extends AuthenticatorRespo
         string $clientDataJSON,
         public string $attestationObject,
         public ?array $transports,
-    ) {
+    )
+    {
         parent::__construct($clientDataJSON);
     }
 
     /**
-     * @throws JsonObjectException
      * @throws InvalidBase64Exception
+     * @throws JsonObjectException
      */
     public static function fromJsonObject(JsonObject $jsonObject): self
     {
@@ -55,8 +57,9 @@ final readonly class AuthenticatorAttestationResponse extends AuthenticatorRespo
                 return AttestationObject::fromCborMap(CborMap::fromBytesReader($reader));
             });
 
-        } catch (BytesReaderException | InvalidCborException | CborMapException $e) {
+        } catch (BytesReaderException | CborMapException | InvalidCborException $e) {
             throw new MalformedDataException('Malformed attestation object', $e);
         }
     }
+
 }

@@ -2,16 +2,14 @@
 
 namespace WebAuthnXTests;
 
-use WebAuthnX\Credential\AuthenticatorAssertionResponse;
 use WebAuthnX\Base64\Base64;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
-
+use WebAuthnX\Credential\AuthenticatorAssertionResponse;
 use function hash;
 use function is_string;
 use function json_encode;
 use function openssl_sign;
 use function pack;
-
 use const OPENSSL_ALGO_SHA256;
 
 /**
@@ -21,6 +19,7 @@ use const OPENSSL_ALGO_SHA256;
  */
 class AssertionSignatureTest extends CryptoTestCase
 {
+
     public function testVerifiesAssertionSignature(): void
     {
         [$coseKey, $privateKey] = self::generateCoseKeyPair(CoseAlgorithmIdentifier::ES256);
@@ -54,4 +53,5 @@ class AssertionSignatureTest extends CryptoTestCase
 
         self::assertTrue($coseKey->verify($message, $response->signature));
     }
+
 }

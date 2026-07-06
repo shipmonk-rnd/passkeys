@@ -14,6 +14,7 @@ use WebAuthnX\Cose\CoseKeyException;
  */
 readonly class AuthenticatorData
 {
+
     public const int FLAG_USER_PRESENT = 1 << 0;
     public const int FLAG_USER_VERIFIED = 1 << 2;
     public const int FLAG_BACKUP_ELIGIBILITY = 1 << 3;
@@ -30,7 +31,8 @@ readonly class AuthenticatorData
         public int $signCount,
         public ?AttestedCredentialData $attestedCredentialData,
         public ?CborMap $extensions,
-    ) {
+    )
+    {
     }
 
     /**
@@ -61,7 +63,7 @@ readonly class AuthenticatorData
                 );
             });
 
-        } catch (BytesReaderException | InvalidCborException | CborMapException | CoseKeyException $e) {
+        } catch (BytesReaderException | CborMapException | CoseKeyException | InvalidCborException $e) {
             throw new MalformedDataException('Malformed authenticator data', $e);
         }
     }
@@ -114,4 +116,5 @@ readonly class AuthenticatorData
     {
         return ($this->flags & self::FLAG_EXTENSION_DATA) !== 0;
     }
+
 }

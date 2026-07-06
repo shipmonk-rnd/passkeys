@@ -6,13 +6,12 @@ use WebAuthnX\Base64\Base64;
 use WebAuthnX\Credential\CollectedClientData;
 use WebAuthnX\Credential\MalformedDataException;
 use WebAuthnXTests\WebAuthnTestCase;
-
 use function json_encode;
-
 use const JSON_THROW_ON_ERROR;
 
 class CollectedClientDataTest extends WebAuthnTestCase
 {
+
     public function testReadsAllMembers(): void
     {
         $clientData = CollectedClientData::fromBytes(self::clientDataJson([
@@ -72,10 +71,11 @@ class CollectedClientDataTest extends WebAuthnTestCase
     }
 
     /**
-     * @param  array<string, mixed> $members
+     * @param array<string, mixed> $members
      */
     private static function clientDataJson(array $members): string
     {
         return json_encode($members, JSON_THROW_ON_ERROR);
     }
+
 }

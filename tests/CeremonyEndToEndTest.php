@@ -3,16 +3,14 @@
 namespace WebAuthnXTests;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use WebAuthnX\Credential\AuthenticatorAttestationResponse;
-use WebAuthnX\Credential\AuthenticatorData;
 use WebAuthnX\Base64\Base64;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
-use WebAuthnX\Cose\CoseKey;
 use WebAuthnX\Cose\CoseOkpKey;
-use WebAuthnX\Json\JsonObject;
+use WebAuthnX\Credential\AuthenticatorAttestationResponse;
+use WebAuthnX\Credential\AuthenticatorData;
 use WebAuthnX\Credential\PublicKeyCredential;
+use WebAuthnX\Json\JsonObject;
 use WebAuthnXTests\Cbor\CborTestEncoder;
-
 use function chr;
 use function hash;
 use function json_encode;
@@ -20,7 +18,6 @@ use function ord;
 use function pack;
 use function str_repeat;
 use function strlen;
-
 use const JSON_THROW_ON_ERROR;
 
 /**
@@ -38,6 +35,7 @@ use const JSON_THROW_ON_ERROR;
  */
 class CeremonyEndToEndTest extends CryptoTestCase
 {
+
     private const string RP_ID = 'example.com';
     private const string CREDENTIAL_ID = "\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a";
 
@@ -45,7 +43,10 @@ class CeremonyEndToEndTest extends CryptoTestCase
      * @param CoseAlgorithmIdentifier::* $alg
      */
     #[DataProvider('provideAlgorithms')]
-    public function testRegistrationThenAuthentication(int $alg, int $okpCrv = CoseOkpKey::CRV_ED25519): void
+    public function testRegistrationThenAuthentication(
+        int $alg,
+        int $okpCrv = CoseOkpKey::CRV_ED25519,
+    ): void
     {
         [$privateKey, $coseEntries] = self::generateKeyAndCoseEntries($alg, $okpCrv);
         $rpIdHash = hash('sha256', self::RP_ID, binary: true);
@@ -125,9 +126,12 @@ class CeremonyEndToEndTest extends CryptoTestCase
      * Builds a `none`-format attestation object whose authenticator data carries attested
      * credential data (AT flag) for the given COSE public key.
      *
-     * @param  array<int, int|string> $coseEntries
+     * @param array<int, int|string> $coseEntries
      */
-    private static function attestationObject(string $rpIdHash, array $coseEntries): string
+    private static function attestationObject(
+        string $rpIdHash,
+        array $coseEntries,
+    ): string
     {
         $attestedCredentialData = str_repeat("\x00", 16) // AAGUID
             . pack('n', strlen(self::CREDENTIAL_ID))
@@ -155,4 +159,5 @@ class CeremonyEndToEndTest extends CryptoTestCase
             'origin' => 'https://' . self::RP_ID,
         ], JSON_THROW_ON_ERROR);
     }
+
 }

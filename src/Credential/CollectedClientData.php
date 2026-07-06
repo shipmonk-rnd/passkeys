@@ -14,6 +14,7 @@ use WebAuthnX\Json\JsonObjectException;
  */
 readonly class CollectedClientData
 {
+
     /**
      * @param string $challenge raw challenge bytes (base64url-decoded from the JSON member)
      */
@@ -23,7 +24,8 @@ readonly class CollectedClientData
         private string $origin,
         private ?string $topOrigin,
         private ?bool $crossOrigin,
-    ) {
+    )
+    {
     }
 
     /**
@@ -45,7 +47,7 @@ readonly class CollectedClientData
                 $object->getOptionalBoolean('crossOrigin'),
             );
 
-        } catch (JsonObjectException | InvalidBase64Exception $e) {
+        } catch (InvalidBase64Exception | JsonObjectException $e) {
             throw new MalformedDataException('Malformed client data', $e);
         }
     }
@@ -77,4 +79,5 @@ readonly class CollectedClientData
     {
         return $this->crossOrigin;
     }
+
 }

@@ -5,7 +5,6 @@ namespace WebAuthnXTests\Passkey;
 use WebAuthnX\Passkey\PendingAuthentication;
 use WebAuthnX\Passkey\PendingCeremonyStore;
 use WebAuthnX\Passkey\PendingRegistration;
-
 use function base64_encode;
 
 /**
@@ -15,10 +14,15 @@ use function base64_encode;
  */
 final class InMemoryPendingCeremonyStore implements PendingCeremonyStore
 {
-    /** @var array<string, PendingAuthentication> base64(challenge) → pending ceremony */
+
+    /**
+     * @var array<string, PendingAuthentication> base64(challenge) → pending ceremony
+     */
     public private(set) array $pendingAuthentications = [];
 
-    /** @var array<string, PendingRegistration> base64(challenge) → pending ceremony */
+    /**
+     * @var array<string, PendingRegistration> base64(challenge) → pending ceremony
+     */
     public private(set) array $pendingRegistrations = [];
 
     public function rememberPendingAuthentication(PendingAuthentication $pending): void
@@ -48,4 +52,5 @@ final class InMemoryPendingCeremonyStore implements PendingCeremonyStore
 
         return $pending;
     }
+
 }

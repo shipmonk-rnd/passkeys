@@ -12,6 +12,7 @@ namespace WebAuthnX\Passkey;
  */
 interface PendingCeremonyStore
 {
+
     /**
      * Stores a pending ceremony, keyed by its challenge. The challenge is raw bytes — fine as a
      * PHP array key (arrays and session serialization are binary-safe), but encode it for a
@@ -47,4 +48,5 @@ interface PendingCeremonyStore
      * @param string $challenge raw challenge bytes
      */
     public function consumePendingRegistration(string $challenge): ?PendingRegistration;
+
 }

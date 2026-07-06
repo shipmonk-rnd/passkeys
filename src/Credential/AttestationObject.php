@@ -10,6 +10,7 @@ use WebAuthnX\Cbor\CborMapException;
  */
 readonly class AttestationObject
 {
+
     /**
      * @param string $authData raw authenticator data bytes; parse with {@see self::parseAuthenticatorData()}
      */
@@ -17,7 +18,8 @@ readonly class AttestationObject
         public string $authData,
         public string $fmt,
         public CborMap $attStmt,
-    ) {
+    )
+    {
     }
 
     /**
@@ -39,4 +41,5 @@ readonly class AttestationObject
     {
         return AuthenticatorData::fromBytes($this->authData);
     }
+
 }

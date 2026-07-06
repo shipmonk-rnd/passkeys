@@ -7,19 +7,22 @@ use stdClass;
 use WebAuthnX\Base64\Base64;
 use WebAuthnX\Base64\InvalidBase64Exception;
 use function is_array;
+use function is_bool;
 use function is_string;
-
+use function json_decode;
+use const JSON_THROW_ON_ERROR;
 
 /**
  * @api
  */
 readonly class JsonObject
 {
+
     private function __construct(
         private stdClass $object,
-    ) {
+    )
+    {
     }
-
 
     /**
      * @throws JsonObjectException
@@ -40,7 +43,6 @@ readonly class JsonObject
         return new self($data);
     }
 
-
     /**
      * @throws JsonObjectException
      */
@@ -56,7 +58,6 @@ readonly class JsonObject
 
         return $this->object->$key;
     }
-
 
     /**
      * @throws JsonObjectException
@@ -74,9 +75,9 @@ readonly class JsonObject
         return $this->object->$key;
     }
 
-
     /**
      * @return list<string>|null
+     *
      * @throws JsonObjectException
      */
     public function getOptionalStringList(string $key): ?array
@@ -102,7 +103,6 @@ readonly class JsonObject
         return $list;
     }
 
-
     /**
      * @throws JsonObjectException
      */
@@ -119,7 +119,6 @@ readonly class JsonObject
         return new self($this->object->$key);
     }
 
-
     /**
      * @throws JsonObjectException
      */
@@ -131,7 +130,6 @@ readonly class JsonObject
 
         return $this->getObject($key);
     }
-
 
     /**
      * @throws JsonObjectException
@@ -149,24 +147,22 @@ readonly class JsonObject
         return $this->object->$key;
     }
 
-
     /**
      * Reads a base64url-encoded member and returns the decoded raw bytes.
      *
-     * @throws JsonObjectException
      * @throws InvalidBase64Exception
+     * @throws JsonObjectException
      */
     public function getBytes(string $key): string
     {
         return Base64::urlDecode($this->getString($key));
     }
 
-
     /**
      * Reads a base64url-encoded member and returns the decoded raw bytes.
      *
-     * @throws JsonObjectException
      * @throws InvalidBase64Exception
+     * @throws JsonObjectException
      */
     public function getOptionalBytes(string $key): ?string
     {
@@ -176,4 +172,5 @@ readonly class JsonObject
 
         return Base64::urlDecode($this->getString($key));
     }
+
 }

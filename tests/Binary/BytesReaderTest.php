@@ -6,11 +6,11 @@ use LogicException;
 use WebAuthnX\Binary\BytesReader;
 use WebAuthnX\Binary\BytesReaderException;
 use WebAuthnXTests\WebAuthnTestCase;
-
 use const INF;
 
 class BytesReaderTest extends WebAuthnTestCase
 {
+
     public function testRead(): void
     {
         self::assertSame(

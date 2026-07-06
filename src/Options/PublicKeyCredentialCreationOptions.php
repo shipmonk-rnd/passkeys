@@ -5,9 +5,7 @@ namespace WebAuthnX\Options;
 use JsonSerializable;
 use WebAuthnX\Base64\Base64;
 use WebAuthnX\Enum\PublicKeyCredentialHint;
-
 use function json_encode;
-
 use const JSON_THROW_ON_ERROR;
 
 /**
@@ -20,6 +18,7 @@ use const JSON_THROW_ON_ERROR;
  */
 readonly class PublicKeyCredentialCreationOptions implements JsonSerializable
 {
+
     /**
      * The recommended default ceremony timeout (§15.1: recommended range 300 000–600 000 ms).
      *
@@ -34,12 +33,12 @@ readonly class PublicKeyCredentialCreationOptions implements JsonSerializable
      * AuthenticationExtensionsClientInputsJSON}), passed through verbatim — binary values must
      * already be base64url-encoded strings, e.g. `['credProps' => true]`.
      *
-     * @param  string                                   $challenge raw challenge bytes (e.g. from
+     * @param string $challenge raw challenge bytes (e.g. from
      *     {@see \random_bytes()}); base64url encoding happens on serialization
-     * @param  list<PublicKeyCredentialParameters>      $pubKeyCredParams
-     * @param  list<PublicKeyCredentialDescriptor>|null $excludeCredentials
-     * @param  list<PublicKeyCredentialHint>|null       $hints
-     * @param  array<string, mixed>|null                $extensions
+     * @param list<PublicKeyCredentialParameters> $pubKeyCredParams
+     * @param list<PublicKeyCredentialDescriptor>|null $excludeCredentials
+     * @param list<PublicKeyCredentialHint>|null $hints
+     * @param array<string, mixed>|null $extensions
      */
     public function __construct(
         public PublicKeyCredentialRpEntity $rp,
@@ -51,7 +50,8 @@ readonly class PublicKeyCredentialCreationOptions implements JsonSerializable
         public ?AuthenticatorSelectionCriteria $authenticatorSelection = null,
         public ?array $hints = null,
         public ?array $extensions = null,
-    ) {
+    )
+    {
     }
 
     /**
@@ -96,4 +96,5 @@ readonly class PublicKeyCredentialCreationOptions implements JsonSerializable
         // "</script>" breakout if a relying party inlines this JSON into an HTML <script> block.
         return json_encode($this, JSON_THROW_ON_ERROR);
     }
+
 }

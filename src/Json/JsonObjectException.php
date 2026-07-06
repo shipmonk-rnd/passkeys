@@ -4,7 +4,7 @@ namespace WebAuthnX\Json;
 
 use RuntimeException;
 
-
 class JsonObjectException extends RuntimeException
 {
+
 }

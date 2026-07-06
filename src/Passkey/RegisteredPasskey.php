@@ -20,6 +20,7 @@ use WebAuthnX\Enum\AuthenticatorAttachment;
  */
 final readonly class RegisteredPasskey
 {
+
     /**
      * @param string $userHandle raw user handle bytes of the account the passkey was registered to
      * @param AuthenticatorAttachment|null $authenticatorAttachment the client-asserted attachment,
@@ -29,11 +30,13 @@ final readonly class RegisteredPasskey
         public string $userHandle,
         public ?AuthenticatorAttachment $authenticatorAttachment,
         public RegistrationResult $result,
-    ) {
+    )
+    {
     }
 
     public function toCredentialRecord(): CredentialRecord
     {
         return $this->result->toCredentialRecord($this->userHandle);
     }
+
 }

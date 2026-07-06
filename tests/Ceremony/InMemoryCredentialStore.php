@@ -11,7 +11,10 @@ use WebAuthnX\Ceremony\CredentialStore;
  */
 final class InMemoryCredentialStore implements CredentialStore
 {
-    /** @var array<string, CredentialRecord> */
+
+    /**
+     * @var array<string, CredentialRecord>
+     */
     private array $records = [];
 
     public function add(CredentialRecord $record): void
@@ -23,4 +26,5 @@ final class InMemoryCredentialStore implements CredentialStore
     {
         return $this->records[$credentialId] ?? null;
     }
+
 }

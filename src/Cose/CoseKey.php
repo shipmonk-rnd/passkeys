@@ -7,7 +7,6 @@ use WebAuthnX\Binary\BytesReaderException;
 use WebAuthnX\Cbor\CborMap;
 use WebAuthnX\Cbor\CborMapException;
 use WebAuthnX\Cbor\InvalidCborException;
-
 use function base64_encode;
 use function chunk_split;
 use function implode;
@@ -18,17 +17,23 @@ use function openssl_verify;
 /**
  * A COSE_Key as used by WebAuthn credential public keys.
  *
+ * @template-covariant TAlg of CoseAlgorithmIdentifier::* = CoseAlgorithmIdentifier::* the COSE algorithm identifiers the key type supports
+ *
  * @see https://www.rfc-editor.org/rfc/rfc9052.html#section-7 COSE key structure
  * @see https://www.rfc-editor.org/rfc/rfc9053.html key type / algorithm parameters
- * @template-covariant TAlg of CoseAlgorithmIdentifier::* = CoseAlgorithmIdentifier::* the COSE algorithm identifiers the key type supports
  * @api
  */
 abstract class CoseKey
 {
-    /** Common COSE key label: key type (kty). */
+
+    /**
+     * Common COSE key label: key type (kty).
+     */
     protected const int LABEL_KTY = 1;
 
-    /** Common COSE key label: algorithm (alg). */
+    /**
+     * Common COSE key label: algorithm (alg).
+     */
     protected const int LABEL_ALG = 3;
 
     /**
@@ -36,12 +41,13 @@ abstract class CoseKey
      */
     protected function __construct(
         public readonly int $alg,
-    ) {
+    )
+    {
     }
 
     /**
-     * @throws CoseKeyException
      * @throws CborMapException
+     * @throws CoseKeyException
      */
     public static function fromCborMap(CborMap $map): CoseKey
     {
@@ -67,7 +73,7 @@ abstract class CoseKey
             $map = BytesReader::read($bytes, CborMap::fromBytesReader(...));
             return self::fromCborMap($map);
 
-        } catch (BytesReaderException | InvalidCborException | CborMapException $e) {
+        } catch (BytesReaderException | CborMapException | InvalidCborException $e) {
             throw new CoseKeyException('Malformed COSE key', previous: $e);
         }
     }
@@ -97,7 +103,10 @@ abstract class CoseKey
      * @see https://www.rfc-editor.org/rfc/rfc9053.html signature algorithms
      * @throws SignatureVerificationException if OpenSSL rejects the key material
      */
-    final public function verify(string $message, string $signature): bool
+    final public function verify(
+        string $message,
+        string $signature,
+    ): bool
     {
         // Discard any stale entries so a failure below reports only this call's errors.
         self::clearOpensslErrors();
@@ -146,4 +155,5 @@ abstract class CoseKey
             // drain the queue
         }
     }
+
 }

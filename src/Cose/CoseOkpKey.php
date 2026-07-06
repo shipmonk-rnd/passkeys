@@ -6,33 +6,44 @@ use WebAuthnX\Cbor\CborEncoder;
 use WebAuthnX\Cbor\CborMap;
 use WebAuthnX\Cbor\CborMapException;
 use WebAuthnX\Der\DerEncoder;
-
 use function in_array;
 use function strlen;
 
 /**
  * COSE key of type OKP (Octet Key Pair), i.e. an Edwards-curve key such as Ed25519.
  *
+ * @extends CoseKey<key-of<self::ALGORITHMS>>
+ *
  * @see https://www.rfc-editor.org/rfc/rfc9053.html#section-2.2 EdDSA
  * @see https://www.rfc-editor.org/rfc/rfc9053.html#section-7.2 OKP key parameters
- * @extends CoseKey<key-of<self::ALGORITHMS>>
  * @api
  */
 final class CoseOkpKey extends CoseKey
 {
-    /** Key type value for OKP keys. */
+
+    /**
+     * Key type value for OKP keys.
+     */
     public const int KTY = 1;
 
-    /** COSE curve identifier: Ed25519. */
+    /**
+     * COSE curve identifier: Ed25519.
+     */
     public const int CRV_ED25519 = 6;
 
-    /** COSE curve identifier: Ed448. */
+    /**
+     * COSE curve identifier: Ed448.
+     */
     public const int CRV_ED448 = 7;
 
-    /** OKP key label: curve (crv). */
+    /**
+     * OKP key label: curve (crv).
+     */
     private const int LABEL_CRV = -1;
 
-    /** OKP key label: public key (x). */
+    /**
+     * OKP key label: public key (x).
+     */
     private const int LABEL_X = -2;
 
     /**
@@ -63,13 +74,14 @@ final class CoseOkpKey extends CoseKey
         int $alg,
         public readonly int $crv,
         public readonly string $x,
-    ) {
+    )
+    {
         parent::__construct($alg);
     }
 
     /**
-     * @throws CoseKeyException
      * @throws CborMapException
+     * @throws CoseKeyException
      */
     public static function fromCborMap(CborMap $map): self
     {
@@ -119,4 +131,5 @@ final class CoseOkpKey extends CoseKey
         // EdDSA is a pure signature scheme; OpenSSL takes no separate message digest.
         return 0;
     }
+
 }

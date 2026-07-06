@@ -2,14 +2,15 @@
 
 namespace WebAuthnX;
 
+use WebAuthnX\Cbor\CborMapException;
 use WebAuthnX\Ceremony\AuthenticationExpectations;
 use WebAuthnX\Ceremony\AuthenticationResult;
 use WebAuthnX\Ceremony\CredentialStore;
 use WebAuthnX\Ceremony\RegistrationExpectations;
 use WebAuthnX\Ceremony\RegistrationResult;
 use WebAuthnX\Ceremony\VerificationException;
-use WebAuthnX\Cbor\CborMapException;
 use WebAuthnX\Cose\CoseKey;
+use WebAuthnX\Cose\SignatureVerificationException;
 use WebAuthnX\Credential\AttestationObject;
 use WebAuthnX\Credential\AuthenticatorAssertionResponse;
 use WebAuthnX\Credential\AuthenticatorAttestationResponse;
@@ -17,8 +18,6 @@ use WebAuthnX\Credential\AuthenticatorData;
 use WebAuthnX\Credential\CollectedClientData;
 use WebAuthnX\Credential\MalformedDataException;
 use WebAuthnX\Credential\PublicKeyCredential;
-use WebAuthnX\Cose\SignatureVerificationException;
-
 use function hash;
 use function hash_equals;
 use function in_array;
@@ -51,10 +50,13 @@ use function strlen;
  */
 final class RelyingParty
 {
+
     private const string TYPE_CREATE = 'webauthn.create';
     private const string TYPE_GET = 'webauthn.get';
 
-    /** {@link https://w3c.github.io/webauthn/#credential-id Credential IDs} are at most 1023 bytes (§7.1 step 25). */
+    /**
+     * {@link https://w3c.github.io/webauthn/#credential-id Credential IDs} are at most 1023 bytes (§7.1 step 25).
+     */
     private const int MAX_CREDENTIAL_ID_LENGTH = 1023;
 
     private const string FMT_NONE = 'none';
@@ -63,7 +65,7 @@ final class RelyingParty
     /**
      * Verifies a registration ceremony response (`navigator.credentials.create()`) per WebAuthn §7.1.
      *
-     * @param  PublicKeyCredential<AuthenticatorAttestationResponse> $credential
+     * @param PublicKeyCredential<AuthenticatorAttestationResponse> $credential
      * @throws VerificationException on any failed §7.1 check, if the response is malformed, or if
      *     the attested credential key is unusable (unsupported algorithm / cannot be loaded)
      */
@@ -71,7 +73,8 @@ final class RelyingParty
         PublicKeyCredential $credential,
         RegistrationExpectations $expectations,
         CredentialStore $store,
-    ): RegistrationResult {
+    ): RegistrationResult
+    {
         try {
             return $this->doVerifyRegistration($credential, $expectations, $store);
 
@@ -94,16 +97,17 @@ final class RelyingParty
     }
 
     /**
-     * @param  PublicKeyCredential<AuthenticatorAttestationResponse> $credential
-     * @throws VerificationException
+     * @param PublicKeyCredential<AuthenticatorAttestationResponse> $credential
      * @throws MalformedDataException
      * @throws SignatureVerificationException
+     * @throws VerificationException
      */
     private function doVerifyRegistration(
         PublicKeyCredential $credential,
         RegistrationExpectations $expectations,
         CredentialStore $store,
-    ): RegistrationResult {
+    ): RegistrationResult
+    {
         $response = $credential->response;
         $clientData = $response->parseClientData();
 
@@ -205,14 +209,15 @@ final class RelyingParty
      * receives it. Anything needing a certificate trust path stays unsupported.
      *
      * @return RegistrationResult::ATTESTATION_*
-     * @throws VerificationException
      * @throws SignatureVerificationException if the attested credential key cannot be loaded
+     * @throws VerificationException
      */
     private function verifyAttestationStatement(
         AttestationObject $attestationObject,
         CoseKey $credentialPublicKey,
         string $clientDataJSON,
-    ): string {
+    ): string
+    {
         if ($attestationObject->fmt === self::FMT_NONE) {
             return RegistrationResult::ATTESTATION_NONE;
         }
@@ -260,7 +265,7 @@ final class RelyingParty
     /**
      * Verifies an authentication ceremony response (`navigator.credentials.get()`) per WebAuthn §7.2.
      *
-     * @param  PublicKeyCredential<AuthenticatorAssertionResponse> $credential
+     * @param PublicKeyCredential<AuthenticatorAssertionResponse> $credential
      * @throws VerificationException on any failed §7.2 check, if the response is malformed, or if
      *     the stored credential key is unusable (unsupported algorithm / cannot be loaded)
      */
@@ -268,7 +273,8 @@ final class RelyingParty
         PublicKeyCredential $credential,
         AuthenticationExpectations $expectations,
         CredentialStore $store,
-    ): AuthenticationResult {
+    ): AuthenticationResult
+    {
         try {
             return $this->doVerifyAuthentication($credential, $expectations, $store);
 
@@ -291,16 +297,17 @@ final class RelyingParty
     }
 
     /**
-     * @param  PublicKeyCredential<AuthenticatorAssertionResponse> $credential
-     * @throws VerificationException
+     * @param PublicKeyCredential<AuthenticatorAssertionResponse> $credential
      * @throws MalformedDataException
      * @throws SignatureVerificationException
+     * @throws VerificationException
      */
     private function doVerifyAuthentication(
         PublicKeyCredential $credential,
         AuthenticationExpectations $expectations,
         CredentialStore $store,
-    ): AuthenticationResult {
+    ): AuthenticationResult
+    {
         $response = $credential->response;
 
         // §7.2 step 5: if allowCredentials was non-empty, the returned credential must be a member.
@@ -391,7 +398,8 @@ final class RelyingParty
     private function verifyClientData(
         CollectedClientData $clientData,
         RegistrationExpectations|AuthenticationExpectations $expectations,
-    ): void {
+    ): void
+    {
         if (!hash_equals($expectations->challenge, $clientData->getChallenge())) {
             throw new VerificationException(VerificationException::CHALLENGE_MISMATCH, 'Challenge does not match');
         }
@@ -436,7 +444,10 @@ final class RelyingParty
      *
      * @throws VerificationException
      */
-    private function verifyRpIdHash(AuthenticatorData $authData, string $rpId): void
+    private function verifyRpIdHash(
+        AuthenticatorData $authData,
+        string $rpId,
+    ): void
     {
         $expectedHash = hash('sha256', $rpId, binary: true);
 
@@ -475,7 +486,8 @@ final class RelyingParty
         ?string $responseUserHandle,
         ?string $expectedUserHandle,
         string $recordUserHandle,
-    ): void {
+    ): void
+    {
         if ($expectedUserHandle !== null) {
             if (!hash_equals($expectedUserHandle, $recordUserHandle)) {
                 throw new VerificationException(
@@ -513,9 +525,12 @@ final class RelyingParty
     }
 
     /**
-     * @param  list<string> $list
+     * @param list<string> $list
      */
-    private function credentialIdInList(string $needle, array $list): bool
+    private function credentialIdInList(
+        string $needle,
+        array $list,
+    ): bool
     {
         foreach ($list as $candidate) {
             if (hash_equals($candidate, $needle)) {
@@ -525,4 +540,5 @@ final class RelyingParty
 
         return false;
     }
+
 }

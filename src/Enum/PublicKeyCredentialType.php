@@ -7,5 +7,7 @@ namespace WebAuthnX\Enum;
  */
 class PublicKeyCredentialType
 {
+
     final public const string PUBLIC_KEY = 'public-key';
+
 }

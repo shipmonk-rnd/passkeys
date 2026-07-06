@@ -4,7 +4,7 @@ namespace WebAuthnX\Cbor;
 
 use RuntimeException;
 
-
 class CborMapException extends RuntimeException
 {
+
 }

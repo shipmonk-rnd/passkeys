@@ -3,24 +3,26 @@
 namespace WebAuthnX\Cbor;
 
 use WebAuthnX\Binary\BytesReader;
-
+use function array_key_exists;
 use function is_array;
 use function is_int;
 use function is_string;
 
 readonly class CborMap
 {
+
     /**
-     * @param  array<int|string, mixed> $map
+     * @param array<int|string, mixed> $map
      */
     private function __construct(
         private array $map,
-    ) {
+    )
+    {
     }
 
     /**
-     * @throws InvalidCborException
      * @throws CborMapException
+     * @throws InvalidCborException
      */
     public static function fromBytesReader(BytesReader $bytesReader): self
     {
@@ -94,4 +96,5 @@ readonly class CborMap
 
         return $this->map[$key];
     }
+
 }
