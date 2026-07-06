@@ -192,7 +192,7 @@ class BytesReader
 		$value = unpack($format, $this->readRaw($length));
 
 		if ($value === false || !isset($value[1]) || !is_float($value[1])) {
-			throw new BytesReaderException('Failed to unpack data');
+			throw new LogicException('Failed to unpack data'); // unreachable, every 4/8-byte sequence is a valid IEEE 754 float
 		}
 
 		return $value[1];

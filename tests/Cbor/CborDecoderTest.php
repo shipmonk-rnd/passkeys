@@ -55,6 +55,7 @@ class CborDecoderTest extends WebAuthnTestCase
 		yield ['29', -10];
 		yield ['38 63', -100];
 		yield ['39 03 e7', -1000];
+		yield ['3a 00 0f 42 3f', -1000000];
 		yield ['3b 7f ff ff ff ff ff ff ff', -9223372036854775807 - 1];
 
 		// byte strings
