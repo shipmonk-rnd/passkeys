@@ -118,7 +118,6 @@ match ($path) {
 				'id' => $row['credential_id'],
 				'attachment' => $row['authenticator_attachment'],
 				'createdAt' => $row['created_at'],
-				'signCount' => $row['sign_count'],
 			];
 		}
 
@@ -227,12 +226,7 @@ match ($path) {
 				signIn($user['id']);
 			}
 
-			respond(200, [
-				'ok' => true,
-				'email' => $user['email'] ?? 'unknown',
-				'signCount' => $result->newSignCount,
-				'possibleClone' => $result->possibleClone,
-			]);
+			respond(200, ['ok' => true, 'email' => $user['email'] ?? 'unknown']);
 
 		} catch (VerificationException $e) {
 			respond(400, ['ok' => false, 'reason' => $e->reason, 'message' => $e->getMessage()]);

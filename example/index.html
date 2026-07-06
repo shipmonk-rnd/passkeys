@@ -63,7 +63,7 @@
 				: cred.attachment === 'cross-platform' ? 'Security key / phone'
 				: 'Passkey';
 			const when = cred.createdAt ? new Date(cred.createdAt).toLocaleString() : 'unknown';
-			return `<strong>${kind}</strong> · sign count ${cred.signCount}`
+			return `<strong>${kind}</strong>`
 				+ `<div class="meta">added ${when} · <code>${cred.id.slice(0, 16)}…</code></div>`;
 		}
 
