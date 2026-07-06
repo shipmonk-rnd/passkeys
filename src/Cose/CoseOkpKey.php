@@ -20,25 +20,25 @@ use function strlen;
 final class CoseOkpKey extends CoseKey
 {
 	/** Key type value for OKP keys. */
-	public const KTY = 1;
+	public const int KTY = 1;
 
 	/** COSE curve identifier: Ed25519. */
-	public const CRV_ED25519 = 6;
+	public const int CRV_ED25519 = 6;
 
 	/** COSE curve identifier: Ed448. */
-	public const CRV_ED448 = 7;
+	public const int CRV_ED448 = 7;
 
 	/** OKP key label: curve (crv). */
-	private const LABEL_CRV = -1;
+	private const int LABEL_CRV = -1;
 
 	/** OKP key label: public key (x). */
-	private const LABEL_X = -2;
+	private const int LABEL_X = -2;
 
 	/**
 	 * Maps each supported algorithm to the curves it allows: the generic EdDSA identifier
 	 * spans both Edwards curves, while the fully-specified RFC 9864 identifiers pin one.
 	 */
-	private const ALGORITHMS = [
+	private const array ALGORITHMS = [
 		CoseAlgorithmIdentifier::EdDSA => [self::CRV_ED25519, self::CRV_ED448],
 		CoseAlgorithmIdentifier::Ed25519 => [self::CRV_ED25519],
 		CoseAlgorithmIdentifier::Ed448 => [self::CRV_ED448],
@@ -48,7 +48,7 @@ final class CoseOkpKey extends CoseKey
 	 * Maps each supported curve to its public-key length in bytes and its id-Ed* OID
 	 * (RFC 8410 §3); note these OIDs carry no algorithm parameters.
 	 */
-	private const CURVES = [
+	private const array CURVES = [
 		self::CRV_ED25519 => [32, '1.3.101.112'],
 		self::CRV_ED448 => [57, '1.3.101.113'],
 	];

@@ -26,7 +26,7 @@ readonly class PublicKeyCredentialRequestOptions implements JsonSerializable
 	 *
 	 * @see https://w3c.github.io/webauthn/#sctn-timeout-recommended-range
 	 */
-	public const RECOMMENDED_TIMEOUT = 300_000;
+	public const int RECOMMENDED_TIMEOUT = 300_000;
 
 	/**
 	 * `$timeout` defaults to {@see self::RECOMMENDED_TIMEOUT}; pass null to omit it and let the

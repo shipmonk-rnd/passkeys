@@ -14,12 +14,12 @@ use WebAuthnX\Cose\CoseKeyException;
  */
 readonly class AuthenticatorData
 {
-	public const FLAG_USER_PRESENT = 1 << 0;
-	public const FLAG_USER_VERIFIED = 1 << 2;
-	public const FLAG_BACKUP_ELIGIBILITY = 1 << 3;
-	public const FLAG_BACKUP_STATE = 1 << 4;
-	public const FLAG_ATTESTED_CREDENTIAL_DATA = 1 << 6;
-	public const FLAG_EXTENSION_DATA = 1 << 7;
+	public const int FLAG_USER_PRESENT = 1 << 0;
+	public const int FLAG_USER_VERIFIED = 1 << 2;
+	public const int FLAG_BACKUP_ELIGIBILITY = 1 << 3;
+	public const int FLAG_BACKUP_STATE = 1 << 4;
+	public const int FLAG_ATTESTED_CREDENTIAL_DATA = 1 << 6;
+	public const int FLAG_EXTENSION_DATA = 1 << 7;
 
 	/**
 	 * @param string $rpIdHash raw SHA-256 hash of the RP ID (32 bytes)

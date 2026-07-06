@@ -47,12 +47,12 @@ use function substr;
  */
 class SpecTestVectorsTest extends WebAuthnTestCase
 {
-	private const RP_ID = 'example.org';
-	private const ORIGIN = 'https://example.org';
-	private const TOP_ORIGIN = 'https://example.com';
+	private const string RP_ID = 'example.org';
+	private const string ORIGIN = 'https://example.org';
+	private const string TOP_ORIGIN = 'https://example.com';
 
 	/** The vectors carry no user handle; the relying party assigns one at registration. */
-	private const USER_HANDLE = 'spec-vector-user';
+	private const string USER_HANDLE = 'spec-vector-user';
 
 	#[DataProvider('provideVectors')]
 	public function testRegistrationThenAuthentication(

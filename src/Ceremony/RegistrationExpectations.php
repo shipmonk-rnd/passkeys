@@ -16,7 +16,7 @@ use function strlen;
 final readonly class RegistrationExpectations
 {
 	/** WebAuthn §13.4.3 recommends challenges carry at least 16 bytes of entropy. */
-	private const MIN_CHALLENGE_LENGTH = 16;
+	private const int MIN_CHALLENGE_LENGTH = 16;
 
 	/**
 	 * @param  string             $challenge         the raw challenge bytes issued for this ceremony (not base64url-encoded)

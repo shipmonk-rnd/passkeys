@@ -7,7 +7,7 @@ namespace WebAuthnX\Enum;
  */
 class PublicKeyCredentialHints
 {
-	final public const SECURITY_KEY = 'security-key';
-	final public const CLIENT_DEVICE = 'client-device';
-	final public const HYBRID = 'hybrid';
+	final public const string SECURITY_KEY = 'security-key';
+	final public const string CLIENT_DEVICE = 'client-device';
+	final public const string HYBRID = 'hybrid';
 }

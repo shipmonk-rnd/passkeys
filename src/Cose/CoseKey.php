@@ -18,10 +18,10 @@ use WebAuthnX\Cbor\InvalidCborException;
 abstract class CoseKey
 {
 	/** Common COSE key label: key type (kty). */
-	protected const LABEL_KTY = 1;
+	protected const int LABEL_KTY = 1;
 
 	/** Common COSE key label: algorithm (alg). */
-	protected const LABEL_ALG = 3;
+	protected const int LABEL_ALG = 3;
 
 	protected function __construct(
 		public int $alg,

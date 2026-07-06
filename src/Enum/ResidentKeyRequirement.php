@@ -7,7 +7,7 @@ namespace WebAuthnX\Enum;
  */
 class ResidentKeyRequirement
 {
-	final public const DISCOURAGED = 'discouraged';
-	final public const PREFERRED = 'preferred';
-	final public const REQUIRED = 'required';
+	final public const string DISCOURAGED = 'discouraged';
+	final public const string PREFERRED = 'preferred';
+	final public const string REQUIRED = 'required';
 }

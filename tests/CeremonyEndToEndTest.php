@@ -38,8 +38,8 @@ use const JSON_THROW_ON_ERROR;
  */
 class CeremonyEndToEndTest extends CryptoTestCase
 {
-	private const RP_ID = 'example.com';
-	private const CREDENTIAL_ID = "\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a";
+	private const string RP_ID = 'example.com';
+	private const string CREDENTIAL_ID = "\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a";
 
 	#[DataProvider('provideAlgorithms')]
 	public function testRegistrationThenAuthentication(int $alg, int $okpCrv = CoseOkpKey::CRV_ED25519): void

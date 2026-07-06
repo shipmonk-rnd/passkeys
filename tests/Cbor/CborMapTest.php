@@ -17,7 +17,7 @@ class CborMapTest extends WebAuthnTestCase
 	 *   5       => {1: 2}                   (nested map)
 	 *   "neg"   => -1                      (int, text key)
 	 */
-	private const SAMPLE_MAP_HEX = 'a5 01 02 03 63 61 62 63 04 44 01 02 03 04 05 a1 01 02 63 6e 65 67 20';
+	private const string SAMPLE_MAP_HEX = 'a5 01 02 03 63 61 62 63 04 44 01 02 03 04 05 a1 01 02 63 6e 65 67 20';
 
 	private static function sampleMap(): CborMap
 	{

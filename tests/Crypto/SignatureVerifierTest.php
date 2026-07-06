@@ -16,7 +16,7 @@ use function substr;
 
 class SignatureVerifierTest extends CryptoTestCase
 {
-	private const MESSAGE = 'authenticatorData||clientDataHash ' . '0123456789abcdef';
+	private const string MESSAGE = 'authenticatorData||clientDataHash ' . '0123456789abcdef';
 
 	#[DataProvider('provideAlgorithms')]
 	public function testVerifiesValidSignature(int $alg, int $okpCrv = CoseOkpKey::CRV_ED25519): void

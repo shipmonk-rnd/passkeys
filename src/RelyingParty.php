@@ -52,14 +52,14 @@ use function strlen;
  */
 final class RelyingParty
 {
-	private const TYPE_CREATE = 'webauthn.create';
-	private const TYPE_GET = 'webauthn.get';
+	private const string TYPE_CREATE = 'webauthn.create';
+	private const string TYPE_GET = 'webauthn.get';
 
 	/** {@link https://w3c.github.io/webauthn/#credential-id Credential IDs} are at most 1023 bytes (§7.1 step 25). */
-	private const MAX_CREDENTIAL_ID_LENGTH = 1023;
+	private const int MAX_CREDENTIAL_ID_LENGTH = 1023;
 
-	private const FMT_NONE = 'none';
-	private const FMT_PACKED = 'packed';
+	private const string FMT_NONE = 'none';
+	private const string FMT_PACKED = 'packed';
 
 	public function __construct(
 		private readonly SignatureVerifier $signatureVerifier = new SignatureVerifier(),

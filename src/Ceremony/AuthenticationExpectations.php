@@ -17,7 +17,7 @@ use function strlen;
 final readonly class AuthenticationExpectations
 {
 	/** WebAuthn §13.4.3 recommends challenges carry at least 16 bytes of entropy. */
-	private const MIN_CHALLENGE_LENGTH = 16;
+	private const int MIN_CHALLENGE_LENGTH = 16;
 
 	/**
 	 * @param  string           $rpId                   the RP ID whose SHA-256 must equal `authData.rpIdHash`

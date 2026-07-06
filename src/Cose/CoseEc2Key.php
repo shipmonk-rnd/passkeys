@@ -18,35 +18,35 @@ use function strlen;
 final class CoseEc2Key extends CoseKey
 {
 	/** Key type value for EC2 keys. */
-	public const KTY = 2;
+	public const int KTY = 2;
 
 	/** COSE curve identifier: NIST P-256. */
-	public const CRV_P256 = 1;
+	public const int CRV_P256 = 1;
 
 	/** COSE curve identifier: NIST P-384. */
-	public const CRV_P384 = 2;
+	public const int CRV_P384 = 2;
 
 	/** COSE curve identifier: NIST P-521. */
-	public const CRV_P521 = 3;
+	public const int CRV_P521 = 3;
 
 	/** EC2 key label: curve (crv). */
-	private const LABEL_CRV = -1;
+	private const int LABEL_CRV = -1;
 
 	/** EC2 key label: x-coordinate. */
-	private const LABEL_X = -2;
+	private const int LABEL_X = -2;
 
 	/** EC2 key label: y-coordinate. */
-	private const LABEL_Y = -3;
+	private const int LABEL_Y = -3;
 
 	/** OID for id-ecPublicKey (RFC 5480 §2.1.1). */
-	private const OID_EC_PUBLIC_KEY = '1.2.840.10045.2.1';
+	private const string OID_EC_PUBLIC_KEY = '1.2.840.10045.2.1';
 
 	/**
 	 * Maps each supported algorithm to its mandated curve and coordinate length in bytes.
 	 *
 	 * @see https://www.rfc-editor.org/rfc/rfc9053.html#section-2.1 ECDSA
 	 */
-	private const ALGORITHMS = [
+	private const array ALGORITHMS = [
 		CoseAlgorithmIdentifier::ES256 => [self::CRV_P256, 32, '1.2.840.10045.3.1.7'],
 		CoseAlgorithmIdentifier::ES384 => [self::CRV_P384, 48, '1.3.132.0.34'],
 		CoseAlgorithmIdentifier::ES512 => [self::CRV_P521, 66, '1.3.132.0.35'],

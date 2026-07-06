@@ -7,6 +7,6 @@ namespace WebAuthnX\Enum;
  */
 class AuthenticatorAttachment
 {
-	final public const PLATFORM = 'platform';
-	final public const CROSS_PLATFORM = 'cross-platform';
+	final public const string PLATFORM = 'platform';
+	final public const string CROSS_PLATFORM = 'cross-platform';
 }

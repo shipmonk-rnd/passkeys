@@ -14,7 +14,7 @@ use WebAuthnX\Cose\CoseKey;
 final readonly class RegistrationResult
 {
 	/** Attestation conveyed no statement (`fmt: "none"`); no trust path was evaluated. */
-	public const ATTESTATION_NONE = 'none';
+	public const string ATTESTATION_NONE = 'none';
 
 	/**
 	 * Self attestation (`fmt: "packed"` without `x5c`, §6.5.3): the statement was signed by the
@@ -22,7 +22,7 @@ final readonly class RegistrationResult
 	 * key but says nothing about the authenticator's make or provenance — treat it with the same
 	 * (lack of) trust as {@see self::ATTESTATION_NONE}.
 	 */
-	public const ATTESTATION_SELF = 'self';
+	public const string ATTESTATION_SELF = 'self';
 
 	/**
 	 * @param  string            $credentialId raw credential id bytes (encode before embedding in JSON/HTML)

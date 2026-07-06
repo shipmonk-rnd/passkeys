@@ -31,10 +31,10 @@ use const OPENSSL_ALGO_SHA512;
 final class SignatureVerifier
 {
 	/** EdDSA is a pure signature scheme; OpenSSL takes no separate message digest. */
-	private const OPENSSL_ALGO_EDDSA = 0;
+	private const int OPENSSL_ALGO_EDDSA = 0;
 
 	/** Maps each supported COSE algorithm to its OpenSSL message-digest algorithm. */
-	private const OPENSSL_ALGORITHMS = [
+	private const array OPENSSL_ALGORITHMS = [
 		CoseAlgorithmIdentifier::ES256 => OPENSSL_ALGO_SHA256,
 		CoseAlgorithmIdentifier::ES384 => OPENSSL_ALGO_SHA384,
 		CoseAlgorithmIdentifier::ES512 => OPENSSL_ALGO_SHA512,

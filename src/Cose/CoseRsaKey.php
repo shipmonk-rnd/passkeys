@@ -22,24 +22,24 @@ use function substr;
 final class CoseRsaKey extends CoseKey
 {
 	/** Key type value for RSA keys. */
-	public const KTY = 3;
+	public const int KTY = 3;
 
 	/** RSA key label: modulus (n). */
-	private const LABEL_N = -1;
+	private const int LABEL_N = -1;
 
 	/** RSA key label: public exponent (e). */
-	private const LABEL_E = -2;
+	private const int LABEL_E = -2;
 
 	/** OID for rsaEncryption (RFC 8017 App. C / RFC 3279 §2.3.1). */
-	private const OID_RSA_ENCRYPTION = '1.2.840.113549.1.1.1';
+	private const string OID_RSA_ENCRYPTION = '1.2.840.113549.1.1.1';
 
 	/** Algorithms that use an RSA key. */
-	private const ALGORITHMS = [
+	private const array ALGORITHMS = [
 		CoseAlgorithmIdentifier::RS256,
 	];
 
 	/** Minimum accepted modulus size in bytes (2048 bits; RFC 8230 §6.1). */
-	private const MIN_MODULUS_BYTES = 256;
+	private const int MIN_MODULUS_BYTES = 256;
 
 	/**
 	 * @param string $n modulus as raw big-endian bytes
