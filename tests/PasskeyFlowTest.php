@@ -9,9 +9,11 @@ use WebAuthnX\Ceremony\VerificationException;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 use WebAuthnX\Cose\CoseKey;
 use WebAuthnX\Credential\AuthenticatorData;
+use WebAuthnX\Enum\ResidentKeyRequirement;
 use WebAuthnX\Enum\UserVerificationRequirement;
 use WebAuthnX\Options\PublicKeyCredentialRequestOptions;
 
+use function array_map;
 use function base64_encode;
 use function chr;
 use function hash;
@@ -41,6 +43,10 @@ class PasskeyFlowTest extends CryptoTestCase
 	private const string ALICE_CREDENTIAL_ID = "\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a";
 	private const string BOB_HANDLE = 'bob-handle-000002';
 	private const string BOB_CREDENTIAL_ID = "\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b";
+	private const string DAVE = 'dave@example.com';
+	private const string DAVE_HANDLE = 'dave-handle-00004';
+	private const string NEW_CREDENTIAL_ID = "\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d";
+	private const string AAGUID = "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10";
 
 	private const int FLAGS_UP_UV = AuthenticatorData::FLAG_USER_PRESENT | AuthenticatorData::FLAG_USER_VERIFIED;
 
@@ -179,6 +185,119 @@ class PasskeyFlowTest extends CryptoTestCase
 		self::assertCount(2, $flow->updatedCredentials);
 	}
 
+	// --- Registration -----------------------------------------------------------------------------
+
+	public function testRegistrationThenLoginRoundTrip(): void
+	{
+		$flow = new InMemoryPasskeyFlow();
+
+		$options = $flow->registrationOptions(self::DAVE_HANDLE, self::DAVE);
+
+		self::assertSame('Example RP', $options->rp->name);
+		self::assertSame(self::RP_ID, $options->rp->id);
+		self::assertSame(self::DAVE_HANDLE, $options->user->id);
+		self::assertSame(self::DAVE, $options->user->name);
+		self::assertSame(self::DAVE, $options->user->displayName);
+		self::assertSame(
+			[CoseAlgorithmIdentifier::ES256, CoseAlgorithmIdentifier::RS256, CoseAlgorithmIdentifier::EdDSA],
+			array_map(static fn ($parameters) => $parameters->alg, $options->pubKeyCredParams),
+		);
+		self::assertSame(ResidentKeyRequirement::REQUIRED, $options->authenticatorSelection?->residentKey);
+		self::assertSame(UserVerificationRequirement::REQUIRED, $options->authenticatorSelection->userVerification);
+		self::assertNull($options->excludeCredentials);
+		self::assertSame(32, strlen($options->challenge));
+
+		$pending = $flow->pendingRegistrations[base64_encode($options->challenge)] ?? null;
+		self::assertNotNull($pending);
+		self::assertSame(self::DAVE_HANDLE, $pending->userHandle);
+
+		$registered = $flow->register($this->registrationBody($options->challenge));
+
+		self::assertSame(self::DAVE_HANDLE, $registered->userHandle);
+		self::assertSame('platform', $registered->authenticatorAttachment);
+		self::assertSame(self::NEW_CREDENTIAL_ID, $registered->result->credentialId);
+		self::assertSame(['internal'], $registered->toCredentialRecord()->transports);
+		self::assertSame([$registered], $flow->savedPasskeys);
+		self::assertSame([], $flow->pendingRegistrations);
+
+		// The passkey saved by the flow immediately works for a usernameless login.
+		$loginOptions = $flow->authenticationOptions();
+		$result = $flow->authenticate(self::assertionBody(
+			$this->privateKey,
+			$loginOptions->challenge,
+			self::NEW_CREDENTIAL_ID,
+			self::DAVE_HANDLE,
+		));
+		self::assertSame(self::DAVE_HANDLE, $result->userHandle);
+	}
+
+	public function testRegistrationOptionsExcludeExistingCredentials(): void
+	{
+		$flow = $this->flowWithAlice();
+
+		$options = $flow->registrationOptions(self::ALICE_HANDLE, self::ALICE);
+
+		self::assertNotNull($options->excludeCredentials);
+		self::assertCount(1, $options->excludeCredentials);
+		self::assertSame(self::ALICE_CREDENTIAL_ID, $options->excludeCredentials[0]->id);
+		self::assertSame(['internal', 'hybrid'], $options->excludeCredentials[0]->transports);
+	}
+
+	public function testReplayedRegistrationResponseIsRejected(): void
+	{
+		$flow = new InMemoryPasskeyFlow();
+		$body = $this->registrationBody($flow->registrationOptions(self::DAVE_HANDLE, self::DAVE)->challenge);
+
+		$flow->register($body);
+
+		$this->assertRegistrationFails(VerificationException::CHALLENGE_MISMATCH, $flow, $body);
+		self::assertCount(1, $flow->savedPasskeys);
+	}
+
+	public function testRegistrationRejectsDisallowedAlgorithm(): void
+	{
+		$flow = new InMemoryPasskeyFlow();
+		[, $es384CoseEntries] = self::generateKeyAndCoseEntries(CoseAlgorithmIdentifier::ES384);
+
+		$options = $flow->registrationOptions(self::DAVE_HANDLE, self::DAVE);
+
+		$this->assertRegistrationFails(
+			VerificationException::UNSUPPORTED_ALGORITHM,
+			$flow,
+			$this->registrationBody($options->challenge, coseEntries: $es384CoseEntries),
+		);
+		self::assertSame([], $flow->savedPasskeys);
+	}
+
+	public function testMalformedRegistrationResponseIsRejected(): void
+	{
+		$flow = new InMemoryPasskeyFlow();
+
+		$this->assertRegistrationFails(VerificationException::MALFORMED_RESPONSE, $flow, 'not json');
+		$this->assertRegistrationFails(VerificationException::MALFORMED_RESPONSE, $flow, '{}');
+	}
+
+	public function testPendingRegistrationsAndAuthenticationsAreSeparate(): void
+	{
+		$flow = $this->flowWithAlice();
+		$authenticationChallenge = $flow->authenticationOptions()->challenge;
+		$registrationChallenge = $flow->registrationOptions(self::DAVE_HANDLE, self::DAVE)->challenge;
+
+		// A response of one kind cannot consume — or even burn — a ceremony of the other kind.
+		$this->assertRegistrationFails(
+			VerificationException::CHALLENGE_MISMATCH,
+			$flow,
+			$this->registrationBody($authenticationChallenge),
+		);
+		$this->assertAuthenticationFails(
+			VerificationException::CHALLENGE_MISMATCH,
+			$flow,
+			$this->aliceAssertion($registrationChallenge),
+		);
+		self::assertCount(1, $flow->pendingAuthentications);
+		self::assertCount(1, $flow->pendingRegistrations);
+	}
+
 	// --- Failure wiring ---------------------------------------------------------------------------
 
 	public function testUnknownChallengeIsRejected(): void
@@ -278,6 +397,17 @@ class PasskeyFlowTest extends CryptoTestCase
 		}
 	}
 
+	private function assertRegistrationFails(string $reason, InMemoryPasskeyFlow $flow, string $body): void
+	{
+		try {
+			$flow->register($body);
+			self::fail('Expected registration to fail with ' . $reason);
+
+		} catch (VerificationException $e) {
+			self::assertSame($reason, $e->reason);
+		}
+	}
+
 	// --- Fixture builders -------------------------------------------------------------------------
 
 	/**
@@ -331,6 +461,52 @@ class PasskeyFlowTest extends CryptoTestCase
 			tamperSignature: $tamperSignature,
 			crossOrigin: $crossOrigin,
 		);
+	}
+
+	/**
+	 * Builds the raw request body a browser would post after `navigator.credentials.create()`
+	 * with a `none`-format attestation object attesting the given COSE key.
+	 *
+	 * @param array<int, int|string>|null $coseEntries defaults to the ES256 fixture key
+	 */
+	private function registrationBody(
+		string $challenge,
+		string $credentialId = self::NEW_CREDENTIAL_ID,
+		?array $coseEntries = null,
+	): string {
+		$clientDataJson = json_encode([
+			'type' => 'webauthn.create',
+			'challenge' => Base64::urlEncode($challenge),
+			'origin' => self::ORIGIN,
+		], JSON_THROW_ON_ERROR);
+
+		$attestedCredentialData = self::AAGUID
+			. pack('n', strlen($credentialId))
+			. $credentialId
+			. CborTestEncoder::intMap($coseEntries ?? $this->coseEntries);
+
+		$authData = hash('sha256', self::RP_ID, binary: true)
+			. chr(self::FLAGS_UP_UV | AuthenticatorData::FLAG_ATTESTED_CREDENTIAL_DATA)
+			. pack('N', 0)
+			. $attestedCredentialData;
+
+		$attestationObject = CborTestEncoder::map([
+			[CborTestEncoder::textString('fmt'), CborTestEncoder::textString('none')],
+			[CborTestEncoder::textString('attStmt'), CborTestEncoder::map([])],
+			[CborTestEncoder::textString('authData'), CborTestEncoder::byteString($authData)],
+		]);
+
+		return json_encode([
+			'id' => Base64::urlEncode($credentialId),
+			'rawId' => Base64::urlEncode($credentialId),
+			'type' => 'public-key',
+			'authenticatorAttachment' => 'platform',
+			'response' => [
+				'clientDataJSON' => Base64::urlEncode($clientDataJson),
+				'attestationObject' => Base64::urlEncode($attestationObject),
+				'transports' => ['internal'],
+			],
+		], JSON_THROW_ON_ERROR);
 	}
 
 	/**

@@ -6,6 +6,8 @@ use WebAuthnX\Ceremony\AuthenticationResult;
 use WebAuthnX\Ceremony\CredentialRecord;
 use WebAuthnX\Passkey\PasskeyFlow;
 use WebAuthnX\Passkey\PendingAuthentication;
+use WebAuthnX\Passkey\PendingRegistration;
+use WebAuthnX\Passkey\RegisteredPasskey;
 
 use function array_shift;
 use function array_key_exists;
@@ -30,10 +32,12 @@ final class DemoPasskeyFlow extends PasskeyFlow
 	public function __construct(
 		private readonly PasskeyStore $store,
 		private readonly string $rpId,
+		private readonly string $rpName,
 		private readonly array $origins,
 	) {
 		parent::__construct();
 		$_SESSION['pending_authentications'] ??= [];
+		$_SESSION['pending_registrations'] ??= [];
 	}
 
 	public function findByCredentialId(string $credentialId): ?CredentialRecord
@@ -44,6 +48,11 @@ final class DemoPasskeyFlow extends PasskeyFlow
 	protected function getRelyingPartyId(): string
 	{
 		return $this->rpId;
+	}
+
+	protected function getRelyingPartyName(): string
+	{
+		return $this->rpName;
 	}
 
 	protected function getAllowedOrigins(): array
@@ -96,6 +105,29 @@ final class DemoPasskeyFlow extends PasskeyFlow
 		unset($_SESSION['pending_authentications'][$key]);
 
 		return new PendingAuthentication($challenge, $userHandle === null ? null : base64_decode($userHandle));
+	}
+
+	protected function rememberPendingRegistration(PendingRegistration $pending): void
+	{
+		$_SESSION['pending_registrations'][base64_encode($pending->challenge)] = base64_encode($pending->userHandle);
+
+		while (count($_SESSION['pending_registrations']) > self::MAX_PENDING) {
+			array_shift($_SESSION['pending_registrations']);
+		}
+	}
+
+	protected function consumePendingRegistration(string $challenge): ?PendingRegistration
+	{
+		$key = base64_encode($challenge);
+		$userHandle = $_SESSION['pending_registrations'][$key] ?? null;
+		unset($_SESSION['pending_registrations'][$key]);
+
+		return $userHandle === null ? null : new PendingRegistration($challenge, base64_decode($userHandle));
+	}
+
+	protected function saveCredential(RegisteredPasskey $passkey): void
+	{
+		$this->store->insertCredential($passkey->toCredentialRecord(), $passkey->authenticatorAttachment);
 	}
 
 	protected function updateCredential(AuthenticationResult $result): void

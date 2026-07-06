@@ -6,15 +6,23 @@ use WebAuthnX\Ceremony\AuthenticationExpectations;
 use WebAuthnX\Ceremony\AuthenticationResult;
 use WebAuthnX\Ceremony\CredentialRecord;
 use WebAuthnX\Ceremony\CredentialStore;
+use WebAuthnX\Ceremony\RegistrationExpectations;
 use WebAuthnX\Ceremony\VerificationException;
+use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 use WebAuthnX\Credential\MalformedDataException;
 use WebAuthnX\Credential\PublicKeyCredential;
 use WebAuthnX\Enum\PublicKeyCredentialType;
+use WebAuthnX\Enum\ResidentKeyRequirement;
 use WebAuthnX\Enum\UserVerificationRequirement;
 use WebAuthnX\Json\JsonObject;
 use WebAuthnX\Json\JsonObjectException;
+use WebAuthnX\Options\AuthenticatorSelectionCriteria;
+use WebAuthnX\Options\PublicKeyCredentialCreationOptions;
 use WebAuthnX\Options\PublicKeyCredentialDescriptor;
+use WebAuthnX\Options\PublicKeyCredentialParameters;
 use WebAuthnX\Options\PublicKeyCredentialRequestOptions;
+use WebAuthnX\Options\PublicKeyCredentialRpEntity;
+use WebAuthnX\Options\PublicKeyCredentialUserEntity;
 use WebAuthnX\RelyingParty;
 
 use function array_map;
@@ -42,7 +50,10 @@ use function random_bytes;
  * {@see self::authenticate()} looks the ceremony up by the challenge inside the response instead
  * of assuming a single pending slot.
  *
- * Registration is not covered yet; use {@see RelyingParty::verifyRegistration()} directly.
+ * Registration is the same pair of calls — {@see self::registrationOptions()} /
+ * {@see self::register()} — for an account the caller has already resolved (the signed-in user
+ * adding a passkey, or a just-created signup). Deciding *who* may enrol — verifying the email,
+ * requiring an authenticated session — is deliberately left in front of the flow.
  *
  * @api
  */
@@ -66,23 +77,7 @@ abstract class PasskeyFlow implements CredentialStore
 	public function authenticationOptions(?string $username = null): PublicKeyCredentialRequestOptions
 	{
 		$userHandle = $username === null ? null : $this->findUserHandleByUsername($username);
-		$allowCredentials = null;
-
-		if ($userHandle !== null) {
-			$credentials = $this->findCredentialsByUserHandle($userHandle);
-
-			if ($credentials !== []) {
-				$allowCredentials = array_map(
-					static fn (CredentialRecord $credential) => new PublicKeyCredentialDescriptor(
-						PublicKeyCredentialType::PUBLIC_KEY,
-						$credential->credentialId,
-						$credential->transports,
-					),
-					$credentials,
-				);
-			}
-		}
-
+		$allowCredentials = $userHandle === null ? null : $this->credentialDescriptorsFor($userHandle);
 		$challenge = $this->generateChallenge();
 		$this->rememberPendingAuthentication(new PendingAuthentication($challenge, $userHandle));
 
@@ -161,6 +156,123 @@ abstract class PasskeyFlow implements CredentialStore
 		return $result;
 	}
 
+	/**
+	 * Starts a registration ceremony for an account the caller has already resolved and is
+	 * entitled to enrol for: issues a challenge, records the pending ceremony via
+	 * {@see self::rememberPendingRegistration()}, and returns the options to hand to the
+	 * browser's `navigator.credentials.create()`. Credentials the account already has are listed
+	 * in `excludeCredentials` so the same authenticator cannot enrol twice.
+	 *
+	 * @param string      $userHandle  raw user handle bytes (an opaque, immutable, PII-free
+	 *     account id, at most 64 bytes — never the email itself)
+	 * @param string      $username    the human-readable account identifier (email/username),
+	 *     shown by authenticator UIs to label the passkey
+	 * @param string|null $displayName a friendlier account label ("Alice Doe"), defaulting to the username
+	 */
+	public function registrationOptions(
+		string $userHandle,
+		string $username,
+		?string $displayName = null,
+	): PublicKeyCredentialCreationOptions {
+		$challenge = $this->generateChallenge();
+		$this->rememberPendingRegistration(new PendingRegistration($challenge, $userHandle));
+
+		return new PublicKeyCredentialCreationOptions(
+			rp: new PublicKeyCredentialRpEntity(name: $this->getRelyingPartyName(), id: $this->getRelyingPartyId()),
+			user: new PublicKeyCredentialUserEntity(id: $userHandle, name: $username, displayName: $displayName ?? $username),
+			challenge: $challenge,
+			pubKeyCredParams: array_map(
+				static fn (int $algorithm) => new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, $algorithm),
+				$this->getAllowedAlgorithms(),
+			),
+			timeout: $this->getTimeout(),
+			excludeCredentials: $this->credentialDescriptorsFor($userHandle),
+			authenticatorSelection: new AuthenticatorSelectionCriteria(
+				residentKey: $this->getResidentKeyRequirement(),
+				userVerification: $this->getUserVerificationRequirement(),
+			),
+		);
+	}
+
+	/**
+	 * Finishes a registration ceremony: parses the JSON the browser produced, locates the pending
+	 * ceremony by the challenge inside the response, runs the full WebAuthn §7.1 verification, and
+	 * persists the new credential via {@see self::saveCredential()}.
+	 *
+	 * The returned {@see RegisteredPasskey} identifies the enrolled account (e.g. to sign the user
+	 * in after a passkey-first signup); failures throw, exactly as in {@see self::authenticate()}.
+	 *
+	 * @param string $responseJson raw request body containing the registration response JSON
+	 * @throws VerificationException
+	 */
+	public function register(string $responseJson): RegisteredPasskey
+	{
+		try {
+			$credential = PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString($responseJson));
+			$clientData = $credential->response->parseClientData();
+
+		} catch (JsonObjectException | MalformedDataException $e) {
+			throw new VerificationException(
+				VerificationException::MALFORMED_RESPONSE,
+				'Malformed registration response: ' . $e->getMessage(),
+				$e,
+			);
+		}
+
+		$pending = $this->consumePendingRegistration($clientData->getChallenge());
+
+		if ($pending === null) {
+			throw new VerificationException(
+				VerificationException::CHALLENGE_MISMATCH,
+				'No pending registration ceremony matches the challenge — it may have expired or been used already',
+			);
+		}
+
+		$result = $this->relyingParty->verifyRegistration(
+			$credential,
+			new RegistrationExpectations(
+				challenge: $pending->challenge,
+				rpId: $this->getRelyingPartyId(),
+				origins: $this->getAllowedOrigins(),
+				allowedAlgorithms: $this->getAllowedAlgorithms(),
+				requireUserVerification: $this->getUserVerificationRequirement() === UserVerificationRequirement::REQUIRED,
+				allowCrossOrigin: $this->isCrossOriginAllowed(),
+				allowedTopOrigins: $this->getAllowedTopOrigins(),
+			),
+			$this,
+		);
+
+		$registered = new RegisteredPasskey($pending->userHandle, $credential->authenticatorAttachment, $result);
+		$this->saveCredential($registered);
+
+		return $registered;
+	}
+
+	/**
+	 * The account's registered credentials as descriptors for `allowCredentials` /
+	 * `excludeCredentials`, or null (omit the member) when it has none.
+	 *
+	 * @param  string $userHandle raw user handle bytes
+	 * @return list<PublicKeyCredentialDescriptor>|null
+	 */
+	private function credentialDescriptorsFor(string $userHandle): ?array
+	{
+		$credentials = $this->findCredentialsByUserHandle($userHandle);
+
+		if ($credentials === []) {
+			return null;
+		}
+
+		return array_map(
+			static fn (CredentialRecord $credential) => new PublicKeyCredentialDescriptor(
+				PublicKeyCredentialType::PUBLIC_KEY,
+				$credential->credentialId,
+				$credential->transports,
+			),
+			$credentials,
+		);
+	}
+
 	// --- Identity of the relying party: every deployment must define these ----------------------
 
 	/**
@@ -168,6 +280,12 @@ abstract class PasskeyFlow implements CredentialStore
 	 * scoped to, e.g. `example.com` (it must be a registrable-suffix match of your origins).
 	 */
 	abstract protected function getRelyingPartyId(): string;
+
+	/**
+	 * The human-readable relying party name, e.g. `Example Corp` — shown by authenticator UIs
+	 * when a passkey is created.
+	 */
+	abstract protected function getRelyingPartyName(): string;
 
 	/**
 	 * The exact origins your login pages are served from, e.g. `['https://example.com']`.
@@ -187,8 +305,8 @@ abstract class PasskeyFlow implements CredentialStore
 	abstract protected function findUserHandleByUsername(string $username): ?string;
 
 	/**
-	 * Every credential registered to the given account — used to build `allowCredentials` and to
-	 * enforce it at verification.
+	 * Every credential registered to the given account — used to build `allowCredentials` /
+	 * `excludeCredentials` and to enforce the former at verification.
 	 *
 	 * @param  string $userHandle raw user handle bytes
 	 * @return list<CredentialRecord>
@@ -218,6 +336,28 @@ abstract class PasskeyFlow implements CredentialStore
 	abstract protected function consumePendingAuthentication(string $challenge): ?PendingAuthentication;
 
 	/**
+	 * The registration counterpart of {@see self::rememberPendingAuthentication()} — same keying
+	 * and bounding advice, but keep the two stores separate so a response can never finish a
+	 * ceremony of the other kind.
+	 */
+	abstract protected function rememberPendingRegistration(PendingRegistration $pending): void;
+
+	/**
+	 * Returns **and deletes** the pending registration ceremony stored under this challenge, or
+	 * null when there is none; see {@see self::consumePendingAuthentication()}.
+	 *
+	 * @param string $challenge raw challenge bytes
+	 */
+	abstract protected function consumePendingRegistration(string $challenge): ?PendingRegistration;
+
+	/**
+	 * Persists the newly registered credential — typically one INSERT of
+	 * {@see RegisteredPasskey::toCredentialRecord()}, plus whatever extra columns you keep
+	 * ({@see RegisteredPasskey::$authenticatorAttachment}, a created-at timestamp, a label…).
+	 */
+	abstract protected function saveCredential(RegisteredPasskey $passkey): void;
+
+	/**
 	 * Persists the post-authentication credential state: set the record's `signCount` to
 	 * {@see AuthenticationResult::$newSignCount}, `backupState` to {@see AuthenticationResult::$backupState},
 	 * and — if it was not already — `uvInitialized` to {@see AuthenticationResult::$userVerified}.
@@ -238,6 +378,32 @@ abstract class PasskeyFlow implements CredentialStore
 	protected function getUserVerificationRequirement(): string
 	{
 		return UserVerificationRequirement::REQUIRED;
+	}
+
+	/**
+	 * The COSE algorithms offered at registration, best first, and enforced on the attested key
+	 * (WebAuthn §7.1 step 20). The default triple covers what real-world authenticators produce.
+	 *
+	 * @return non-empty-list<CoseAlgorithmIdentifier::*>
+	 */
+	protected function getAllowedAlgorithms(): array
+	{
+		return [
+			CoseAlgorithmIdentifier::ES256,
+			CoseAlgorithmIdentifier::RS256,
+			CoseAlgorithmIdentifier::EdDSA,
+		];
+	}
+
+	/**
+	 * Whether new credentials must be discoverable (client-side). Defaults to `required` — that
+	 * is what makes the credential a passkey, and what the usernameless flow depends on.
+	 *
+	 * @return ResidentKeyRequirement::*
+	 */
+	protected function getResidentKeyRequirement(): string
+	{
+		return ResidentKeyRequirement::REQUIRED;
 	}
 
 	/**

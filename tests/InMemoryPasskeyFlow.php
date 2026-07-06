@@ -7,6 +7,8 @@ use WebAuthnX\Ceremony\CredentialRecord;
 use WebAuthnX\Enum\UserVerificationRequirement;
 use WebAuthnX\Passkey\PasskeyFlow;
 use WebAuthnX\Passkey\PendingAuthentication;
+use WebAuthnX\Passkey\PendingRegistration;
+use WebAuthnX\Passkey\RegisteredPasskey;
 
 use function base64_encode;
 
@@ -27,8 +29,14 @@ final class InMemoryPasskeyFlow extends PasskeyFlow
 	/** @var array<string, PendingAuthentication> base64(challenge) → pending ceremony */
 	public array $pendingAuthentications = [];
 
+	/** @var array<string, PendingRegistration> base64(challenge) → pending ceremony */
+	public array $pendingRegistrations = [];
+
 	/** @var list<AuthenticationResult> everything passed to updateCredential() */
 	public array $updatedCredentials = [];
+
+	/** @var list<RegisteredPasskey> everything passed to saveCredential() */
+	public array $savedPasskeys = [];
 
 	/**
 	 * @param list<string>                             $origins
@@ -61,6 +69,11 @@ final class InMemoryPasskeyFlow extends PasskeyFlow
 	protected function getRelyingPartyId(): string
 	{
 		return $this->rpId;
+	}
+
+	protected function getRelyingPartyName(): string
+	{
+		return 'Example RP';
 	}
 
 	protected function getAllowedOrigins(): array
@@ -98,6 +111,26 @@ final class InMemoryPasskeyFlow extends PasskeyFlow
 		unset($this->pendingAuthentications[$key]);
 
 		return $pending;
+	}
+
+	protected function rememberPendingRegistration(PendingRegistration $pending): void
+	{
+		$this->pendingRegistrations[base64_encode($pending->challenge)] = $pending;
+	}
+
+	protected function consumePendingRegistration(string $challenge): ?PendingRegistration
+	{
+		$key = base64_encode($challenge);
+		$pending = $this->pendingRegistrations[$key] ?? null;
+		unset($this->pendingRegistrations[$key]);
+
+		return $pending;
+	}
+
+	protected function saveCredential(RegisteredPasskey $passkey): void
+	{
+		$this->savedPasskeys[] = $passkey;
+		$this->addCredential($passkey->toCredentialRecord());
 	}
 
 	protected function updateCredential(AuthenticationResult $result): void

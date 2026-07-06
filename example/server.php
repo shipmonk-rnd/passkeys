@@ -11,9 +11,10 @@
  * then open http://localhost:8000. The RP id / origin below assume exactly that host and port;
  * change them together if you serve it elsewhere.
  *
- * Login (usernameless, two-step by email, and conditional-mediation autofill) goes through the
- * high-level {@see DemoPasskeyFlow} (a {@see \WebAuthnX\Passkey\PasskeyFlow}); registration still
- * drives {@see RelyingParty} directly until the flow grows a registration side.
+ * All four WebAuthn endpoints go through the high-level {@see DemoPasskeyFlow} (a
+ * {@see \WebAuthnX\Passkey\PasskeyFlow}): login is usernameless, two-step by email, or
+ * conditional-mediation autofill; registration enrols the resolved account. What remains here is
+ * only what a relying party genuinely owns — resolving/creating accounts and the session.
  *
  * Deliberately NOT production code: state lives in $_SESSION (see PasskeyStore) and — importantly —
  * the very first registration for an email is allowed without proving ownership. A real service
@@ -25,23 +26,9 @@
 namespace WebAuthnXDemo;
 
 use Throwable;
-use WebAuthnX\Ceremony\RegistrationExpectations;
 use WebAuthnX\Ceremony\VerificationException;
-use WebAuthnX\Cose\CoseAlgorithmIdentifier;
-use WebAuthnX\Credential\PublicKeyCredential;
-use WebAuthnX\Enum\PublicKeyCredentialType;
-use WebAuthnX\Enum\ResidentKeyRequirement;
-use WebAuthnX\Enum\UserVerificationRequirement;
 use WebAuthnX\Json\JsonObject;
-use WebAuthnX\Options\AuthenticatorSelectionCriteria;
-use WebAuthnX\Options\PublicKeyCredentialCreationOptions;
-use WebAuthnX\Options\PublicKeyCredentialDescriptor;
-use WebAuthnX\Options\PublicKeyCredentialParameters;
-use WebAuthnX\Options\PublicKeyCredentialRpEntity;
-use WebAuthnX\Options\PublicKeyCredentialUserEntity;
-use WebAuthnX\RelyingParty;
 
-use function array_map;
 use function base64_decode;
 use function base64_encode;
 use function file_get_contents;
@@ -66,17 +53,9 @@ const RP_ID = 'localhost';
 const RP_NAME = 'WebAuthnX Demo';
 const ORIGIN = 'http://localhost:8000';
 
-/** The algorithms we accept, best first. */
-const ALLOWED_ALGORITHMS = [
-	CoseAlgorithmIdentifier::ES256,
-	CoseAlgorithmIdentifier::RS256,
-	CoseAlgorithmIdentifier::EdDSA,
-];
-
 session_start();
 $store = new PasskeyStore();
-$rp = new RelyingParty();
-$flow = new DemoPasskeyFlow($store, RP_ID, [ORIGIN]);
+$flow = new DemoPasskeyFlow($store, RP_ID, RP_NAME, [ORIGIN]);
 
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
 
@@ -93,36 +72,8 @@ function body(): JsonObject
 	return JsonObject::fromString((string) file_get_contents('php://input'));
 }
 
-// --- Session state: the pending ceremony challenge + who is signed in --------------------------
-// Transient per-browser state (not database tables); a real app keeps these in the session/cache.
-
-function rememberChallenge(string $challenge): void
-{
-	$_SESSION['pending_challenge'] = base64_encode($challenge);
-}
-
-/** Returns and clears the pending challenge, keeping each challenge single-use. */
-function consumeChallenge(): ?string
-{
-	$challenge = $_SESSION['pending_challenge'] ?? null;
-	unset($_SESSION['pending_challenge']);
-
-	return $challenge === null ? null : base64_decode($challenge);
-}
-
-/** The user a pending registration ceremony is enrolling a passkey for. */
-function rememberPendingUser(string $handle): void
-{
-	$_SESSION['pending_user_handle'] = base64_encode($handle);
-}
-
-function consumePendingUser(): ?string
-{
-	$handle = $_SESSION['pending_user_handle'] ?? null;
-	unset($_SESSION['pending_user_handle']);
-
-	return $handle === null ? null : base64_decode($handle);
-}
+// --- Session state: who is signed in ------------------------------------------------------------
+// (Pending ceremony state lives in DemoPasskeyFlow, also on top of $_SESSION.)
 
 function signIn(string $handle): void
 {
@@ -174,7 +125,7 @@ match ($path) {
 
 	// ---- Registration (navigator.credentials.create) ---------------------------------------
 
-	'/register/options' => (static function () use ($store): void {
+	'/register/options' => (static function () use ($store, $flow): void {
 		try {
 			$current = currentUserHandle();
 
@@ -210,35 +161,9 @@ match ($path) {
 				}
 			}
 
-			// Don't let the same authenticator enrol twice for this user.
-			$excludeCredentials = [];
-
-			foreach ($store->credentialsForUser($handle) as $row) {
-				$excludeCredentials[] = new PublicKeyCredentialDescriptor(
-					PublicKeyCredentialType::PUBLIC_KEY,
-					base64_decode($row['credential_id']),
-					$row['transports'],
-				);
-			}
-
-			$challenge = random_bytes(32);
-			rememberChallenge($challenge);
-			rememberPendingUser($handle);
-
-			$options = new PublicKeyCredentialCreationOptions(
-				rp: new PublicKeyCredentialRpEntity(name: RP_NAME, id: RP_ID),
-				user: new PublicKeyCredentialUserEntity(id: $handle, name: $email, displayName: $email),
-				challenge: $challenge,
-				pubKeyCredParams: array_map(
-					static fn (int $alg) => new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, $alg),
-					ALLOWED_ALGORITHMS,
-				),
-				excludeCredentials: $excludeCredentials === [] ? null : $excludeCredentials,
-				authenticatorSelection: new AuthenticatorSelectionCriteria(
-					residentKey: ResidentKeyRequirement::PREFERRED,
-					userVerification: UserVerificationRequirement::REQUIRED,
-				),
-			);
+			// The flow issues the challenge, excludes already-enrolled authenticators, and asks
+			// for a discoverable (resident) credential with user verification — the passkey defaults.
+			$options = $flow->registrationOptions($handle, $email);
 
 			respond(200, $options->toJson());
 
@@ -247,34 +172,13 @@ match ($path) {
 		}
 	})(),
 
-	'/register/verify' => (static function () use ($store, $rp): void {
+	'/register/verify' => (static function () use ($store, $flow): void {
 		try {
-			$credential = PublicKeyCredential::fromRegistrationResponseJson(body());
-			$challenge = consumeChallenge();
-			$handle = consumePendingUser();
+			// The flow verifies the ceremony and persists the credential (DemoPasskeyFlow::saveCredential).
+			$registered = $flow->register((string) file_get_contents('php://input'));
+			signIn($registered->userHandle);
 
-			if ($challenge === null || $handle === null) {
-				respond(400, ['ok' => false, 'message' => 'No registration in progress — request options first']);
-
-				return;
-			}
-
-			$result = $rp->verifyRegistration(
-				$credential,
-				new RegistrationExpectations(
-					challenge: $challenge,
-					rpId: RP_ID,
-					origins: [ORIGIN],
-					allowedAlgorithms: ALLOWED_ALGORITHMS,
-					requireUserVerification: false,
-				),
-				$store,
-			);
-
-			$store->insertCredential($result->toCredentialRecord($handle), $credential->authenticatorAttachment);
-			signIn($handle);
-
-			$user = $store->findUserByHandle($handle);
+			$user = $store->findUserByHandle($registered->userHandle);
 			respond(200, ['ok' => true, 'email' => $user['email'] ?? 'unknown']);
 
 		} catch (VerificationException $e) {
