@@ -2,16 +2,16 @@
 
 namespace WebAuthnXTests;
 
+use WebAuthnX\Cbor\CborEncoder;
+
 use function chr;
-use function count;
 use function is_int;
-use function pack;
-use function strlen;
+use function ord;
+use function substr;
 
 /**
- * Minimal CBOR encoder used only to build test fixtures (COSE keys, attestation
- * objects). The production code never encodes CBOR — it only decodes — so this
- * lives in the test suite rather than in {@see \WebAuthnX}.
+ * Builds CBOR test fixtures (COSE keys, attestation objects) on top of {@see CborEncoder},
+ * adding the encodings only tests need: text strings and integer-keyed maps.
  */
 final class CborTestEncoder
 {
@@ -20,9 +20,7 @@ final class CborTestEncoder
 	 */
 	public static function int(int $value): string
 	{
-		return $value >= 0
-			? self::head(0, $value)
-			: self::head(1, -1 - $value);
+		return CborEncoder::encodeInt($value);
 	}
 
 	/**
@@ -30,15 +28,18 @@ final class CborTestEncoder
 	 */
 	public static function byteString(string $bytes): string
 	{
-		return self::head(2, strlen($bytes)) . $bytes;
+		return CborEncoder::encodeByteString($bytes);
 	}
 
 	/**
-	 * Major type 3: a UTF-8 text string.
+	 * Major type 3: a UTF-8 text string. It differs from a byte string only in the major
+	 * type (2 vs 3), i.e. bit 0x20 of the initial byte.
 	 */
 	public static function textString(string $text): string
 	{
-		return self::head(3, strlen($text)) . $text;
+		$encoded = CborEncoder::encodeByteString($text);
+
+		return chr(ord($encoded[0]) | 0x20) . substr($encoded, 1);
 	}
 
 	/**
@@ -48,13 +49,7 @@ final class CborTestEncoder
 	 */
 	public static function map(array $pairs): string
 	{
-		$body = '';
-
-		foreach ($pairs as [$key, $value]) {
-			$body .= $key . $value;
-		}
-
-		return self::head(5, count($pairs)) . $body;
+		return CborEncoder::encodeMap($pairs);
 	}
 
 	/**
@@ -72,28 +67,5 @@ final class CborTestEncoder
 		}
 
 		return self::map($pairs);
-	}
-
-	private static function head(int $majorType, int $value): string
-	{
-		$initialByte = $majorType << 5;
-
-		if ($value < 24) {
-			return chr($initialByte | $value);
-		}
-
-		if ($value <= 0xFF) {
-			return chr($initialByte | 24) . chr($value);
-		}
-
-		if ($value <= 0xFFFF) {
-			return chr($initialByte | 25) . pack('n', $value);
-		}
-
-		if ($value <= 0xFFFFFFFF) {
-			return chr($initialByte | 26) . pack('N', $value);
-		}
-
-		return chr($initialByte | 27) . pack('J', $value);
 	}
 }
