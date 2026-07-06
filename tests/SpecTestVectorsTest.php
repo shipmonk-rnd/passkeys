@@ -15,6 +15,7 @@ use WebAuthnX\Credential\AuthenticatorAttestationResponse;
 use WebAuthnX\Credential\PublicKeyCredential;
 use WebAuthnX\Json\JsonObject;
 use WebAuthnX\RelyingParty;
+use WebAuthnXTests\Ceremony\InMemoryCredentialStore;
 
 use function bin2hex;
 use function chr;

@@ -8,6 +8,7 @@ use Throwable;
 use WebAuthnX\Binary\BytesReader;
 use WebAuthnX\Cbor\CborMap;
 use WebAuthnX\Json\JsonObject;
+use WebAuthnXTests\Cbor\CborTestEncoder;
 
 use function hex2bin;
 use function json_encode;

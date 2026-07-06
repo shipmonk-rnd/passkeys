@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests;
+namespace WebAuthnXTests\Options;
 
 use WebAuthnX\Enum\AuthenticatorTransport;
 use WebAuthnX\Base64\Base64;
@@ -9,6 +9,7 @@ use WebAuthnX\Enum\PublicKeyCredentialHint;
 use WebAuthnX\Options\PublicKeyCredentialRequestOptions;
 use WebAuthnX\Enum\PublicKeyCredentialType;
 use WebAuthnX\Enum\UserVerificationRequirement;
+use WebAuthnXTests\WebAuthnTestCase;
 
 use function json_decode;
 

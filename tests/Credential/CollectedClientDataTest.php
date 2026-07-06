@@ -1,10 +1,11 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests;
+namespace WebAuthnXTests\Credential;
 
 use WebAuthnX\Base64\Base64;
 use WebAuthnX\Credential\CollectedClientData;
 use WebAuthnX\Credential\MalformedDataException;
+use WebAuthnXTests\WebAuthnTestCase;
 
 use function json_encode;
 

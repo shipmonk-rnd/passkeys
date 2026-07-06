@@ -11,6 +11,7 @@ use WebAuthnX\Cose\CoseKey;
 use WebAuthnX\Cose\CoseOkpKey;
 use WebAuthnX\Json\JsonObject;
 use WebAuthnX\Credential\PublicKeyCredential;
+use WebAuthnXTests\Cbor\CborTestEncoder;
 
 use function chr;
 use function hash;

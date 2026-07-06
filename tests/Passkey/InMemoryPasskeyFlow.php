@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests;
+namespace WebAuthnXTests\Passkey;
 
 use WebAuthnX\Ceremony\AuthenticationResult;
 use WebAuthnX\Ceremony\CredentialRecord;

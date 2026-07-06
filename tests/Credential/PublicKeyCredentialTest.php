@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests;
+namespace WebAuthnXTests\Credential;
 
 use WebAuthnX\Credential\AuthenticatorAssertionResponse;
 use WebAuthnX\Credential\AuthenticatorAttestationResponse;
@@ -11,6 +11,7 @@ use WebAuthnX\Json\JsonObjectException;
 use WebAuthnX\Credential\PublicKeyCredential;
 use WebAuthnX\Enum\AuthenticatorAttachment;
 use WebAuthnX\Enum\PublicKeyCredentialType;
+use WebAuthnXTests\WebAuthnTestCase;
 
 use function json_encode;
 

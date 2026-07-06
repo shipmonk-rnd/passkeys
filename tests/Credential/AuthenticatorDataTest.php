@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests;
+namespace WebAuthnXTests\Credential;
 
 use WebAuthnX\Credential\AttestationObject;
 use WebAuthnX\Credential\AuthenticatorData;
@@ -9,6 +9,7 @@ use WebAuthnX\Binary\BytesReader;
 use WebAuthnX\Cbor\CborMap;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 use WebAuthnX\Cose\CoseEc2Key;
+use WebAuthnXTests\WebAuthnTestCase;
 
 use function strlen;
 

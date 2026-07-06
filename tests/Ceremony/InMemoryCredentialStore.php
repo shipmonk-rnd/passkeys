@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests;
+namespace WebAuthnXTests\Ceremony;
 
 use WebAuthnX\Ceremony\CredentialRecord;
 use WebAuthnX\Ceremony\CredentialStore;

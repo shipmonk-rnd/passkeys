@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests;
+namespace WebAuthnXTests\Options;
 
 use InvalidArgumentException;
 use WebAuthnX\Enum\AuthenticatorAttachment;
@@ -17,6 +17,7 @@ use WebAuthnX\Enum\PublicKeyCredentialType;
 use WebAuthnX\Options\PublicKeyCredentialUserEntity;
 use WebAuthnX\Enum\ResidentKeyRequirement;
 use WebAuthnX\Enum\UserVerificationRequirement;
+use WebAuthnXTests\WebAuthnTestCase;
 
 use function json_decode;
 use function str_repeat;

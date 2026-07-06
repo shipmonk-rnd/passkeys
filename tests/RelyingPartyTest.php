@@ -19,6 +19,8 @@ use WebAuthnX\Credential\AuthenticatorData;
 use WebAuthnX\Credential\PublicKeyCredential;
 use WebAuthnX\Json\JsonObject;
 use WebAuthnX\RelyingParty;
+use WebAuthnXTests\Cbor\CborTestEncoder;
+use WebAuthnXTests\Ceremony\InMemoryCredentialStore;
 
 use function chr;
 use function hash;

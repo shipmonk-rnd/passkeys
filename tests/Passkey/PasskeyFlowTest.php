@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests;
+namespace WebAuthnXTests\Passkey;
 
 use OpenSSLAsymmetricKey;
 use WebAuthnX\Base64\Base64;
@@ -14,6 +14,8 @@ use WebAuthnX\Enum\ResidentKeyRequirement;
 use WebAuthnX\Enum\UserVerificationRequirement;
 use WebAuthnX\Options\PublicKeyCredentialParameters;
 use WebAuthnX\Options\PublicKeyCredentialRequestOptions;
+use WebAuthnXTests\Cbor\CborTestEncoder;
+use WebAuthnXTests\CryptoTestCase;
 
 use function array_map;
 use function base64_encode;
