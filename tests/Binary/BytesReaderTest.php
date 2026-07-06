@@ -2,7 +2,6 @@
 
 namespace WebAuthnXTests\Binary;
 
-use PHPUnit\Framework\Attributes\CoversClass;
 use LogicException;
 use WebAuthnX\Binary\BytesReader;
 use WebAuthnX\Binary\BytesReaderException;
@@ -10,7 +9,6 @@ use WebAuthnXTests\WebAuthnTestCase;
 
 use const INF;
 
-#[CoversClass(BytesReader::class)]
 class BytesReaderTest extends WebAuthnTestCase
 {
 	public function testRead(): void

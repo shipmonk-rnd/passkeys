@@ -2,7 +2,6 @@
 
 namespace WebAuthnXTests\Cbor;
 
-use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use WebAuthnX\Binary\BytesReader;
 use WebAuthnX\Cbor\CborDecoder;
@@ -12,7 +11,6 @@ use WebAuthnXTests\WebAuthnTestCase;
 use function is_float;
 use function is_nan;
 
-#[CoversClass(CborDecoder::class)]
 class CborDecoderTest extends WebAuthnTestCase
 {
 	#[DataProvider('provideDecodeData')]

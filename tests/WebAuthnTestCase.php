@@ -42,7 +42,7 @@ abstract class WebAuthnTestCase extends TestCase
 	{
 		return BytesReader::read(
 			CborTestEncoder::intMap($entries),
-			static fn (BytesReader $reader): CborMap => CborMap::fromBytesReader($reader),
+			CborMap::fromBytesReader(...),
 		);
 	}
 
