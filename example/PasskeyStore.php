@@ -3,6 +3,7 @@
 namespace WebAuthnXDemo;
 
 use PDO;
+use PDOStatement;
 use WebAuthnX\Ceremony\AuthenticationResult;
 use WebAuthnX\Ceremony\CredentialRecord;
 use WebAuthnX\Cose\CoseKey;
@@ -83,12 +84,11 @@ final class PasskeyStore implements PasskeyStoreInterface
 	 */
 	public function insertUser(string $email): array
 	{
-		// The spec-recommended user handle: 64 opaque random bytes, unrelated to the primary key.
-		$handle = random_bytes(64);
+		$handle = random_bytes(64); // The spec-recommended user handle: 64 opaque random bytes, unrelated to the primary key.
 
 		$statement = $this->db->prepare('INSERT INTO users (passkey_user_handle, email) VALUES (:handle, :email)');
-		$statement->bindParam(':handle', $handle, PDO::PARAM_LOB);
-		$statement->bindParam(':email', $email);
+		$this->bindParameter($statement, ':handle', $handle, PDO::PARAM_LOB);
+		$this->bindParameter($statement, ':email', $email);
 		$statement->execute();
 
 		return ['id' => (int) $this->db->lastInsertId(), 'passkey_user_handle' => $handle, 'email' => $email];
@@ -100,11 +100,10 @@ final class PasskeyStore implements PasskeyStoreInterface
 	public function findUserByEmail(string $email): ?array
 	{
 		$statement = $this->db->prepare('SELECT * FROM users WHERE email = :email');
-		$statement->bindParam(':email', $email);
+		$this->bindParameter($statement, ':email', $email);
 		$statement->execute();
-		$row = $statement->fetch();
 
-		/** @var array{id: int, passkey_user_handle: string, email: string}|null */
+		$row = $statement->fetch();
 		return $row === false ? null : $row;
 	}
 
@@ -114,25 +113,23 @@ final class PasskeyStore implements PasskeyStoreInterface
 	public function findUserById(int $id): ?array
 	{
 		$statement = $this->db->prepare('SELECT * FROM users WHERE id = :id');
-		$statement->bindParam(':id', $id, PDO::PARAM_INT);
+		$this->bindParameter($statement, ':id', $id, PDO::PARAM_INT);
 		$statement->execute();
-		$row = $statement->fetch();
 
-		/** @var array{id: int, passkey_user_handle: string, email: string}|null */
+		$row = $statement->fetch();
 		return $row === false ? null : $row;
 	}
 
 	/**
 	 * @return array{id: int, passkey_user_handle: string, email: string}|null
 	 */
-	public function findUserByHandle(string $passkeyUserHandle): ?array
+	public function findUserByHandle(string $userHandle): ?array
 	{
 		$statement = $this->db->prepare('SELECT * FROM users WHERE passkey_user_handle = :handle');
-		$statement->bindParam(':handle', $passkeyUserHandle, PDO::PARAM_LOB);
+		$this->bindParameter($statement, ':handle', $userHandle, PDO::PARAM_LOB);
 		$statement->execute();
-		$row = $statement->fetch();
 
-		/** @var array{id: int, passkey_user_handle: string, email: string}|null */
+		$row = $statement->fetch();
 		return $row === false ? null : $row;
 	}
 
@@ -154,10 +151,11 @@ final class PasskeyStore implements PasskeyStoreInterface
 			JOIN users ON users.id = credentials.user_id
 			WHERE credential_id = :credential_id
 		');
-		$statement->bindParam(':credential_id', $encodedCredentialId);
-		$statement->execute();
-		$row = $statement->fetch();
 
+		$this->bindParameter($statement, ':credential_id', $encodedCredentialId);
+		$statement->execute();
+
+		$row = $statement->fetch();
 		return $row === false ? null : $this->recordFromRow($row);
 	}
 
@@ -173,7 +171,8 @@ final class PasskeyStore implements PasskeyStoreInterface
 			WHERE users.passkey_user_handle = :handle
 			ORDER BY created_at
 		');
-		$statement->bindParam(':handle', $userHandle, PDO::PARAM_LOB);
+
+		$this->bindParameter($statement, ':handle', $userHandle, PDO::PARAM_LOB);
 		$statement->execute();
 
 		return array_map($this->recordFromRow(...), $statement->fetchAll());
@@ -182,17 +181,6 @@ final class PasskeyStore implements PasskeyStoreInterface
 	public function saveCredential(RegisteredPasskey $passkey): void
 	{
 		$record = $passkey->toCredentialRecord();
-
-		$credentialId = base64_encode($record->credentialId);
-		$userHandle = $record->userHandle;
-		$publicKey = base64_encode($record->publicKey->toBytes());
-		$signCount = $record->signCount;
-		$uvInitialized = (int) $record->uvInitialized;
-		$backupEligible = (int) $record->backupEligible;
-		$backupState = (int) $record->backupState;
-		$transports = $record->transports === null ? null : json_encode($record->transports, JSON_THROW_ON_ERROR);
-		$attachment = $passkey->authenticatorAttachment?->value;
-		$createdAt = date('c');
 
 		$statement = $this->db->prepare('
 			INSERT INTO credentials (
@@ -205,16 +193,17 @@ final class PasskeyStore implements PasskeyStoreInterface
 			)
 		');
 
-		$statement->bindParam(':credential_id', $credentialId);
-		$statement->bindParam(':user_handle', $userHandle, PDO::PARAM_LOB);
-		$statement->bindParam(':public_key', $publicKey);
-		$statement->bindParam(':sign_count', $signCount, PDO::PARAM_INT);
-		$statement->bindParam(':uv_initialized', $uvInitialized, PDO::PARAM_INT);
-		$statement->bindParam(':backup_eligible', $backupEligible, PDO::PARAM_INT);
-		$statement->bindParam(':backup_state', $backupState, PDO::PARAM_INT);
-		$statement->bindParam(':transports', $transports);
-		$statement->bindParam(':authenticator_attachment', $attachment);
-		$statement->bindParam(':created_at', $createdAt);
+		$this->bindParameter($statement, ':credential_id', base64_encode($record->credentialId));
+		$this->bindParameter($statement, ':user_handle', $record->userHandle, PDO::PARAM_LOB);
+		$this->bindParameter($statement, ':public_key', base64_encode($record->publicKey->toBytes()));
+		$this->bindParameter($statement, ':sign_count', $record->signCount, PDO::PARAM_INT);
+		$this->bindParameter($statement, ':uv_initialized', (int) $record->uvInitialized, PDO::PARAM_INT);
+		$this->bindParameter($statement, ':backup_eligible', (int) $record->backupEligible, PDO::PARAM_INT);
+		$this->bindParameter($statement, ':backup_state', (int) $record->backupState, PDO::PARAM_INT);
+		$this->bindParameter($statement, ':transports', $record->transports === null ? null : json_encode($record->transports, JSON_THROW_ON_ERROR));
+		$this->bindParameter($statement, ':authenticator_attachment', $passkey->authenticatorAttachment?->value);
+		$this->bindParameter($statement, ':created_at', date('c'));
+
 		$statement->execute();
 	}
 
@@ -233,10 +222,12 @@ final class PasskeyStore implements PasskeyStoreInterface
 				uv_initialized = max(uv_initialized, :uv_initialized)
 			WHERE credential_id = :credential_id
 		');
-		$statement->bindParam(':sign_count', $signCount, PDO::PARAM_INT);
-		$statement->bindParam(':backup_state', $backupState, PDO::PARAM_INT);
-		$statement->bindParam(':uv_initialized', $uvInitialized, PDO::PARAM_INT);
-		$statement->bindParam(':credential_id', $credentialId);
+
+		$this->bindParameter($statement, ':sign_count', $signCount, PDO::PARAM_INT);
+		$this->bindParameter($statement, ':backup_state', $backupState, PDO::PARAM_INT);
+		$this->bindParameter($statement, ':uv_initialized', $uvInitialized, PDO::PARAM_INT);
+		$this->bindParameter($statement, ':credential_id', $credentialId);
+
 		$statement->execute();
 	}
 
@@ -249,7 +240,7 @@ final class PasskeyStore implements PasskeyStoreInterface
 	public function credentialsForUser(int $userId): array
 	{
 		$statement = $this->db->prepare('SELECT * FROM credentials WHERE user_id = :user_id ORDER BY created_at');
-		$statement->bindParam(':user_id', $userId, PDO::PARAM_INT);
+		$this->bindParameter($statement, ':user_id', $userId, PDO::PARAM_INT);
 		$statement->execute();
 
 		return $statement->fetchAll();
@@ -270,5 +261,10 @@ final class PasskeyStore implements PasskeyStoreInterface
 			backupState: (bool) $row['backup_state'],
 			transports: $row['transports'] === null ? null : json_decode($row['transports'], flags: JSON_THROW_ON_ERROR),
 		);
+	}
+
+	private function bindParameter(PDOStatement $statement, string $parameterName, mixed $value, int $type = PDO::PARAM_STR): void
+	{
+		$statement->bindValue($parameterName, $value, $type);
 	}
 }
