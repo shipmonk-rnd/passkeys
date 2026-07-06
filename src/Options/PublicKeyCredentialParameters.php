@@ -14,11 +14,10 @@ readonly class PublicKeyCredentialParameters implements JsonSerializable
 {
 
     /**
-     * @param PublicKeyCredentialType::* $type
      * @param CoseAlgorithmIdentifier::* $alg
      */
     public function __construct(
-        public string $type,
+        public PublicKeyCredentialType $type,
         public int $alg,
     )
     {
@@ -26,7 +25,7 @@ readonly class PublicKeyCredentialParameters implements JsonSerializable
 
     /**
      * @return array{
-     *     type: PublicKeyCredentialType::*,
+     *     type: PublicKeyCredentialType,
      *     alg: CoseAlgorithmIdentifier::*,
      * }
      */

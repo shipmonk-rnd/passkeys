@@ -163,13 +163,12 @@ class PublicKeyCredentialTest extends WebAuthnTestCase
         self::assertNull($credential->response->userHandle);
     }
 
-    /**
-     * The parser does not validate the `type` string (consistent with how `AttestationObject`
-     * leaves `fmt` unchecked); the ceremony layer is responsible for rejecting an unexpected type.
-     */
-    public function testAcceptsArbitraryType(): void
+    public function testRejectsUnexpectedType(): void
     {
-        $credential = PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
+        $this->expectException(MalformedDataException::class);
+        $this->expectExceptionMessage("Unexpected credential type 'not-public-key'");
+
+        PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
             'id' => Base64::urlEncode('credential-id'),
             'rawId' => Base64::urlEncode('credential-id'),
             'type' => 'not-public-key',
@@ -178,8 +177,6 @@ class PublicKeyCredentialTest extends WebAuthnTestCase
                 'attestationObject' => Base64::urlEncode('x'),
             ],
         ], JSON_THROW_ON_ERROR)));
-
-        self::assertSame('not-public-key', $credential->type);
     }
 
     public function testRejectsMissingTopLevelMember(): void

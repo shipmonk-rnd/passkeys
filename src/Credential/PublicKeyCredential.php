@@ -4,6 +4,7 @@ namespace WebAuthnX\Credential;
 
 use WebAuthnX\Base64\InvalidBase64Exception;
 use WebAuthnX\Enum\AuthenticatorAttachment;
+use WebAuthnX\Enum\PublicKeyCredentialType;
 use WebAuthnX\Json\JsonObject;
 use WebAuthnX\Json\JsonObjectException;
 
@@ -28,7 +29,7 @@ final readonly class PublicKeyCredential
     private function __construct(
         public string $id,
         public string $rawId,
-        public string $type,
+        public PublicKeyCredentialType $type,
         public AuthenticatorResponse $response,
         public ?AuthenticatorAttachment $authenticatorAttachment,
         public ?JsonObject $clientExtensionResults,
@@ -84,18 +85,20 @@ final readonly class PublicKeyCredential
      *
      * @throws InvalidBase64Exception
      * @throws JsonObjectException
+     * @throws MalformedDataException
      */
     private static function create(
         JsonObject $jsonObject,
         AuthenticatorResponse $response,
     ): self
     {
+        $type = $jsonObject->getString('type');
         $attachment = $jsonObject->getOptionalString('authenticatorAttachment');
 
         return new self(
             $jsonObject->getString('id'),
             $jsonObject->getBytes('rawId'),
-            $jsonObject->getString('type'),
+            PublicKeyCredentialType::tryFrom($type) ?? throw new MalformedDataException("Unexpected credential type '$type'"),
             $response,
             $attachment === null ? null : AuthenticatorAttachment::tryFrom($attachment),
             $jsonObject->getOptionalObject('clientExtensionResults'),

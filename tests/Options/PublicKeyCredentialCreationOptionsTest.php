@@ -216,7 +216,7 @@ class PublicKeyCredentialCreationOptionsTest extends WebAuthnTestCase
         );
 
         self::assertSame(
-            ['type' => 'public-key', 'id' => Base64::urlEncode('cred-1')],
+            ['type' => PublicKeyCredentialType::PUBLIC_KEY, 'id' => Base64::urlEncode('cred-1')],
             $descriptor->jsonSerialize(),
         );
     }
