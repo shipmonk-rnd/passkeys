@@ -17,10 +17,10 @@ use WebAuthnX\Credential\AuthenticatorData;
 use WebAuthnX\Credential\CollectedClientData;
 use WebAuthnX\Credential\MalformedDataException;
 use WebAuthnX\Credential\PublicKeyCredential;
-use WebAuthnX\Crypto\Hash;
 use WebAuthnX\Crypto\SignatureVerificationException;
 use WebAuthnX\Crypto\SignatureVerifier;
 
+use function hash;
 use function hash_equals;
 use function in_array;
 use function strlen;
@@ -251,7 +251,7 @@ final class RelyingParty
 			);
 		}
 
-		$message = $attestationObject->authData . Hash::sha256($clientDataJSON);
+		$message = $attestationObject->authData . hash('sha256', $clientDataJSON, binary: true);
 
 		if (!$this->signatureVerifier->verify($credentialPublicKey, $message, $sig)) {
 			throw new VerificationException(
@@ -367,7 +367,7 @@ final class RelyingParty
 		}
 
 		// §7.2 steps 20–21: verify the signature over authenticatorData || SHA-256(clientDataJSON).
-		$message = $response->authenticatorData . Hash::sha256($response->clientDataJSON);
+		$message = $response->authenticatorData . hash('sha256', $response->clientDataJSON, binary: true);
 
 		if (!$this->signatureVerifier->verify($record->publicKey, $message, $response->signature)) {
 			throw new VerificationException(VerificationException::INVALID_SIGNATURE, 'Assertion signature is invalid');
@@ -444,7 +444,7 @@ final class RelyingParty
 	 */
 	private function verifyRpIdHash(AuthenticatorData $authData, string $rpId): void
 	{
-		$expectedHash = Hash::sha256($rpId);
+		$expectedHash = hash('sha256', $rpId, binary: true);
 
 		if (!hash_equals($expectedHash, $authData->rpIdHash)) {
 			throw new VerificationException(VerificationException::RP_ID_MISMATCH, 'RP ID hash does not match');

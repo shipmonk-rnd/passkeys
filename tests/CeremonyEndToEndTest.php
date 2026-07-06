@@ -8,7 +8,6 @@ use WebAuthnX\Credential\AuthenticatorData;
 use WebAuthnX\Base64\Base64;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
 use WebAuthnX\Cose\CoseOkpKey;
-use WebAuthnX\Crypto\Hash;
 use WebAuthnX\Crypto\SignatureVerifier;
 use WebAuthnX\Json\JsonObject;
 use WebAuthnX\Credential\PublicKeyCredential;
@@ -93,7 +92,7 @@ class CeremonyEndToEndTest extends CryptoTestCase
 
 		$assertionResponse = $authentication->response;
 		$message = $assertionResponse->authenticatorData
-			. Hash::sha256($assertionResponse->clientDataJSON);
+			. hash('sha256', $assertionResponse->clientDataJSON, binary: true);
 
 		$verifier = new SignatureVerifier();
 		self::assertTrue($verifier->verify($registeredKey, $message, $assertionResponse->signature));
