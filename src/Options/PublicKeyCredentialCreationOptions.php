@@ -22,19 +22,34 @@ use const JSON_THROW_ON_ERROR;
 readonly class PublicKeyCredentialCreationOptions implements JsonSerializable
 {
 	/**
+	 * The recommended default ceremony timeout (§15.1: recommended range 300 000–600 000 ms).
+	 *
+	 * @see https://w3c.github.io/webauthn/#sctn-timeout-recommended-range
+	 */
+	public const RECOMMENDED_TIMEOUT = 300_000;
+
+	/**
+	 * `$timeout` defaults to {@see self::RECOMMENDED_TIMEOUT}; pass null to omit it and let the
+	 * client apply its own default. `$extensions` are the client extension inputs in their JSON
+	 * form ({@link https://w3c.github.io/webauthn/#dictdef-authenticationextensionsclientinputsjson
+	 * AuthenticationExtensionsClientInputsJSON}), passed through verbatim — binary values must
+	 * already be base64url-encoded strings, e.g. `['credProps' => true]`.
+	 *
 	 * @param  list<PublicKeyCredentialParameters>      $pubKeyCredParams
 	 * @param  list<PublicKeyCredentialDescriptor>|null $excludeCredentials
 	 * @param  list<PublicKeyCredentialHints::*>|null   $hints
+	 * @param  array<string, mixed>|null                $extensions
 	 */
 	public function __construct(
 		public PublicKeyCredentialRpEntity $rp,
 		public PublicKeyCredentialUserEntity $user,
 		public Bytes $challenge,
 		public array $pubKeyCredParams,
-		public ?int $timeout = null,
+		public ?int $timeout = self::RECOMMENDED_TIMEOUT,
 		public ?array $excludeCredentials = null,
 		public ?AuthenticatorSelectionCriteria $authenticatorSelection = null,
 		public ?array $hints = null,
+		public ?array $extensions = null,
 	) {
 	}
 
@@ -64,6 +79,11 @@ readonly class PublicKeyCredentialCreationOptions implements JsonSerializable
 
 		if ($this->hints !== null) {
 			$data['hints'] = $this->hints;
+		}
+
+		if ($this->extensions !== null) {
+			// Cast so an empty map serializes as {} (a JSON object), never [].
+			$data['extensions'] = (object) $this->extensions;
 		}
 
 		return $data;

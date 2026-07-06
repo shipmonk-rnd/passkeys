@@ -49,6 +49,7 @@ class PublicKeyCredentialCreationOptionsTest extends WebAuthnTestCase
 				userVerification: UserVerificationRequirement::REQUIRED,
 			),
 			hints: [PublicKeyCredentialHints::CLIENT_DEVICE],
+			extensions: ['credProps' => true],
 		);
 
 		self::assertSame(
@@ -79,12 +80,13 @@ class PublicKeyCredentialCreationOptionsTest extends WebAuthnTestCase
 					'userVerification' => 'required',
 				],
 				'hints' => ['client-device'],
+				'extensions' => ['credProps' => true],
 			],
 			json_decode($options->toJson(), true, flags: JSON_THROW_ON_ERROR),
 		);
 	}
 
-	public function testSerializesOnlyRequiredMembers(): void
+	public function testSerializesOnlyRequiredMembersWithRecommendedTimeoutDefault(): void
 	{
 		$options = new PublicKeyCredentialCreationOptions(
 			rp: new PublicKeyCredentialRpEntity(name: 'Example RP', id: 'example.com'),
@@ -107,9 +109,42 @@ class PublicKeyCredentialCreationOptionsTest extends WebAuthnTestCase
 				'pubKeyCredParams' => [
 					['type' => 'public-key', 'alg' => CoseAlgorithmIdentifier::ES256],
 				],
+				'timeout' => PublicKeyCredentialCreationOptions::RECOMMENDED_TIMEOUT,
 			],
 			json_decode($options->toJson(), true, flags: JSON_THROW_ON_ERROR),
 		);
+	}
+
+	public function testNullTimeoutIsOmitted(): void
+	{
+		$options = new PublicKeyCredentialCreationOptions(
+			rp: new PublicKeyCredentialRpEntity(name: 'Example RP', id: 'example.com'),
+			user: new PublicKeyCredentialUserEntity(Bytes::fromBinaryString('user-id'), 'alice', 'Alice Smith'),
+			challenge: Bytes::fromBinaryString('challenge-bytes'),
+			pubKeyCredParams: [
+				new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::ES256),
+			],
+			timeout: null,
+		);
+
+		$decoded = json_decode($options->toJson(), true, flags: JSON_THROW_ON_ERROR);
+		self::assertIsArray($decoded);
+		self::assertArrayNotHasKey('timeout', $decoded);
+	}
+
+	public function testEmptyExtensionsSerializeAsJsonObject(): void
+	{
+		$options = new PublicKeyCredentialCreationOptions(
+			rp: new PublicKeyCredentialRpEntity(name: 'Example RP', id: 'example.com'),
+			user: new PublicKeyCredentialUserEntity(Bytes::fromBinaryString('user-id'), 'alice', 'Alice Smith'),
+			challenge: Bytes::fromBinaryString('challenge-bytes'),
+			pubKeyCredParams: [
+				new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::ES256),
+			],
+			extensions: [],
+		);
+
+		self::assertStringContainsString('"extensions":{}', $options->toJson());
 	}
 
 	public function testRpEntityOmitsIdWhenNull(): void

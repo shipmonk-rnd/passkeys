@@ -32,6 +32,7 @@ class PublicKeyCredentialRequestOptionsTest extends WebAuthnTestCase
 			],
 			userVerification: UserVerificationRequirement::PREFERRED,
 			hints: [PublicKeyCredentialHints::SECURITY_KEY],
+			extensions: ['appid' => 'https://example.com/appid.json'],
 		);
 
 		self::assertSame(
@@ -48,20 +49,47 @@ class PublicKeyCredentialRequestOptionsTest extends WebAuthnTestCase
 				],
 				'userVerification' => 'preferred',
 				'hints' => ['security-key'],
+				'extensions' => ['appid' => 'https://example.com/appid.json'],
 			],
 			json_decode($options->toJson(), true, flags: JSON_THROW_ON_ERROR),
 		);
 	}
 
-	public function testSerializesOnlyRequiredMembers(): void
+	public function testSerializesOnlyRequiredMembersWithRecommendedTimeoutDefault(): void
 	{
 		$options = new PublicKeyCredentialRequestOptions(
 			challenge: Bytes::fromBinaryString('challenge-bytes'),
 		);
 
 		self::assertSame(
+			[
+				'challenge' => Base64::urlEncode('challenge-bytes'),
+				'timeout' => PublicKeyCredentialRequestOptions::RECOMMENDED_TIMEOUT,
+			],
+			json_decode($options->toJson(), true, flags: JSON_THROW_ON_ERROR),
+		);
+	}
+
+	public function testNullTimeoutIsOmitted(): void
+	{
+		$options = new PublicKeyCredentialRequestOptions(
+			challenge: Bytes::fromBinaryString('challenge-bytes'),
+			timeout: null,
+		);
+
+		self::assertSame(
 			['challenge' => Base64::urlEncode('challenge-bytes')],
 			json_decode($options->toJson(), true, flags: JSON_THROW_ON_ERROR),
 		);
+	}
+
+	public function testEmptyExtensionsSerializeAsJsonObject(): void
+	{
+		$options = new PublicKeyCredentialRequestOptions(
+			challenge: Bytes::fromBinaryString('challenge-bytes'),
+			extensions: [],
+		);
+
+		self::assertStringContainsString('"extensions":{}', $options->toJson());
 	}
 }

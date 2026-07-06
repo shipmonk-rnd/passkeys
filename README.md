@@ -73,6 +73,11 @@ $json = $options->toJson();
 `PublicKeyCredentialRequestOptions` is the equivalent for the authentication (login) ceremony
 and serializes the same way via `toJson()`.
 
+Both options default `timeout` to the spec-recommended 300 000 ms ([§15.1](https://w3c.github.io/webauthn/#sctn-timeout-recommended-range));
+pass an explicit value (the recommended range is 300 000–600 000 ms) or `null` to omit it. Client
+extension inputs (e.g. `prf`, `credProps`) can be passed through verbatim in their JSON form via
+the `extensions` member.
+
 ### 2. Verify a registration
 
 Parse the browser's response, then hand it to the `RelyingParty` façade with your per-ceremony
