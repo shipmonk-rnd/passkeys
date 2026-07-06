@@ -64,9 +64,8 @@ abstract class CoseKey
 	public static function fromBytes(string $bytes): CoseKey
 	{
 		try {
-			return BytesReader::read($bytes, static function (BytesReader $reader): CoseKey {
-				return self::fromCborMap(CborMap::fromBytesReader($reader));
-			});
+			$map = BytesReader::read($bytes, CborMap::fromBytesReader(...));
+			return self::fromCborMap($map);
 
 		} catch (BytesReaderException | InvalidCborException | CborMapException $e) {
 			throw new CoseKeyException('Malformed COSE key', previous: $e);
