@@ -58,9 +58,13 @@ class CborDecoderTest extends WebAuthnTestCase
 		yield ['3a 00 0f 42 3f', -1000000];
 		yield ['3b 7f ff ff ff ff ff ff ff', -9223372036854775807 - 1];
 
-		// byte strings
+		// byte strings (longer length prefixes are accepted even when not minimally encoded)
 		yield ['40', ''];
 		yield ['44 01 02 03 04', "\x01\x02\x03\x04"];
+		yield ['58 04 01 02 03 04', "\x01\x02\x03\x04"];
+		yield ['59 00 04 01 02 03 04', "\x01\x02\x03\x04"];
+		yield ['5a 00 00 00 04 01 02 03 04', "\x01\x02\x03\x04"];
+		yield ['5b 00 00 00 00 00 00 00 04 01 02 03 04', "\x01\x02\x03\x04"];
 
 		// utf-8 strings
 		yield ['60', ''];
@@ -70,12 +74,19 @@ class CborDecoderTest extends WebAuthnTestCase
 		yield ['62 c3 bc', "\u{00fc}"];
 		yield ['63 e6 b0 b4', "\u{6c34}"];
 		yield ['64 f0 90 85 91', "\u{10151}"];
+		yield ['78 04 49 45 54 46', 'IETF'];
+		yield ['79 00 04 49 45 54 46', 'IETF'];
+		yield ['7a 00 00 00 04 49 45 54 46', 'IETF'];
+		yield ['7b 00 00 00 00 00 00 00 04 49 45 54 46', 'IETF'];
 
 		// arrays
 		yield ['80', []];
 		yield ['83 01 02 03', [1, 2, 3]];
 		yield ['83 01 82 02 03 82 04 05', [1, [2, 3], [4, 5]]];
 		yield ['98 19 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f 10 11 12 13 14 15 16 17 18 18 18 19', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]];
+		yield ['99 00 03 01 02 03', [1, 2, 3]];
+		yield ['9a 00 00 00 03 01 02 03', [1, 2, 3]];
+		yield ['9b 00 00 00 00 00 00 00 03 01 02 03', [1, 2, 3]];
 
 		// maps
 		yield ['a0', []];
@@ -83,6 +94,10 @@ class CborDecoderTest extends WebAuthnTestCase
 		yield ['a2 61 61 01 61 62 82 02 03', ['a' => 1, 'b' => [2, 3]]];
 		yield ['82 61 61 a1 61 62 61 63', ['a', ['b' => 'c']]];
 		yield ['a5 61 61 61 41 61 62 61 42 61 63 61 43 61 64 61 44 61 65 61 45', ['a' => 'A', 'b' => 'B', 'c' => 'C', 'd' => 'D', 'e' => 'E']];
+		yield ['b8 02 01 02 03 04', [1 => 2, 3 => 4]];
+		yield ['b9 00 02 01 02 03 04', [1 => 2, 3 => 4]];
+		yield ['ba 00 00 00 02 01 02 03 04', [1 => 2, 3 => 4]];
+		yield ['bb 00 00 00 00 00 00 00 02 01 02 03 04', [1 => 2, 3 => 4]];
 
 		// floats
 		yield ['f9 00 00', +0.0];
