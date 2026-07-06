@@ -14,6 +14,9 @@ use WebAuthnX\Enum\ResidentKeyRequirement;
 use WebAuthnX\Enum\UserVerificationRequirement;
 use WebAuthnX\Options\PublicKeyCredentialParameters;
 use WebAuthnX\Options\PublicKeyCredentialRequestOptions;
+use WebAuthnX\Passkey\PasskeyFlow;
+use WebAuthnX\Passkey\PasskeyStore;
+use WebAuthnX\Passkey\PendingCeremonyStore;
 use WebAuthnXTests\Cbor\CborTestEncoder;
 use WebAuthnXTests\CryptoTestCase;
 
@@ -29,10 +32,10 @@ use function strlen;
 use const JSON_THROW_ON_ERROR;
 
 /**
- * Exercises the {@see \WebAuthnX\Passkey\PasskeyFlow} template against an in-memory
- * implementation ({@see InMemoryPasskeyFlow}), covering both entry flows — usernameless
- * (dedicated button / conditional mediation) and two-step (username first) — plus the
- * challenge-keyed pending-ceremony state that lets them run concurrently.
+ * Exercises {@see PasskeyFlow} against in-memory stores ({@see InMemoryPasskeyStore},
+ * {@see InMemoryPendingCeremonyStore}), covering both entry flows — usernameless (dedicated
+ * button / conditional mediation) and two-step (username first) — plus the challenge-keyed
+ * pending-ceremony state that lets them run concurrently.
  *
  * The §7.2 checks themselves are covered by {@see RelyingPartyTest}; here only a representative
  * failure per layer asserts that the flow wires expectations and state correctly.
@@ -59,9 +62,15 @@ class PasskeyFlowTest extends CryptoTestCase
 
 	private OpenSSLAsymmetricKey $privateKey;
 
+	private InMemoryPasskeyStore $store;
+
+	private InMemoryPendingCeremonyStore $pending;
+
 	protected function setUp(): void
 	{
 		[$this->privateKey, $this->coseEntries] = self::generateKeyAndCoseEntries(CoseAlgorithmIdentifier::ES256);
+		$this->store = new InMemoryPasskeyStore();
+		$this->pending = new InMemoryPendingCeremonyStore();
 	}
 
 	// --- Flow 1: usernameless (dedicated button / conditional mediation) ------------------------
@@ -78,7 +87,7 @@ class PasskeyFlowTest extends CryptoTestCase
 		self::assertSame(UserVerificationRequirement::REQUIRED, $options->userVerification);
 		self::assertSame(PublicKeyCredentialRequestOptions::RECOMMENDED_TIMEOUT, $options->timeout);
 
-		$pending = $flow->pendingAuthentications[base64_encode($options->challenge)] ?? null;
+		$pending = $this->pending->pendingAuthentications[base64_encode($options->challenge)] ?? null;
 		self::assertNotNull($pending);
 		self::assertNull($pending->userHandle);
 
@@ -87,8 +96,8 @@ class PasskeyFlowTest extends CryptoTestCase
 		self::assertSame(self::ALICE_HANDLE, $result->userHandle);
 		self::assertSame(self::ALICE_CREDENTIAL_ID, $result->credentialId);
 		self::assertSame(7, $result->newSignCount);
-		self::assertSame([$result], $flow->updatedCredentials);
-		self::assertSame([], $flow->pendingAuthentications);
+		self::assertSame([$result], $this->store->updatedCredentials);
+		self::assertSame([], $this->pending->pendingAuthentications);
 	}
 
 	public function testReplayedResponseIsRejected(): void
@@ -99,7 +108,7 @@ class PasskeyFlowTest extends CryptoTestCase
 		$flow->authenticate($body);
 
 		$this->assertAuthenticationFails(VerificationException::CHALLENGE_MISMATCH, $flow, $body);
-		self::assertCount(1, $flow->updatedCredentials);
+		self::assertCount(1, $this->store->updatedCredentials);
 	}
 
 	// --- Flow 2: two-step (username first) -------------------------------------------------------
@@ -114,7 +123,7 @@ class PasskeyFlowTest extends CryptoTestCase
 		self::assertCount(1, $options->allowCredentials);
 		self::assertSame(self::ALICE_CREDENTIAL_ID, $options->allowCredentials[0]->id);
 		self::assertSame(['internal', 'hybrid'], $options->allowCredentials[0]->transports);
-		self::assertSame(self::ALICE_HANDLE, $flow->pendingAuthentications[base64_encode($options->challenge)]->userHandle ?? null);
+		self::assertSame(self::ALICE_HANDLE, $this->pending->pendingAuthentications[base64_encode($options->challenge)]->userHandle ?? null);
 
 		$result = $flow->authenticate($this->aliceAssertion($options->challenge));
 
@@ -125,8 +134,8 @@ class PasskeyFlowTest extends CryptoTestCase
 	{
 		$flow = $this->flowWithAlice();
 		[$bobKey, $bobCoseEntries] = self::generateKeyAndCoseEntries(CoseAlgorithmIdentifier::ES256);
-		$flow->addUser('bob@example.com', self::BOB_HANDLE);
-		$flow->addCredential($this->record(self::BOB_CREDENTIAL_ID, self::BOB_HANDLE, $bobCoseEntries));
+		$this->store->addUser('bob@example.com', self::BOB_HANDLE);
+		$this->store->addCredential($this->record(self::BOB_CREDENTIAL_ID, self::BOB_HANDLE, $bobCoseEntries));
 
 		$options = $flow->authenticationOptions(self::ALICE);
 
@@ -144,7 +153,7 @@ class PasskeyFlowTest extends CryptoTestCase
 		$options = $flow->authenticationOptions('nobody@example.com');
 
 		self::assertNull($options->allowCredentials);
-		$pending = $flow->pendingAuthentications[base64_encode($options->challenge)] ?? null;
+		$pending = $this->pending->pendingAuthentications[base64_encode($options->challenge)] ?? null;
 		self::assertNotNull($pending);
 		self::assertNull($pending->userHandle);
 
@@ -156,7 +165,7 @@ class PasskeyFlowTest extends CryptoTestCase
 	public function testKnownUserWithoutPasskeysStaysPinned(): void
 	{
 		$flow = $this->flowWithAlice();
-		$flow->addUser('carol@example.com', 'carol-handle-0003');
+		$this->store->addUser('carol@example.com', 'carol-handle-0003');
 
 		$options = $flow->authenticationOptions('carol@example.com');
 
@@ -178,22 +187,22 @@ class PasskeyFlowTest extends CryptoTestCase
 		// Page load starts a conditional-mediation ceremony, the login form a pinned one.
 		$conditionalOptions = $flow->authenticationOptions();
 		$twoStepOptions = $flow->authenticationOptions(self::ALICE);
-		self::assertCount(2, $flow->pendingAuthentications);
+		self::assertCount(2, $this->pending->pendingAuthentications);
 
 		// Answering the earlier ceremony works and leaves the later one intact, and vice versa.
 		$flow->authenticate($this->aliceAssertion($conditionalOptions->challenge));
-		self::assertCount(1, $flow->pendingAuthentications);
+		self::assertCount(1, $this->pending->pendingAuthentications);
 
 		$flow->authenticate($this->aliceAssertion($twoStepOptions->challenge, signCount: 2));
-		self::assertSame([], $flow->pendingAuthentications);
-		self::assertCount(2, $flow->updatedCredentials);
+		self::assertSame([], $this->pending->pendingAuthentications);
+		self::assertCount(2, $this->store->updatedCredentials);
 	}
 
 	// --- Registration -----------------------------------------------------------------------------
 
 	public function testRegistrationThenLoginRoundTrip(): void
 	{
-		$flow = new InMemoryPasskeyFlow();
+		$flow = $this->createFlow();
 
 		$options = $flow->registrationOptions(self::DAVE_HANDLE, self::DAVE);
 
@@ -211,7 +220,7 @@ class PasskeyFlowTest extends CryptoTestCase
 		self::assertNull($options->excludeCredentials);
 		self::assertSame(32, strlen($options->challenge));
 
-		$pending = $flow->pendingRegistrations[base64_encode($options->challenge)] ?? null;
+		$pending = $this->pending->pendingRegistrations[base64_encode($options->challenge)] ?? null;
 		self::assertNotNull($pending);
 		self::assertSame(self::DAVE_HANDLE, $pending->userHandle);
 
@@ -221,8 +230,8 @@ class PasskeyFlowTest extends CryptoTestCase
 		self::assertSame(AuthenticatorAttachment::PLATFORM, $registered->authenticatorAttachment);
 		self::assertSame(self::NEW_CREDENTIAL_ID, $registered->result->credentialId);
 		self::assertSame(['internal'], $registered->toCredentialRecord()->transports);
-		self::assertSame([$registered], $flow->savedPasskeys);
-		self::assertSame([], $flow->pendingRegistrations);
+		self::assertSame([$registered], $this->store->savedPasskeys);
+		self::assertSame([], $this->pending->pendingRegistrations);
 
 		// The passkey saved by the flow immediately works for a usernameless login.
 		$loginOptions = $flow->authenticationOptions();
@@ -249,18 +258,18 @@ class PasskeyFlowTest extends CryptoTestCase
 
 	public function testReplayedRegistrationResponseIsRejected(): void
 	{
-		$flow = new InMemoryPasskeyFlow();
+		$flow = $this->createFlow();
 		$body = $this->registrationBody($flow->registrationOptions(self::DAVE_HANDLE, self::DAVE)->challenge);
 
 		$flow->register($body);
 
 		$this->assertRegistrationFails(VerificationException::CHALLENGE_MISMATCH, $flow, $body);
-		self::assertCount(1, $flow->savedPasskeys);
+		self::assertCount(1, $this->store->savedPasskeys);
 	}
 
 	public function testRegistrationRejectsDisallowedAlgorithm(): void
 	{
-		$flow = new InMemoryPasskeyFlow();
+		$flow = $this->createFlow();
 		[, $es384CoseEntries] = self::generateKeyAndCoseEntries(CoseAlgorithmIdentifier::ES384);
 
 		$options = $flow->registrationOptions(self::DAVE_HANDLE, self::DAVE);
@@ -270,12 +279,12 @@ class PasskeyFlowTest extends CryptoTestCase
 			$flow,
 			$this->registrationBody($options->challenge, coseEntries: $es384CoseEntries),
 		);
-		self::assertSame([], $flow->savedPasskeys);
+		self::assertSame([], $this->store->savedPasskeys);
 	}
 
 	public function testMalformedRegistrationResponseIsRejected(): void
 	{
-		$flow = new InMemoryPasskeyFlow();
+		$flow = $this->createFlow();
 
 		$this->assertRegistrationFails(VerificationException::MALFORMED_RESPONSE, $flow, 'not json');
 		$this->assertRegistrationFails(VerificationException::MALFORMED_RESPONSE, $flow, '{}');
@@ -298,8 +307,8 @@ class PasskeyFlowTest extends CryptoTestCase
 			$flow,
 			$this->aliceAssertion($registrationChallenge),
 		);
-		self::assertCount(1, $flow->pendingAuthentications);
-		self::assertCount(1, $flow->pendingRegistrations);
+		self::assertCount(1, $this->pending->pendingAuthentications);
+		self::assertCount(1, $this->pending->pendingRegistrations);
 	}
 
 	// --- Failure wiring ---------------------------------------------------------------------------
@@ -324,7 +333,7 @@ class PasskeyFlowTest extends CryptoTestCase
 		$this->assertAuthenticationFails(VerificationException::MALFORMED_RESPONSE, $flow, '{}');
 
 		// A response that never parsed must not consume the pending ceremony.
-		self::assertCount(1, $flow->pendingAuthentications);
+		self::assertCount(1, $this->pending->pendingAuthentications);
 	}
 
 	public function testFailedVerificationDoesNotUpdateCredential(): void
@@ -337,7 +346,7 @@ class PasskeyFlowTest extends CryptoTestCase
 			$flow,
 			$this->aliceAssertion($options->challenge, tamperSignature: true),
 		);
-		self::assertSame([], $flow->updatedCredentials);
+		self::assertSame([], $this->store->updatedCredentials);
 	}
 
 	// --- Policy defaults and overrides -----------------------------------------------------------
@@ -390,7 +399,7 @@ class PasskeyFlowTest extends CryptoTestCase
 
 	// --- Assertion helpers ------------------------------------------------------------------------
 
-	private function assertAuthenticationFails(string $reason, InMemoryPasskeyFlow $flow, string $body): void
+	private function assertAuthenticationFails(string $reason, PasskeyFlow $flow, string $body): void
 	{
 		try {
 			$flow->authenticate($body);
@@ -401,7 +410,7 @@ class PasskeyFlowTest extends CryptoTestCase
 		}
 	}
 
-	private function assertRegistrationFails(string $reason, InMemoryPasskeyFlow $flow, string $body): void
+	private function assertRegistrationFails(string $reason, PasskeyFlow $flow, string $body): void
 	{
 		try {
 			$flow->register($body);
@@ -414,18 +423,50 @@ class PasskeyFlowTest extends CryptoTestCase
 
 	// --- Fixture builders -------------------------------------------------------------------------
 
-	private function flowWithAlice(?UserVerificationRequirement $userVerification = null, bool $crossOriginAllowed = false): InMemoryPasskeyFlow
+	private function flowWithAlice(?UserVerificationRequirement $userVerification = null, bool $crossOriginAllowed = false): PasskeyFlow
 	{
-		$flow = new InMemoryPasskeyFlow(
-			rpId: self::RP_ID,
-			origins: [self::ORIGIN],
-			userVerification: $userVerification,
-			crossOriginAllowed: $crossOriginAllowed,
-		);
-		$flow->addUser(self::ALICE, self::ALICE_HANDLE);
-		$flow->addCredential($this->record(self::ALICE_CREDENTIAL_ID, self::ALICE_HANDLE, $this->coseEntries));
+		$flow = $this->createFlow($userVerification, $crossOriginAllowed);
+		$this->store->addUser(self::ALICE, self::ALICE_HANDLE);
+		$this->store->addCredential($this->record(self::ALICE_CREDENTIAL_ID, self::ALICE_HANDLE, $this->coseEntries));
 
 		return $flow;
+	}
+
+	/**
+	 * With the passkey defaults, the concrete {@see PasskeyFlow} is used as-is; a policy override
+	 * exercises the intended customisation path — a subclass overriding the protected hook.
+	 */
+	private function createFlow(?UserVerificationRequirement $userVerification = null, bool $crossOriginAllowed = false): PasskeyFlow
+	{
+		if ($userVerification === null && !$crossOriginAllowed) {
+			return new PasskeyFlow(self::RP_ID, 'Example RP', [self::ORIGIN], $this->store, $this->pending);
+		}
+
+		return new class (self::RP_ID, [self::ORIGIN], $this->store, $this->pending, $userVerification, $crossOriginAllowed) extends PasskeyFlow {
+			/**
+			 * @param list<string> $origins
+			 */
+			public function __construct(
+				string $rpId,
+				array $origins,
+				PasskeyStore $store,
+				PendingCeremonyStore $pendingStore,
+				private readonly ?UserVerificationRequirement $userVerification,
+				private readonly bool $crossOriginAllowed,
+			) {
+				parent::__construct($rpId, 'Example RP', $origins, $store, $pendingStore);
+			}
+
+			protected function getUserVerificationRequirement(): UserVerificationRequirement
+			{
+				return $this->userVerification ?? parent::getUserVerificationRequirement();
+			}
+
+			protected function isCrossOriginAllowed(): bool
+			{
+				return $this->crossOriginAllowed || parent::isCrossOriginAllowed();
+			}
+		};
 	}
 
 	/**

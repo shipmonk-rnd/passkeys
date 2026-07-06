@@ -5,7 +5,6 @@ namespace WebAuthnX\Passkey;
 use WebAuthnX\Ceremony\AuthenticationExpectations;
 use WebAuthnX\Ceremony\AuthenticationResult;
 use WebAuthnX\Ceremony\CredentialRecord;
-use WebAuthnX\Ceremony\CredentialStore;
 use WebAuthnX\Ceremony\RegistrationExpectations;
 use WebAuthnX\Ceremony\VerificationException;
 use WebAuthnX\Cose\CoseAlgorithmIdentifier;
@@ -29,10 +28,11 @@ use function array_map;
 use function random_bytes;
 
 /**
- * A high-level, passkey-only login flow on top of the {@see RelyingParty} façade: extend it,
- * implement the abstract lookups and state hooks against your own storage, and wire the two
- * public methods to two HTTP endpoints. It covers the two common ways passkey login is offered —
- * usually both at once, on the same page:
+ * A high-level, passkey-only login flow on top of the {@see RelyingParty} façade: construct it
+ * with your relying party identity and storage — a durable {@see PasskeyStore} and a
+ * session-scoped {@see PendingCeremonyStore} — and wire the public methods to your HTTP
+ * endpoints. It covers the two common ways passkey login is offered — usually both at once, on
+ * the same page:
  *
  *  1. A dedicated "sign in with a passkey" button (and/or conditional-mediation autofill), where
  *     no username is known: call {@see self::authenticationOptions()} with null. The options carry
@@ -55,11 +55,28 @@ use function random_bytes;
  * adding a passkey, or a just-created signup). Deciding *who* may enrol — verifying the email,
  * requiring an authenticated session — is deliberately left in front of the flow.
  *
+ * Policy knobs (user verification, algorithms, timeout…) are protected methods with defaults that
+ * are right for passkeys; subclass only to override those.
+ *
  * @api
  */
-abstract class PasskeyFlow implements CredentialStore
+class PasskeyFlow
 {
+	/**
+	 * @param string       $rpId    the {@link https://w3c.github.io/webauthn/#rp-id RP ID} — the
+	 *     domain your passkeys are scoped to, e.g. `example.com` (it must be a registrable-suffix
+	 *     match of your origins)
+	 * @param string       $rpName  the human-readable relying party name, e.g. `Example Corp` —
+	 *     shown by authenticator UIs when a passkey is created
+	 * @param list<string> $origins the exact origins your login pages are served from,
+	 *     e.g. `['https://example.com']`
+	 */
 	public function __construct(
+		private readonly string $rpId,
+		private readonly string $rpName,
+		private readonly array $origins,
+		private readonly PasskeyStore $store,
+		private readonly PendingCeremonyStore $pendingStore,
 		private readonly RelyingParty $relyingParty = new RelyingParty(),
 	) {
 	}
@@ -76,15 +93,15 @@ abstract class PasskeyFlow implements CredentialStore
 	 */
 	public function authenticationOptions(?string $username = null): PublicKeyCredentialRequestOptions
 	{
-		$userHandle = $username === null ? null : $this->findUserHandleByUsername($username);
+		$userHandle = $username === null ? null : $this->store->findUserHandleByUsername($username);
 		$allowCredentials = $userHandle === null ? null : $this->credentialDescriptorsFor($userHandle);
 		$challenge = $this->generateChallenge();
-		$this->rememberPendingAuthentication(new PendingAuthentication($challenge, $userHandle));
+		$this->pendingStore->rememberPendingAuthentication(new PendingAuthentication($challenge, $userHandle));
 
 		return new PublicKeyCredentialRequestOptions(
 			challenge: $challenge,
 			timeout: $this->getTimeout(),
-			rpId: $this->getRelyingPartyId(),
+			rpId: $this->rpId,
 			allowCredentials: $allowCredentials,
 			userVerification: $this->getUserVerificationRequirement(),
 		);
@@ -120,7 +137,7 @@ abstract class PasskeyFlow implements CredentialStore
 
 		// The challenge is the ceremony key; it is attacker-supplied until verifyAuthentication()
 		// re-checks it (in constant time) against the pending record consumed here.
-		$pending = $this->consumePendingAuthentication($clientData->getChallenge());
+		$pending = $this->pendingStore->consumePendingAuthentication($clientData->getChallenge());
 
 		if ($pending === null) {
 			throw new VerificationException(
@@ -133,25 +150,25 @@ abstract class PasskeyFlow implements CredentialStore
 		// pending state; the user-handle pin is what actually ties the assertion to the account.
 		$allowedCredentialIds = $pending->userHandle === null ? null : array_map(
 			static fn (CredentialRecord $credential) => $credential->credentialId,
-			$this->findCredentialsByUserHandle($pending->userHandle),
+			$this->store->findCredentialsByUserHandle($pending->userHandle),
 		);
 
 		$result = $this->relyingParty->verifyAuthentication(
 			$credential,
 			new AuthenticationExpectations(
 				challenge: $pending->challenge,
-				rpId: $this->getRelyingPartyId(),
-				origins: $this->getAllowedOrigins(),
+				rpId: $this->rpId,
+				origins: $this->origins,
 				allowedCredentialIds: $allowedCredentialIds,
 				requireUserVerification: $this->getUserVerificationRequirement() === UserVerificationRequirement::REQUIRED,
 				allowCrossOrigin: $this->isCrossOriginAllowed(),
 				allowedTopOrigins: $this->getAllowedTopOrigins(),
 				expectedUserHandle: $pending->userHandle,
 			),
-			$this,
+			$this->store,
 		);
 
-		$this->updateCredential($result);
+		$this->store->updateCredential($result);
 
 		return $result;
 	}
@@ -175,10 +192,10 @@ abstract class PasskeyFlow implements CredentialStore
 		?string $displayName = null,
 	): PublicKeyCredentialCreationOptions {
 		$challenge = $this->generateChallenge();
-		$this->rememberPendingRegistration(new PendingRegistration($challenge, $userHandle));
+		$this->pendingStore->rememberPendingRegistration(new PendingRegistration($challenge, $userHandle));
 
 		return new PublicKeyCredentialCreationOptions(
-			rp: new PublicKeyCredentialRpEntity(name: $this->getRelyingPartyName(), id: $this->getRelyingPartyId()),
+			rp: new PublicKeyCredentialRpEntity(name: $this->rpName, id: $this->rpId),
 			user: new PublicKeyCredentialUserEntity(id: $userHandle, name: $username, displayName: $displayName ?? $username),
 			challenge: $challenge,
 			pubKeyCredParams: array_map(
@@ -219,7 +236,7 @@ abstract class PasskeyFlow implements CredentialStore
 			);
 		}
 
-		$pending = $this->consumePendingRegistration($clientData->getChallenge());
+		$pending = $this->pendingStore->consumePendingRegistration($clientData->getChallenge());
 
 		if ($pending === null) {
 			throw new VerificationException(
@@ -232,18 +249,18 @@ abstract class PasskeyFlow implements CredentialStore
 			$credential,
 			new RegistrationExpectations(
 				challenge: $pending->challenge,
-				rpId: $this->getRelyingPartyId(),
-				origins: $this->getAllowedOrigins(),
+				rpId: $this->rpId,
+				origins: $this->origins,
 				allowedAlgorithms: $this->getAllowedAlgorithms(),
 				requireUserVerification: $this->getUserVerificationRequirement() === UserVerificationRequirement::REQUIRED,
 				allowCrossOrigin: $this->isCrossOriginAllowed(),
 				allowedTopOrigins: $this->getAllowedTopOrigins(),
 			),
-			$this,
+			$this->store,
 		);
 
 		$registered = new RegisteredPasskey($pending->userHandle, $credential->authenticatorAttachment, $result);
-		$this->saveCredential($registered);
+		$this->store->saveCredential($registered);
 
 		return $registered;
 	}
@@ -257,7 +274,7 @@ abstract class PasskeyFlow implements CredentialStore
 	 */
 	private function credentialDescriptorsFor(string $userHandle): ?array
 	{
-		$credentials = $this->findCredentialsByUserHandle($userHandle);
+		$credentials = $this->store->findCredentialsByUserHandle($userHandle);
 
 		if ($credentials === []) {
 			return null;
@@ -272,98 +289,6 @@ abstract class PasskeyFlow implements CredentialStore
 			$credentials,
 		);
 	}
-
-	// --- Identity of the relying party: every deployment must define these ----------------------
-
-	/**
-	 * The {@link https://w3c.github.io/webauthn/#rp-id RP ID} — the domain your passkeys are
-	 * scoped to, e.g. `example.com` (it must be a registrable-suffix match of your origins).
-	 */
-	abstract protected function getRelyingPartyId(): string;
-
-	/**
-	 * The human-readable relying party name, e.g. `Example Corp` — shown by authenticator UIs
-	 * when a passkey is created.
-	 */
-	abstract protected function getRelyingPartyName(): string;
-
-	/**
-	 * The exact origins your login pages are served from, e.g. `['https://example.com']`.
-	 *
-	 * @return list<string>
-	 */
-	abstract protected function getAllowedOrigins(): array;
-
-	// --- Storage lookups: implement against your user / credential tables -----------------------
-
-	/**
-	 * Maps a login-form identifier (email/username) to the account's user handle, or null when no
-	 * such account exists. Only consulted for the two-step flow.
-	 *
-	 * @return string|null raw user handle bytes
-	 */
-	abstract protected function findUserHandleByUsername(string $username): ?string;
-
-	/**
-	 * Every credential registered to the given account — used to build `allowCredentials` /
-	 * `excludeCredentials` and to enforce the former at verification.
-	 *
-	 * @param  string $userHandle raw user handle bytes
-	 * @return list<CredentialRecord>
-	 */
-	abstract protected function findCredentialsByUserHandle(string $userHandle): array;
-
-	// --- Ceremony state: implement on top of your session / cache -------------------------------
-
-	/**
-	 * Stores a pending ceremony, keyed by its challenge (encode {@see PendingAuthentication::$challenge}
-	 * before using it as an array/cache key — it is raw bytes). Scope the storage to the browser
-	 * session, and bound it: cap the number of concurrently pending ceremonies (a handful is
-	 * plenty) or expire them, since a page may start several without finishing any.
-	 */
-	abstract protected function rememberPendingAuthentication(PendingAuthentication $pending): void;
-
-	/**
-	 * Returns **and deletes** the pending ceremony stored under this challenge, or null when
-	 * there is none. The deletion is what makes each challenge single-use — the anti-replay
-	 * control.
-	 *
-	 * The challenge comes out of the (yet unverified) response, so treat it as untrusted input:
-	 * look it up, never evaluate it.
-	 *
-	 * @param string $challenge raw challenge bytes
-	 */
-	abstract protected function consumePendingAuthentication(string $challenge): ?PendingAuthentication;
-
-	/**
-	 * The registration counterpart of {@see self::rememberPendingAuthentication()} — same keying
-	 * and bounding advice, but keep the two stores separate so a response can never finish a
-	 * ceremony of the other kind.
-	 */
-	abstract protected function rememberPendingRegistration(PendingRegistration $pending): void;
-
-	/**
-	 * Returns **and deletes** the pending registration ceremony stored under this challenge, or
-	 * null when there is none; see {@see self::consumePendingAuthentication()}.
-	 *
-	 * @param string $challenge raw challenge bytes
-	 */
-	abstract protected function consumePendingRegistration(string $challenge): ?PendingRegistration;
-
-	/**
-	 * Persists the newly registered credential — typically one INSERT of
-	 * {@see RegisteredPasskey::toCredentialRecord()}, plus whatever extra columns you keep
-	 * ({@see RegisteredPasskey::$authenticatorAttachment}, a created-at timestamp, a label…).
-	 */
-	abstract protected function saveCredential(RegisteredPasskey $passkey): void;
-
-	/**
-	 * Persists the post-authentication credential state: set the record's `signCount` to
-	 * {@see AuthenticationResult::$newSignCount}, `backupState` to {@see AuthenticationResult::$backupState},
-	 * and — if it was not already — `uvInitialized` to {@see AuthenticationResult::$userVerified}.
-	 * This is also the place to react to {@see AuthenticationResult::$possibleClone} if you want to.
-	 */
-	abstract protected function updateCredential(AuthenticationResult $result): void;
 
 	// --- Policy defaults: sensible for passkeys, override to taste ------------------------------
 
