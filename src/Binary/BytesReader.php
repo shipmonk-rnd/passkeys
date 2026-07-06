@@ -24,12 +24,13 @@ class BytesReader
 {
 	private readonly int $length;
 
+	private int $offset = 0;
+
 	/**
 	 * @param string $data binary string to read from
 	 */
 	private function __construct(
 		private readonly string $data,
-		private int $offset,
 	) {
 		$this->length = strlen($data);
 	}
@@ -45,7 +46,7 @@ class BytesReader
 	 */
 	public static function read(string $bytes, Closure $callback): mixed
 	{
-		$reader = new self($bytes, 0);
+		$reader = new self($bytes);
 		$result = $callback($reader);
 		$reader->end();
 
