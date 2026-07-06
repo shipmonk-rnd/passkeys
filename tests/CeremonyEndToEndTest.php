@@ -34,7 +34,8 @@ use const JSON_THROW_ON_ERROR;
  * composes: base64url boundaries, the CBOR/COSE decode inside attested credential data, the
  * generic {@see PublicKeyCredential} wrapper, and the signed-message reconstruction. Signatures
  * are produced live rather than frozen because ECDSA output is non-deterministic; the fixed,
- * independent crypto oracle is the RFC 8032 Ed25519 known-answer vector in the crypto tests.
+ * independent oracles are the RFC 8032 Ed25519 known-answer vector in the crypto tests and
+ * the official WebAuthn §16 test vectors in {@see SpecTestVectorsTest}.
  */
 class CeremonyEndToEndTest extends CryptoTestCase
 {
