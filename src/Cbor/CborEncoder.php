@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX\Cbor;
+namespace ShipMonk\WebAuthn\Cbor;
 
 use function chr;
 use function count;
@@ -9,7 +9,7 @@ use function strlen;
 
 /**
  * A minimal CBOR encoder — the inverse of {@see CborDecoder}, scoped to what the library needs in
- * order to re-serialise a COSE key ({@see \WebAuthnX\Cose\CoseKey::toBytes()}): signed integers,
+ * order to re-serialise a COSE key ({@see \ShipMonk\WebAuthn\Cose\CoseKey::toBytes()}): signed integers,
  * byte strings, and an integer-keyed map. Encodings are definite-length; map entries are emitted in
  * the order given (the decoder is order-insensitive, so no canonical sort is required for a
  * round-trip).

@@ -1,15 +1,15 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests\Cose;
+namespace ShipMonk\WebAuthnTests\Cose;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use WebAuthnX\Cose\CoseAlgorithmIdentifier;
-use WebAuthnX\Cose\CoseEc2Key;
-use WebAuthnX\Cose\CoseKey;
-use WebAuthnX\Cose\CoseKeyException;
-use WebAuthnX\Cose\CoseOkpKey;
-use WebAuthnX\Cose\CoseRsaKey;
-use WebAuthnXTests\CryptoTestCase;
+use ShipMonk\WebAuthn\Cose\CoseAlgorithmIdentifier;
+use ShipMonk\WebAuthn\Cose\CoseEc2Key;
+use ShipMonk\WebAuthn\Cose\CoseKey;
+use ShipMonk\WebAuthn\Cose\CoseKeyException;
+use ShipMonk\WebAuthn\Cose\CoseOkpKey;
+use ShipMonk\WebAuthn\Cose\CoseRsaKey;
+use ShipMonk\WebAuthnTests\CryptoTestCase;
 use function bin2hex;
 use function str_pad;
 

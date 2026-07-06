@@ -1,9 +1,9 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX\Cbor;
+namespace ShipMonk\WebAuthn\Cbor;
 
-use WebAuthnX\Binary\BytesReader;
-use WebAuthnX\Binary\BytesReaderException;
+use ShipMonk\WebAuthn\Binary\BytesReader;
+use ShipMonk\WebAuthn\Binary\BytesReaderException;
 use function array_key_exists;
 use function dechex;
 use function is_int;

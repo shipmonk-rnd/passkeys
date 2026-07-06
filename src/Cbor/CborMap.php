@@ -1,8 +1,8 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX\Cbor;
+namespace ShipMonk\WebAuthn\Cbor;
 
-use WebAuthnX\Binary\BytesReader;
+use ShipMonk\WebAuthn\Binary\BytesReader;
 use function array_key_exists;
 use function is_array;
 use function is_int;

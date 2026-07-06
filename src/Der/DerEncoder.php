@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX\Der;
+namespace ShipMonk\WebAuthn\Der;
 
 use LogicException;
 use function array_map;

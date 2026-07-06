@@ -1,22 +1,22 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests;
+namespace ShipMonk\WebAuthnTests;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
-use WebAuthnX\Base64\Base64;
-use WebAuthnX\Ceremony\AuthenticationExpectations;
-use WebAuthnX\Ceremony\CredentialRecord;
-use WebAuthnX\Ceremony\RegistrationExpectations;
-use WebAuthnX\Ceremony\RegistrationResult;
-use WebAuthnX\Ceremony\VerificationException;
-use WebAuthnX\Cose\CoseAlgorithmIdentifier;
-use WebAuthnX\Credential\AuthenticatorAssertionResponse;
-use WebAuthnX\Credential\AuthenticatorAttestationResponse;
-use WebAuthnX\Credential\PublicKeyCredential;
-use WebAuthnX\Json\JsonObject;
-use WebAuthnX\RelyingParty;
-use WebAuthnXTests\Ceremony\InMemoryCredentialStore;
+use ShipMonk\WebAuthn\Base64\Base64;
+use ShipMonk\WebAuthn\Ceremony\AuthenticationExpectations;
+use ShipMonk\WebAuthn\Ceremony\CredentialRecord;
+use ShipMonk\WebAuthn\Ceremony\RegistrationExpectations;
+use ShipMonk\WebAuthn\Ceremony\RegistrationResult;
+use ShipMonk\WebAuthn\Ceremony\VerificationException;
+use ShipMonk\WebAuthn\Cose\CoseAlgorithmIdentifier;
+use ShipMonk\WebAuthn\Credential\AuthenticatorAssertionResponse;
+use ShipMonk\WebAuthn\Credential\AuthenticatorAttestationResponse;
+use ShipMonk\WebAuthn\Credential\PublicKeyCredential;
+use ShipMonk\WebAuthn\Json\JsonObject;
+use ShipMonk\WebAuthn\RelyingParty;
+use ShipMonk\WebAuthnTests\Ceremony\InMemoryCredentialStore;
 use function bin2hex;
 use function chr;
 use function file_get_contents;

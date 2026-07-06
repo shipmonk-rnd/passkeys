@@ -1,8 +1,8 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX\Ceremony;
+namespace ShipMonk\WebAuthn\Ceremony;
 
-use WebAuthnX\Cose\CoseKey;
+use ShipMonk\WebAuthn\Cose\CoseKey;
 
 /**
  * The outcome of a successful registration ceremony — the data a relying party persists as a

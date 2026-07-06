@@ -1,11 +1,11 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests\Binary;
+namespace ShipMonk\WebAuthnTests\Binary;
 
 use LogicException;
-use WebAuthnX\Binary\BytesReader;
-use WebAuthnX\Binary\BytesReaderException;
-use WebAuthnXTests\WebAuthnTestCase;
+use ShipMonk\WebAuthn\Binary\BytesReader;
+use ShipMonk\WebAuthn\Binary\BytesReaderException;
+use ShipMonk\WebAuthnTests\WebAuthnTestCase;
 use const INF;
 
 class BytesReaderTest extends WebAuthnTestCase

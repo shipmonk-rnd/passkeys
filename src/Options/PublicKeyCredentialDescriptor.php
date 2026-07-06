@@ -1,10 +1,10 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX\Options;
+namespace ShipMonk\WebAuthn\Options;
 
 use JsonSerializable;
-use WebAuthnX\Base64\Base64;
-use WebAuthnX\Enum\PublicKeyCredentialType;
+use ShipMonk\WebAuthn\Base64\Base64;
+use ShipMonk\WebAuthn\Enum\PublicKeyCredentialType;
 
 /**
  * @see https://w3c.github.io/webauthn/#dictdef-publickeycredentialdescriptorjson

@@ -1,11 +1,11 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests\Der;
+namespace ShipMonk\WebAuthnTests\Der;
 
 use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
-use WebAuthnX\Der\DerEncoder;
-use WebAuthnXTests\WebAuthnTestCase;
+use ShipMonk\WebAuthn\Der\DerEncoder;
+use ShipMonk\WebAuthnTests\WebAuthnTestCase;
 use function bin2hex;
 use function chr;
 use function intdiv;

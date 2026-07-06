@@ -1,10 +1,10 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX\Passkey;
+namespace ShipMonk\WebAuthn\Passkey;
 
-use WebAuthnX\Ceremony\CredentialRecord;
-use WebAuthnX\Ceremony\RegistrationResult;
-use WebAuthnX\Enum\AuthenticatorAttachment;
+use ShipMonk\WebAuthn\Ceremony\CredentialRecord;
+use ShipMonk\WebAuthn\Ceremony\RegistrationResult;
+use ShipMonk\WebAuthn\Enum\AuthenticatorAttachment;
 
 /**
  * The outcome of a successful {@see PasskeyFlow::register()}: the verified ceremony result

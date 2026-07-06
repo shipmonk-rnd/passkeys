@@ -1,11 +1,11 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests\Base64;
+namespace ShipMonk\WebAuthnTests\Base64;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use WebAuthnX\Base64\Base64;
-use WebAuthnX\Base64\InvalidBase64Exception;
-use WebAuthnXTests\WebAuthnTestCase;
+use ShipMonk\WebAuthn\Base64\Base64;
+use ShipMonk\WebAuthn\Base64\InvalidBase64Exception;
+use ShipMonk\WebAuthnTests\WebAuthnTestCase;
 
 class Base64Test extends WebAuthnTestCase
 {

@@ -1,10 +1,10 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX\Credential;
+namespace ShipMonk\WebAuthn\Credential;
 
-use WebAuthnX\Base64\InvalidBase64Exception;
-use WebAuthnX\Json\JsonObject;
-use WebAuthnX\Json\JsonObjectException;
+use ShipMonk\WebAuthn\Base64\InvalidBase64Exception;
+use ShipMonk\WebAuthn\Json\JsonObject;
+use ShipMonk\WebAuthn\Json\JsonObjectException;
 
 /**
  * @see https://w3c.github.io/webauthn/#authenticatorassertionresponse

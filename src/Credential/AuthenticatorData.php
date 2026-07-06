@@ -1,13 +1,13 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX\Credential;
+namespace ShipMonk\WebAuthn\Credential;
 
-use WebAuthnX\Binary\BytesReader;
-use WebAuthnX\Binary\BytesReaderException;
-use WebAuthnX\Cbor\CborMap;
-use WebAuthnX\Cbor\CborMapException;
-use WebAuthnX\Cbor\InvalidCborException;
-use WebAuthnX\Cose\CoseKeyException;
+use ShipMonk\WebAuthn\Binary\BytesReader;
+use ShipMonk\WebAuthn\Binary\BytesReaderException;
+use ShipMonk\WebAuthn\Cbor\CborMap;
+use ShipMonk\WebAuthn\Cbor\CborMapException;
+use ShipMonk\WebAuthn\Cbor\InvalidCborException;
+use ShipMonk\WebAuthn\Cose\CoseKeyException;
 
 /**
  * @api

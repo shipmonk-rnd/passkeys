@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX\Json;
+namespace ShipMonk\WebAuthn\Json;
 
 use RuntimeException;
 

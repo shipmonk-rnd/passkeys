@@ -1,11 +1,11 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests\Cbor;
+namespace ShipMonk\WebAuthnTests\Cbor;
 
-use WebAuthnX\Binary\BytesReader;
-use WebAuthnX\Cbor\CborMap;
-use WebAuthnX\Cbor\CborMapException;
-use WebAuthnXTests\WebAuthnTestCase;
+use ShipMonk\WebAuthn\Binary\BytesReader;
+use ShipMonk\WebAuthn\Cbor\CborMap;
+use ShipMonk\WebAuthn\Cbor\CborMapException;
+use ShipMonk\WebAuthnTests\WebAuthnTestCase;
 
 class CborMapTest extends WebAuthnTestCase
 {

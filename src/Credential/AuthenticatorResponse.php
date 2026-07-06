@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX\Credential;
+namespace ShipMonk\WebAuthn\Credential;
 
 /**
  * Base for the two authenticator responses returned by a credential.

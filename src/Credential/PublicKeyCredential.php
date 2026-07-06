@@ -1,12 +1,12 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX\Credential;
+namespace ShipMonk\WebAuthn\Credential;
 
-use WebAuthnX\Base64\InvalidBase64Exception;
-use WebAuthnX\Enum\AuthenticatorAttachment;
-use WebAuthnX\Enum\PublicKeyCredentialType;
-use WebAuthnX\Json\JsonObject;
-use WebAuthnX\Json\JsonObjectException;
+use ShipMonk\WebAuthn\Base64\InvalidBase64Exception;
+use ShipMonk\WebAuthn\Enum\AuthenticatorAttachment;
+use ShipMonk\WebAuthn\Enum\PublicKeyCredentialType;
+use ShipMonk\WebAuthn\Json\JsonObject;
+use ShipMonk\WebAuthn\Json\JsonObjectException;
 
 /**
  * The credential returned by the browser's `navigator.credentials` API, in its JSON form

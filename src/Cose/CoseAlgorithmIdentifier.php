@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX\Cose;
+namespace ShipMonk\WebAuthn\Cose;
 
 /**
  * @api

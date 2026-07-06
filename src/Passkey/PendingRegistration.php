@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX\Passkey;
+namespace ShipMonk\WebAuthn\Passkey;
 
 /**
  * The server-side state of one registration ceremony started by

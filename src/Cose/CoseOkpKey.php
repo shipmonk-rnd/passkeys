@@ -1,11 +1,11 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX\Cose;
+namespace ShipMonk\WebAuthn\Cose;
 
-use WebAuthnX\Cbor\CborEncoder;
-use WebAuthnX\Cbor\CborMap;
-use WebAuthnX\Cbor\CborMapException;
-use WebAuthnX\Der\DerEncoder;
+use ShipMonk\WebAuthn\Cbor\CborEncoder;
+use ShipMonk\WebAuthn\Cbor\CborMap;
+use ShipMonk\WebAuthn\Cbor\CborMapException;
+use ShipMonk\WebAuthn\Der\DerEncoder;
 use function in_array;
 use function strlen;
 

@@ -1,12 +1,12 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests\Cbor;
+namespace ShipMonk\WebAuthnTests\Cbor;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use WebAuthnX\Binary\BytesReader;
-use WebAuthnX\Cbor\CborEncoder;
-use WebAuthnX\Cbor\CborMap;
-use WebAuthnXTests\WebAuthnTestCase;
+use ShipMonk\WebAuthn\Binary\BytesReader;
+use ShipMonk\WebAuthn\Cbor\CborEncoder;
+use ShipMonk\WebAuthn\Cbor\CborMap;
+use ShipMonk\WebAuthnTests\WebAuthnTestCase;
 use function bin2hex;
 use function str_repeat;
 

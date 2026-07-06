@@ -1,16 +1,16 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests;
+namespace ShipMonk\WebAuthnTests;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use WebAuthnX\Base64\Base64;
-use WebAuthnX\Cose\CoseAlgorithmIdentifier;
-use WebAuthnX\Cose\CoseOkpKey;
-use WebAuthnX\Credential\AuthenticatorAttestationResponse;
-use WebAuthnX\Credential\AuthenticatorData;
-use WebAuthnX\Credential\PublicKeyCredential;
-use WebAuthnX\Json\JsonObject;
-use WebAuthnXTests\Cbor\CborTestEncoder;
+use ShipMonk\WebAuthn\Base64\Base64;
+use ShipMonk\WebAuthn\Cose\CoseAlgorithmIdentifier;
+use ShipMonk\WebAuthn\Cose\CoseOkpKey;
+use ShipMonk\WebAuthn\Credential\AuthenticatorAttestationResponse;
+use ShipMonk\WebAuthn\Credential\AuthenticatorData;
+use ShipMonk\WebAuthn\Credential\PublicKeyCredential;
+use ShipMonk\WebAuthn\Json\JsonObject;
+use ShipMonk\WebAuthnTests\Cbor\CborTestEncoder;
 use function chr;
 use function hash;
 use function json_encode;

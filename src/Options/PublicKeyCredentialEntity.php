@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX\Options;
+namespace ShipMonk\WebAuthn\Options;
 
 /**
  * @api

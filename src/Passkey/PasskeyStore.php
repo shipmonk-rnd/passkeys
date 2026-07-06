@@ -1,10 +1,10 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX\Passkey;
+namespace ShipMonk\WebAuthn\Passkey;
 
-use WebAuthnX\Ceremony\AuthenticationResult;
-use WebAuthnX\Ceremony\CredentialRecord;
-use WebAuthnX\Ceremony\CredentialStore;
+use ShipMonk\WebAuthn\Ceremony\AuthenticationResult;
+use ShipMonk\WebAuthn\Ceremony\CredentialRecord;
+use ShipMonk\WebAuthn\Ceremony\CredentialStore;
 
 /**
  * The relying party's durable passkey storage behind a {@see PasskeyFlow} — the user and

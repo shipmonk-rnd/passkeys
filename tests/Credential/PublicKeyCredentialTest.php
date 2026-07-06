@@ -1,17 +1,17 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests\Credential;
+namespace ShipMonk\WebAuthnTests\Credential;
 
-use WebAuthnX\Base64\Base64;
-use WebAuthnX\Credential\AuthenticatorAssertionResponse;
-use WebAuthnX\Credential\AuthenticatorAttestationResponse;
-use WebAuthnX\Credential\MalformedDataException;
-use WebAuthnX\Credential\PublicKeyCredential;
-use WebAuthnX\Enum\AuthenticatorAttachment;
-use WebAuthnX\Enum\PublicKeyCredentialType;
-use WebAuthnX\Json\JsonObject;
-use WebAuthnX\Json\JsonObjectException;
-use WebAuthnXTests\WebAuthnTestCase;
+use ShipMonk\WebAuthn\Base64\Base64;
+use ShipMonk\WebAuthn\Credential\AuthenticatorAssertionResponse;
+use ShipMonk\WebAuthn\Credential\AuthenticatorAttestationResponse;
+use ShipMonk\WebAuthn\Credential\MalformedDataException;
+use ShipMonk\WebAuthn\Credential\PublicKeyCredential;
+use ShipMonk\WebAuthn\Enum\AuthenticatorAttachment;
+use ShipMonk\WebAuthn\Enum\PublicKeyCredentialType;
+use ShipMonk\WebAuthn\Json\JsonObject;
+use ShipMonk\WebAuthn\Json\JsonObjectException;
+use ShipMonk\WebAuthnTests\WebAuthnTestCase;
 use function json_encode;
 use const JSON_THROW_ON_ERROR;
 

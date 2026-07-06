@@ -1,10 +1,10 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests;
+namespace ShipMonk\WebAuthnTests;
 
-use WebAuthnX\Base64\Base64;
-use WebAuthnX\Cose\CoseAlgorithmIdentifier;
-use WebAuthnX\Credential\AuthenticatorAssertionResponse;
+use ShipMonk\WebAuthn\Base64\Base64;
+use ShipMonk\WebAuthn\Cose\CoseAlgorithmIdentifier;
+use ShipMonk\WebAuthn\Credential\AuthenticatorAssertionResponse;
 use function hash;
 use function is_string;
 use function json_encode;

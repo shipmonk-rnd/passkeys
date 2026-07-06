@@ -1,15 +1,15 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests\Credential;
+namespace ShipMonk\WebAuthnTests\Credential;
 
-use WebAuthnX\Base64\Base64;
-use WebAuthnX\Binary\BytesReader;
-use WebAuthnX\Cbor\CborMap;
-use WebAuthnX\Cose\CoseAlgorithmIdentifier;
-use WebAuthnX\Cose\CoseEc2Key;
-use WebAuthnX\Credential\AttestationObject;
-use WebAuthnX\Credential\AuthenticatorData;
-use WebAuthnXTests\WebAuthnTestCase;
+use ShipMonk\WebAuthn\Base64\Base64;
+use ShipMonk\WebAuthn\Binary\BytesReader;
+use ShipMonk\WebAuthn\Cbor\CborMap;
+use ShipMonk\WebAuthn\Cose\CoseAlgorithmIdentifier;
+use ShipMonk\WebAuthn\Cose\CoseEc2Key;
+use ShipMonk\WebAuthn\Credential\AttestationObject;
+use ShipMonk\WebAuthn\Credential\AuthenticatorData;
+use ShipMonk\WebAuthnTests\WebAuthnTestCase;
 use function str_repeat;
 use function strlen;
 

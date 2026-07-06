@@ -1,11 +1,11 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX\Json;
+namespace ShipMonk\WebAuthn\Json;
 
 use JsonException;
+use ShipMonk\WebAuthn\Base64\Base64;
+use ShipMonk\WebAuthn\Base64\InvalidBase64Exception;
 use stdClass;
-use WebAuthnX\Base64\Base64;
-use WebAuthnX\Base64\InvalidBase64Exception;
 use function is_array;
 use function is_bool;
 use function is_string;

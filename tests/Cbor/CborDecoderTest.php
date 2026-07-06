@@ -1,12 +1,12 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests\Cbor;
+namespace ShipMonk\WebAuthnTests\Cbor;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use WebAuthnX\Binary\BytesReader;
-use WebAuthnX\Cbor\CborDecoder;
-use WebAuthnX\Cbor\InvalidCborException;
-use WebAuthnXTests\WebAuthnTestCase;
+use ShipMonk\WebAuthn\Binary\BytesReader;
+use ShipMonk\WebAuthn\Cbor\CborDecoder;
+use ShipMonk\WebAuthn\Cbor\InvalidCborException;
+use ShipMonk\WebAuthnTests\WebAuthnTestCase;
 use function is_float;
 use function is_nan;
 use const INF;

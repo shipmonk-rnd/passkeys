@@ -1,10 +1,10 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests\Json;
+namespace ShipMonk\WebAuthnTests\Json;
 
-use WebAuthnX\Json\JsonObject;
-use WebAuthnX\Json\JsonObjectException;
-use WebAuthnXTests\WebAuthnTestCase;
+use ShipMonk\WebAuthn\Json\JsonObject;
+use ShipMonk\WebAuthn\Json\JsonObjectException;
+use ShipMonk\WebAuthnTests\WebAuthnTestCase;
 
 class JsonObjectTest extends WebAuthnTestCase
 {

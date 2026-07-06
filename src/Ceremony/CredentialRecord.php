@@ -1,8 +1,8 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX\Ceremony;
+namespace ShipMonk\WebAuthn\Ceremony;
 
-use WebAuthnX\Cose\CoseKey;
+use ShipMonk\WebAuthn\Cose\CoseKey;
 
 /**
  * The persistent state a relying party stores for a registered credential, as described by the

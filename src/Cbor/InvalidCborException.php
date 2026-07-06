@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX\Cbor;
+namespace ShipMonk\WebAuthn\Cbor;
 
 use RuntimeException;
 

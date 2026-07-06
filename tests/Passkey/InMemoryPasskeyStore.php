@@ -1,11 +1,11 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests\Passkey;
+namespace ShipMonk\WebAuthnTests\Passkey;
 
-use WebAuthnX\Ceremony\AuthenticationResult;
-use WebAuthnX\Ceremony\CredentialRecord;
-use WebAuthnX\Passkey\PasskeyStore;
-use WebAuthnX\Passkey\RegisteredPasskey;
+use ShipMonk\WebAuthn\Ceremony\AuthenticationResult;
+use ShipMonk\WebAuthn\Ceremony\CredentialRecord;
+use ShipMonk\WebAuthn\Passkey\PasskeyStore;
+use ShipMonk\WebAuthn\Passkey\RegisteredPasskey;
 use function base64_encode;
 
 /**

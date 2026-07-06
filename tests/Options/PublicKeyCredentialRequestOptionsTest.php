@@ -1,15 +1,15 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests\Options;
+namespace ShipMonk\WebAuthnTests\Options;
 
-use WebAuthnX\Base64\Base64;
-use WebAuthnX\Enum\AuthenticatorTransport;
-use WebAuthnX\Enum\PublicKeyCredentialHint;
-use WebAuthnX\Enum\PublicKeyCredentialType;
-use WebAuthnX\Enum\UserVerificationRequirement;
-use WebAuthnX\Options\PublicKeyCredentialDescriptor;
-use WebAuthnX\Options\PublicKeyCredentialRequestOptions;
-use WebAuthnXTests\WebAuthnTestCase;
+use ShipMonk\WebAuthn\Base64\Base64;
+use ShipMonk\WebAuthn\Enum\AuthenticatorTransport;
+use ShipMonk\WebAuthn\Enum\PublicKeyCredentialHint;
+use ShipMonk\WebAuthn\Enum\PublicKeyCredentialType;
+use ShipMonk\WebAuthn\Enum\UserVerificationRequirement;
+use ShipMonk\WebAuthn\Options\PublicKeyCredentialDescriptor;
+use ShipMonk\WebAuthn\Options\PublicKeyCredentialRequestOptions;
+use ShipMonk\WebAuthnTests\WebAuthnTestCase;
 use function json_decode;
 use const JSON_THROW_ON_ERROR;
 

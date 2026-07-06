@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnX\Binary;
+namespace ShipMonk\WebAuthn\Binary;
 
 use RuntimeException;
 

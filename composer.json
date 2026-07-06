@@ -1,5 +1,5 @@
 {
-    "name": "jantvrdik/webauthn",
+    "name": "shipmonk/webauthn",
     "description": "Spec-compliant WebAuthn (passkeys) library for PHP with minimal dependencies",
     "license": "MIT",
     "require": {
@@ -21,12 +21,12 @@
     },
     "autoload": {
         "psr-4": {
-            "WebAuthnX\\": "src/"
+            "ShipMonk\\WebAuthn\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "WebAuthnXTests\\": "tests/"
+            "ShipMonk\\WebAuthnTests\\": "tests/"
         }
     },
     "config": {

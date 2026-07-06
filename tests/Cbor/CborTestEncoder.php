@@ -1,8 +1,8 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests\Cbor;
+namespace ShipMonk\WebAuthnTests\Cbor;
 
-use WebAuthnX\Cbor\CborEncoder;
+use ShipMonk\WebAuthn\Cbor\CborEncoder;
 use function chr;
 use function is_int;
 use function ord;

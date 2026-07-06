@@ -1,14 +1,14 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests;
+namespace ShipMonk\WebAuthnTests;
 
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use ShipMonk\WebAuthn\Binary\BytesReader;
+use ShipMonk\WebAuthn\Cbor\CborMap;
+use ShipMonk\WebAuthn\Json\JsonObject;
+use ShipMonk\WebAuthnTests\Cbor\CborTestEncoder;
 use Throwable;
-use WebAuthnX\Binary\BytesReader;
-use WebAuthnX\Cbor\CborMap;
-use WebAuthnX\Json\JsonObject;
-use WebAuthnXTests\Cbor\CborTestEncoder;
 use function hex2bin;
 use function json_encode;
 use function str_replace;

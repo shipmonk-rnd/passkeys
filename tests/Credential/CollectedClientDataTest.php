@@ -1,11 +1,11 @@
 <?php declare(strict_types = 1);
 
-namespace WebAuthnXTests\Credential;
+namespace ShipMonk\WebAuthnTests\Credential;
 
-use WebAuthnX\Base64\Base64;
-use WebAuthnX\Credential\CollectedClientData;
-use WebAuthnX\Credential\MalformedDataException;
-use WebAuthnXTests\WebAuthnTestCase;
+use ShipMonk\WebAuthn\Base64\Base64;
+use ShipMonk\WebAuthn\Credential\CollectedClientData;
+use ShipMonk\WebAuthn\Credential\MalformedDataException;
+use ShipMonk\WebAuthnTests\WebAuthnTestCase;
 use function json_encode;
 use const JSON_THROW_ON_ERROR;
 
