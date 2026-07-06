@@ -7,10 +7,6 @@ use ShipMonk\WebAuthn\Binary\BytesReader;
 use ShipMonk\WebAuthn\Cbor\CborDecoder;
 use ShipMonk\WebAuthn\Cbor\InvalidCborException;
 use ShipMonk\WebAuthnTests\WebAuthnTestCase;
-use function is_float;
-use function is_nan;
-use const INF;
-use const NAN;
 
 class CborDecoderTest extends WebAuthnTestCase
 {
@@ -27,12 +23,7 @@ class CborDecoderTest extends WebAuthnTestCase
             return CborDecoder::decode($reader);
         });
 
-        if (is_float($expected) && is_nan($expected)) {
-            self::assertNan($actual);
-
-        } else {
-            self::assertSame($expected, $actual);
-        }
+        self::assertSame($expected, $actual);
     }
 
     /**
@@ -102,30 +93,6 @@ class CborDecoderTest extends WebAuthnTestCase
         yield ['ba 00 00 00 02 01 02 03 04', [1 => 2, 3 => 4]];
         yield ['bb 00 00 00 00 00 00 00 02 01 02 03 04', [1 => 2, 3 => 4]];
 
-        // floats
-        yield ['f9 00 00', +0.0];
-        yield ['f9 80 00', -0.0];
-        yield ['f9 3c 00', 1.0];
-        yield ['fb 3f f1 99 99 99 99 99 9a', 1.1];
-        yield ['f9 3e 00', 1.5];
-        yield ['f9 7b ff', 65_504.0];
-        yield ['fa 47 c3 50 00', 100_000.0];
-        yield ['fa 7f 7f ff ff', 3.4028234663852886e+38];
-        yield ['fb 7e 37 e4 3c 88 00 75 9c', 1.0e+300];
-        yield ['f9 00 01', 5.960464477539063e-8];
-        yield ['f9 04 00', 0.00006103515625];
-        yield ['f9 c4 00', -4.0];
-        yield ['fb c0 10 66 66 66 66 66 66', -4.1];
-        yield ['f9 7c 00', INF];
-        yield ['f9 7e 00', NAN];
-        yield ['f9 fc 00', -INF];
-        yield ['fa 7f 80 00 00', INF];
-        yield ['fa 7f c0 00 00', NAN];
-        yield ['fa ff 80 00 00', -INF];
-        yield ['fb 7f f0 00 00 00 00 00 00', INF];
-        yield ['fb 7f f8 00 00 00 00 00 00', NAN];
-        yield ['fb ff f0 00 00 00 00 00 00', -INF];
-
         // literals
         yield ['f4', false];
         yield ['f5', true];
@@ -179,6 +146,12 @@ class CborDecoderTest extends WebAuthnTestCase
         yield ['f7', 'Unrecognized simple value byte 0xf7'];
         yield ['f0', 'Unrecognized simple value byte 0xf0'];
         yield ['f8 ff', 'Unrecognized simple value byte 0xf8'];
+
+        yield ['f9 3c 00', 'Floating-point values are not supported'];
+        yield ['fa 47 c3 50 00', 'Floating-point values are not supported'];
+        yield ['fb 3f f1 99 99 99 99 99 9a', 'Floating-point values are not supported'];
+        yield ['83 01 02 f9 7e 00', 'Floating-point values are not supported'];
+        yield ['a1 61 61 fb 7f f0 00 00 00 00 00 00', 'Floating-point values are not supported'];
 
         yield ['5f 42 01 02 43 03 04 05 ff', 'Indefinite-length values are not supported'];
         yield ['7f 65 73 74 72 65 61 64 6d 69 6e 67 ff', 'Indefinite-length values are not supported'];

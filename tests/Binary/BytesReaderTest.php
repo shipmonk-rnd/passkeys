@@ -5,7 +5,6 @@ namespace ShipMonk\WebAuthnTests\Binary;
 use ShipMonk\WebAuthn\Binary\BytesReader;
 use ShipMonk\WebAuthn\Binary\BytesReaderException;
 use ShipMonk\WebAuthnTests\WebAuthnTestCase;
-use const INF;
 
 class BytesReaderTest extends WebAuthnTestCase
 {
@@ -121,89 +120,6 @@ class BytesReaderTest extends WebAuthnTestCase
             static function (): void {
                 BytesReader::read('', static function (BytesReader $reader): void {
                     $reader->u64();
-                });
-            },
-        );
-    }
-
-    public function testF16(): void
-    {
-        BytesReader::read("\x00\x00", static function (BytesReader $reader): void {
-            self::assertSame(0.0, $reader->f16());
-        });
-
-        BytesReader::read("\x12\xfa", static function (BytesReader $reader): void {
-            self::assertSame(0.0008516311645507812, $reader->f16());
-        });
-
-        BytesReader::read("\x3c\x00", static function (BytesReader $reader): void {
-            self::assertSame(1.0, $reader->f16());
-        });
-
-        BytesReader::read("\x7b\xff", static function (BytesReader $reader): void {
-            self::assertSame(65_504.0, $reader->f16());
-        });
-
-        BytesReader::read("\x7c\x00", static function (BytesReader $reader): void {
-            self::assertSame(INF, $reader->f16());
-        });
-
-        BytesReader::read("\xfc\x00", static function (BytesReader $reader): void {
-            self::assertSame(-INF, $reader->f16());
-        });
-
-        BytesReader::read("\x7c\x01", static function (BytesReader $reader): void {
-            self::assertNan($reader->f16());
-        });
-
-        BytesReader::read("\x7e\x00", static function (BytesReader $reader): void {
-            self::assertNan($reader->f16());
-        });
-
-        BytesReader::read("\x7e\x01", static function (BytesReader $reader): void {
-            self::assertNan($reader->f16());
-        });
-
-        self::assertException(
-            BytesReaderException::class,
-            'Unexpected end of data',
-            static function (): void {
-                BytesReader::read('', static function (BytesReader $reader): void {
-                    $reader->f16();
-                });
-            },
-        );
-    }
-
-    public function testF32(): void
-    {
-        BytesReader::read("\x40\x49\x0F\xDB", static function (BytesReader $reader): void {
-            self::assertSame(3.1415927410125732, $reader->f32());
-        });
-
-        self::assertException(
-            BytesReaderException::class,
-            'Unexpected end of data',
-            static function (): void {
-                BytesReader::read('', static function (BytesReader $reader): void {
-                    $reader->f32();
-                });
-            },
-        );
-    }
-
-    public function testF64(): void
-    {
-        BytesReader::read("\x40\x09\x21\xfb\x54\x44\x2d\x18", static function (BytesReader $reader): void {
-            self::assertSame(3.141592653589793, $reader->f64());
-        });
-
-        self::assertException(
-            BytesReaderException::class,
-            'Unexpected end of data',
-            static function (): void {
-                BytesReader::read('', static function (BytesReader $reader): void {
-                    $reader->f64();
                 });
             },
         );

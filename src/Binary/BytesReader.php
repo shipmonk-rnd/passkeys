@@ -3,18 +3,13 @@
 namespace ShipMonk\WebAuthn\Binary;
 
 use Closure;
-use LogicException;
-use function is_float;
 use function ord;
 use function preg_match;
 use function strlen;
 use function substr;
-use function unpack;
-use const INF;
-use const NAN;
 
 /**
- * Sequential reader over a binary string, reading big-endian integers, floats and raw byte
+ * Sequential reader over a binary string, reading big-endian integers and raw byte
  * substrings while tracking the current offset. The whole input must be consumed — leftover
  * bytes are an error, so a parser cannot silently ignore trailing data.
  */
@@ -117,40 +112,6 @@ class BytesReader
     }
 
     /**
-     * @throws BytesReaderException
-     */
-    public function f16(): float
-    {
-        $value = $this->u16();
-        $exponent = ($value >> 10) & 0x1f;
-        $mantissa = $value & 0x3ff;
-
-        $float = match ($exponent) {
-            0x00 => $mantissa * (2 ** -24),
-            0x1f => $mantissa !== 0 ? NAN : INF,
-            default => ($mantissa + 1024) * (2 ** ($exponent - 25)),
-        };
-
-        return ($value & 0x8000) !== 0 ? -$float : $float;
-    }
-
-    /**
-     * @throws BytesReaderException
-     */
-    public function f32(): float
-    {
-        return $this->unpackFloat('G', 4);
-    }
-
-    /**
-     * @throws BytesReaderException
-     */
-    public function f64(): float
-    {
-        return $this->unpackFloat('E', 8);
-    }
-
-    /**
      * @param  non-negative-int $length
      * @return string raw bytes, without any validation
      *
@@ -183,25 +144,6 @@ class BytesReader
         }
 
         return $binaryString;
-    }
-
-    /**
-     * @param  non-negative-int $length
-     *
-     * @throws BytesReaderException
-     */
-    private function unpackFloat(
-        string $format,
-        int $length,
-    ): float
-    {
-        $value = unpack($format, $this->bytes($length));
-
-        if ($value === false || !isset($value[1]) || !is_float($value[1])) {
-            throw new LogicException('Failed to unpack data'); // unreachable, every 4/8-byte sequence is a valid IEEE 754 float
-        }
-
-        return $value[1];
     }
 
     /**

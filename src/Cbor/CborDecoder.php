@@ -14,7 +14,8 @@ use function is_string;
  * WebAuthn specification.
  *
  * It targets the {@link https://fidoalliance.org/specs/fido-v2.1-ps-20210615/fido-client-to-authenticator-protocol-v2.1-ps-errata-20220621.html#ctap2-canonical-cbor-encoding-form CTAP2 canonical CBOR encoding form}:
- * it does not support indefinite-length values or tagged values, and rejects duplicate map keys.
+ * it does not support indefinite-length values, tagged values or floating-point values, and
+ * rejects duplicate map keys.
  * It does not, however, fully enforce canonicalness — it accepts non-minimal integer/length
  * encodings and out-of-order map keys. That is deliberate: WebAuthn signature verification does
  * not depend on the exact CBOR byte encoding (COSE keys are re-encoded to DER before use), so
@@ -95,12 +96,8 @@ class CborDecoder
                 0xf5 => true,
                 0xf6 => null,
 
-                // float
-                0xf9 => $bytes->f16(),
-                0xfa => $bytes->f32(),
-                0xfb => $bytes->f64(),
-
                 // unsupported
+                0xf9, 0xfa, 0xfb => throw new InvalidCborException('Floating-point values are not supported'),
                 default => match (true) {
                     ($byte & 0x1f) === 31 => throw new InvalidCborException('Indefinite-length values are not supported'),
                     ($byte >> 5) === 6 => throw new InvalidCborException('Tagged values are not supported'),
