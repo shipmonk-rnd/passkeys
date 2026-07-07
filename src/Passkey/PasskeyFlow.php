@@ -54,7 +54,8 @@ use function random_bytes;
  *
  * Registration is the same pair of calls — {@see self::registrationOptions()} /
  * {@see self::register()} — for an account the caller has already resolved (the signed-in user
- * adding a passkey, or a just-created signup). Deciding *who* may enrol — verifying the email,
+ * adding a passkey, or a just-created signup); pass `conditionalMediation: true` for the silent
+ * passkey-upgrade variant offered right after a password login. Deciding *who* may enrol — verifying the email,
  * requiring an authenticated session — is deliberately left in front of the flow. Mind that a
  * pending registration stays completable for as long as the {@see PendingCeremonyStore} keeps it:
  * the enrolment authorization must still hold when {@see self::register()} is called, not just
@@ -185,20 +186,32 @@ class PasskeyFlow
      * browser's `navigator.credentials.create()`. Credentials the account already has are listed
      * in `excludeCredentials` so the same authenticator cannot enrol twice.
      *
-     * @param string      $userHandle  raw user handle bytes (an opaque, immutable, PII-free
+     * Set `$conditionalMediation` when the page will pass the options to
+     * `navigator.credentials.create()` with `mediation: "conditional"` — the silent passkey
+     * upgrade offered right after a password login. The client creates the passkey without any
+     * user interaction (and only when its own conditions hold, e.g. the password was just
+     * autofilled from its credential manager), so the response may carry neither the User Present
+     * nor the User Verified flag: {@see self::register()} relaxes both checks for this ceremony,
+     * and the options request `userVerification: "preferred"` instead of the configured policy —
+     * a silent creation could never satisfy `required`. Everything the caller must guarantee for
+     * a modal registration still applies, most notably that the account is authenticated.
+     *
+     * @param string      $userHandle           raw user handle bytes (an opaque, immutable, PII-free
      *      account id, at most 64 bytes — never the email itself)
-     * @param string      $username    the human-readable account identifier (email/username),
+     * @param string      $username             the human-readable account identifier (email/username),
      *        shown by authenticator UIs to label the passkey
-     * @param string|null $displayName a friendlier account label ("Alice Doe"), defaulting to the username
+     * @param string|null $displayName          a friendlier account label ("Alice Doe"), defaulting to the username
+     * @param bool        $conditionalMediation whether the options are for a `mediation: "conditional"` creation
      */
     public function registrationOptions(
         string $userHandle,
         string $username,
         ?string $displayName = null,
+        bool $conditionalMediation = false,
     ): PublicKeyCredentialCreationOptions
     {
         $challenge = $this->generateChallenge();
-        $this->pendingCeremonyStore->rememberPendingRegistration(new PendingRegistration($challenge, $userHandle));
+        $this->pendingCeremonyStore->rememberPendingRegistration(new PendingRegistration($challenge, $userHandle, $conditionalMediation));
 
         return new PublicKeyCredentialCreationOptions(
             rp: new PublicKeyCredentialRpEntity(name: $this->rpName, id: $this->rpId),
@@ -212,7 +225,9 @@ class PasskeyFlow
             excludeCredentials: $this->credentialDescriptorsFor($userHandle),
             authenticatorSelection: new AuthenticatorSelectionCriteria(
                 residentKey: $this->getResidentKeyRequirement(),
-                userVerification: $this->getUserVerificationRequirement(),
+                userVerification: $conditionalMediation
+                    ? UserVerificationRequirement::PREFERRED
+                    : $this->getUserVerificationRequirement(),
             ),
         );
     }
@@ -259,14 +274,19 @@ class PasskeyFlow
                 rpId: $this->rpId,
                 origins: $this->origins,
                 allowedAlgorithms: $this->getAllowedAlgorithms(),
-                requireUserVerification: $this->getUserVerificationRequirement() === UserVerificationRequirement::REQUIRED,
+                // A conditional-mediation creation is silent, so neither flag can be demanded: the
+                // expectations relax User Present (§7.1 step 15) via `conditionalMediation`, User
+                // Verified must be relaxed here.
+                requireUserVerification: !$pending->conditionalMediation
+                    && $this->getUserVerificationRequirement() === UserVerificationRequirement::REQUIRED,
                 allowCrossOrigin: $this->isCrossOriginAllowed(),
                 allowedTopOrigins: $this->getAllowedTopOrigins(),
+                conditionalMediation: $pending->conditionalMediation,
             ),
             $this->store,
         );
 
-        $registered = new RegisteredPasskey($pending->userHandle, $credential->authenticatorAttachment, $result);
+        $registered = new RegisteredPasskey($pending->userHandle, $credential->authenticatorAttachment, $result, $pending->conditionalMediation);
         $this->store->saveCredential($registered);
 
         return $registered;

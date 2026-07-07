@@ -24,11 +24,13 @@ final readonly class RegisteredPasskey
     /**
      * @param string                       $userHandle              raw user handle bytes of the account the passkey was registered to
      * @param AuthenticatorAttachment|null $authenticatorAttachment the client-asserted attachment, null when the client sent none or an unknown value — a display hint, not a trusted value
+     * @param bool                         $conditionalMediation    whether the passkey came from a conditional-mediation (silent passkey-upgrade) ceremony — e.g. to notify the user that a passkey was created for them
      */
     public function __construct(
         public string $userHandle,
         public ?AuthenticatorAttachment $authenticatorAttachment,
         public RegistrationResult $result,
+        public bool $conditionalMediation = false,
     )
     {
     }

@@ -230,6 +230,7 @@ class PasskeyFlowTest extends CryptoTestCase
 
         self::assertSame(self::DAVE_HANDLE, $registered->userHandle);
         self::assertSame(AuthenticatorAttachment::PLATFORM, $registered->authenticatorAttachment);
+        self::assertFalse($registered->conditionalMediation);
         self::assertSame(self::NEW_CREDENTIAL_ID, $registered->result->credentialId);
         self::assertSame(['internal'], $registered->toCredentialRecord()->transports);
         self::assertSame([$registered], $this->store->savedPasskeys);
@@ -244,6 +245,58 @@ class PasskeyFlowTest extends CryptoTestCase
             self::DAVE_HANDLE,
         ));
         self::assertSame(self::DAVE_HANDLE, $result->userHandle);
+    }
+
+    public function testConditionalMediationRegistrationRoundTrip(): void
+    {
+        $flow = $this->createFlow();
+
+        $options = $flow->registrationOptions(self::DAVE_HANDLE, self::DAVE, conditionalMediation: true);
+
+        // A silent creation could never satisfy `required`, so the options ask for `preferred`.
+        self::assertSame(UserVerificationRequirement::PREFERRED, $options->authenticatorSelection?->userVerification);
+        self::assertSame(ResidentKeyRequirement::REQUIRED, $options->authenticatorSelection->residentKey);
+
+        $pending = $this->pending->pendingRegistrations[base64_encode($options->challenge)] ?? null;
+        self::assertNotNull($pending);
+        self::assertTrue($pending->conditionalMediation);
+
+        // The passkey is created without user interaction: neither UP nor UV is set, and both
+        // checks are relaxed for this ceremony only.
+        $registered = $flow->register($this->registrationBody($options->challenge, flags: 0));
+
+        self::assertTrue($registered->conditionalMediation);
+        self::assertFalse($registered->result->userVerified);
+        self::assertFalse($registered->toCredentialRecord()->uvInitialized);
+        self::assertSame([$registered], $this->store->savedPasskeys);
+    }
+
+    public function testModalRegistrationStillRequiresUserPresence(): void
+    {
+        $flow = $this->createFlow();
+
+        $options = $flow->registrationOptions(self::DAVE_HANDLE, self::DAVE);
+
+        $this->assertRegistrationFails(
+            VerificationException::USER_NOT_PRESENT,
+            $flow,
+            $this->registrationBody($options->challenge, flags: 0),
+        );
+        self::assertSame([], $this->store->savedPasskeys);
+    }
+
+    public function testModalRegistrationStillRequiresUserVerification(): void
+    {
+        $flow = $this->createFlow();
+
+        $options = $flow->registrationOptions(self::DAVE_HANDLE, self::DAVE);
+
+        $this->assertRegistrationFails(
+            VerificationException::USER_NOT_VERIFIED,
+            $flow,
+            $this->registrationBody($options->challenge, flags: AuthenticatorData::FLAG_USER_PRESENT),
+        );
+        self::assertSame([], $this->store->savedPasskeys);
     }
 
     public function testRegistrationOptionsExcludeExistingCredentials(): void
@@ -584,6 +637,7 @@ class PasskeyFlowTest extends CryptoTestCase
         string $challenge,
         string $credentialId = self::NEW_CREDENTIAL_ID,
         ?array $coseEntries = null,
+        int $flags = self::FLAGS_UP_UV,
     ): string
     {
         $clientDataJson = json_encode([
@@ -598,7 +652,7 @@ class PasskeyFlowTest extends CryptoTestCase
             . CborTestEncoder::intMap($coseEntries ?? $this->coseEntries);
 
         $authData = hash('sha256', self::RP_ID, binary: true)
-            . chr(self::FLAGS_UP_UV | AuthenticatorData::FLAG_ATTESTED_CREDENTIAL_DATA)
+            . chr($flags | AuthenticatorData::FLAG_ATTESTED_CREDENTIAL_DATA)
             . pack('N', 0)
             . $attestedCredentialData;
 
