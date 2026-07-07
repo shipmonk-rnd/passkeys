@@ -1,8 +1,12 @@
-# ShipMonk\WebAuthn
+# WebAuthn / passkeys for PHP
 
-A from-scratch, spec-compliant [WebAuthn](https://w3c.github.io/webauthn/) **passkey** library
-for PHP with **no third-party runtime dependencies** — only PHP itself and the bundled
-`ext-openssl`.
+A from-scratch, spec-compliant [WebAuthn](https://w3c.github.io/webauthn/) **passkey** library for PHP.
+
+- 🔑 **Passkey-focused:** easy-to-use high-level API — wire four methods to four HTTP endpoints and you have passkey registration and login
+- 🔧 **Full control:** the low-level WebAuthn API underneath (ceremony engine, response parsing, COSE/CBOR primitives) is public too
+- 🕸️ **Zero dependencies:** only PHP itself and `ext-openssl`
+- 🧪 **100 % code coverage:** enforced in CI
+- 🔬 **PHPStan max level:** with strict rules and zero ignores in `src/`
 
 The intended entry point is the high-level **`ShipMonk\WebAuthn\Passkey\PasskeyFlow`**: construct it with
 your relying party identity and two small storage interfaces, wire its four methods to four HTTP
