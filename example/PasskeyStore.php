@@ -8,6 +8,7 @@ use RuntimeException;
 use ShipMonk\WebAuthn\Ceremony\AuthenticationResult;
 use ShipMonk\WebAuthn\Ceremony\CredentialRecord;
 use ShipMonk\WebAuthn\Cose\CoseKey;
+use ShipMonk\WebAuthn\Options\PublicKeyCredentialUserEntity;
 use ShipMonk\WebAuthn\Passkey\PasskeyStore as PasskeyStoreInterface;
 use ShipMonk\WebAuthn\Passkey\RegisteredPasskey;
 use function array_map;
@@ -137,6 +138,18 @@ final class PasskeyStore implements PasskeyStoreInterface
     {
         // The demo's usernames are emails.
         return $this->findUserByEmail($username)['passkey_user_handle'] ?? null;
+    }
+
+    public function findUserEntityByUserHandle(string $userHandle): ?PublicKeyCredentialUserEntity
+    {
+        $user = $this->findUserByHandle($userHandle);
+
+        if ($user === null) {
+            return null;
+        }
+
+        // The demo has no separate display name, so the email doubles as both — as at registration.
+        return new PublicKeyCredentialUserEntity(id: $user['passkey_user_handle'], name: $user['email'], displayName: $user['email']);
     }
 
     // -- credentials table --------------------------------------------------------------------
