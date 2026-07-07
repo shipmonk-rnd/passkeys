@@ -78,6 +78,24 @@ options automatically list the account's existing credentials in `excludeCredent
 authenticator cannot enrol twice, and request a discoverable credential with user verification —
 the defaults that make the credential a passkey.
 
+#### Conditional mediation (automatic passkey upgrade)
+
+Browsers can upgrade a password account to a passkey **silently**, right after a successful
+password login. Request the options with `conditionalMediation: true` and hand them to
+`navigator.credentials.create()` with `mediation: 'conditional'`:
+
+```php
+// POST /register/options — immediately after a password-based sign-in
+$options = $flow->registrationOptions($userHandle, $email, conditionalMediation: true);
+```
+
+The browser decides on its own whether to create the passkey (typically only when the password was
+just autofilled from its credential manager) and does so without any user interaction — the
+response then carries neither the User Present nor the User Verified flag, and `register()`
+relaxes both checks for that ceremony (and that ceremony only). The same verify endpoint finishes
+it; `$registered->conditionalMediation` tells you the passkey was created this way, e.g. to notify
+the user.
+
 ### Authentication
 
 One pair of endpoints covers all three ways passkey login is offered — usually together, on the
