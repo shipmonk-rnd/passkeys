@@ -5,6 +5,7 @@ namespace ShipMonk\WebAuthn\Passkey;
 use ShipMonk\WebAuthn\Ceremony\AuthenticationResult;
 use ShipMonk\WebAuthn\Ceremony\CredentialRecord;
 use ShipMonk\WebAuthn\Ceremony\CredentialStore;
+use ShipMonk\WebAuthn\Options\PublicKeyCredentialUserEntity;
 
 /**
  * The relying party's durable passkey storage behind a {@see PasskeyFlow} — the user and
@@ -36,6 +37,16 @@ interface PasskeyStore extends CredentialStore
      * @return list<CredentialRecord>
      */
     public function findCredentialsByUserHandle(string $userHandle): array;
+
+    /**
+     * The account's current identity (user handle, username, display name) as a
+     * {@see PublicKeyCredentialUserEntity}, or null when no such account exists. Used to build a
+     * {@see \ShipMonk\WebAuthn\Signal\CurrentUserDetailsSignal}; typically the same lookup that
+     * backs your login/profile pages, keyed by the opaque handle rather than the username.
+     *
+     * @param string $userHandle raw user handle bytes
+     */
+    public function findUserEntityByUserHandle(string $userHandle): ?PublicKeyCredentialUserEntity;
 
     /**
      * Persists the newly registered credential — typically one INSERT of

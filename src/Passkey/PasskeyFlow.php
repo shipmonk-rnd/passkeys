@@ -2,6 +2,7 @@
 
 namespace ShipMonk\WebAuthn\Passkey;
 
+use InvalidArgumentException;
 use ShipMonk\WebAuthn\Ceremony\AuthenticationExpectations;
 use ShipMonk\WebAuthn\Ceremony\AuthenticationResult;
 use ShipMonk\WebAuthn\Ceremony\CredentialRecord;
@@ -23,6 +24,8 @@ use ShipMonk\WebAuthn\Options\PublicKeyCredentialRequestOptions;
 use ShipMonk\WebAuthn\Options\PublicKeyCredentialRpEntity;
 use ShipMonk\WebAuthn\Options\PublicKeyCredentialUserEntity;
 use ShipMonk\WebAuthn\RelyingParty;
+use ShipMonk\WebAuthn\Signal\AllAcceptedCredentialsSignal;
+use ShipMonk\WebAuthn\Signal\CurrentUserDetailsSignal;
 use function array_map;
 use function random_bytes;
 
@@ -267,6 +270,61 @@ class PasskeyFlow
         $this->store->saveCredential($registered);
 
         return $registered;
+    }
+
+    // --- Signal API: keep credential providers in sync (WebAuthn §5.1.10) -----------------------
+
+    /**
+     * Builds the payload for `PublicKeyCredential.signalAllAcceptedCredentials()`: the *complete*
+     * set of credential ids currently accepted for the account, for the browser to hand to the
+     * credential provider so it prunes any passkey no longer on the list. Serialize it with
+     * {@see AllAcceptedCredentialsSignal::toJson()} and pass it to the JS call.
+     *
+     * Call it after a successful sign-in (opportunistic re-sync) and whenever the account's
+     * credential set changes — a passkey removed, or the account deleted, in which case the list is
+     * legitimately empty and prunes them all. The list is drawn straight from the durable store, so
+     * it stays authoritative: never hand the provider a filtered subset, or it hides the omitted —
+     * still valid — passkeys.
+     *
+     * The matching `signalUnknownCredential()` call needs no server-built payload: the browser
+     * already holds the credential id it just used and your RP ID, so it can prune a single
+     * unrecognised credential itself once {@see self::authenticate()} rejects it with
+     * {@see VerificationException::UNKNOWN_CREDENTIAL}.
+     *
+     * @param string $userHandle raw user handle bytes
+     */
+    public function allAcceptedCredentialsSignal(string $userHandle): AllAcceptedCredentialsSignal
+    {
+        $credentialIds = array_map(
+            static fn (CredentialRecord $credential) => $credential->credentialId,
+            $this->store->findCredentialsByUserHandle($userHandle),
+        );
+
+        return new AllAcceptedCredentialsSignal($this->rpId, $userHandle, $credentialIds);
+    }
+
+    /**
+     * Builds the payload for `PublicKeyCredential.signalCurrentUserDetails()`: the account's current
+     * `name` / `displayName`, for the browser to hand to the credential provider so the metadata it
+     * shows for the account's passkeys stays current. Serialize it with
+     * {@see CurrentUserDetailsSignal::toJson()} and pass it to the JS call.
+     *
+     * Call it after the user changes either value, and opportunistically after a successful sign-in.
+     *
+     * @param string $userHandle raw user handle bytes
+     *
+     * @throws InvalidArgumentException if no account exists for the handle
+     *      (per {@see PasskeyStore::findUserEntityByUserHandle()})
+     */
+    public function currentUserDetailsSignal(string $userHandle): CurrentUserDetailsSignal
+    {
+        $user = $this->store->findUserEntityByUserHandle($userHandle);
+
+        if ($user === null) {
+            throw new InvalidArgumentException('No account exists for the given user handle');
+        }
+
+        return new CurrentUserDetailsSignal($this->rpId, $user->id, $user->name, $user->displayName);
     }
 
     /**

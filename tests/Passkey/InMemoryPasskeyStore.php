@@ -4,6 +4,7 @@ namespace ShipMonk\WebAuthnTests\Passkey;
 
 use ShipMonk\WebAuthn\Ceremony\AuthenticationResult;
 use ShipMonk\WebAuthn\Ceremony\CredentialRecord;
+use ShipMonk\WebAuthn\Options\PublicKeyCredentialUserEntity;
 use ShipMonk\WebAuthn\Passkey\PasskeyStore;
 use ShipMonk\WebAuthn\Passkey\RegisteredPasskey;
 use function base64_encode;
@@ -20,6 +21,11 @@ final class InMemoryPasskeyStore implements PasskeyStore
      * @var array<string, string> username → raw user handle
      */
     private array $users = [];
+
+    /**
+     * @var array<string, PublicKeyCredentialUserEntity> raw user handle → entity
+     */
+    private array $userEntities = [];
 
     /**
      * @var array<string, CredentialRecord> base64(credential id) → record
@@ -39,9 +45,15 @@ final class InMemoryPasskeyStore implements PasskeyStore
     public function addUser(
         string $username,
         string $userHandle,
+        ?string $displayName = null,
     ): void
     {
         $this->users[$username] = $userHandle;
+        $this->userEntities[$userHandle] = new PublicKeyCredentialUserEntity(
+            id: $userHandle,
+            name: $username,
+            displayName: $displayName ?? $username,
+        );
     }
 
     public function addCredential(CredentialRecord $record): void
@@ -57,6 +69,11 @@ final class InMemoryPasskeyStore implements PasskeyStore
     public function findUserHandleByUsername(string $username): ?string
     {
         return $this->users[$username] ?? null;
+    }
+
+    public function findUserEntityByUserHandle(string $userHandle): ?PublicKeyCredentialUserEntity
+    {
+        return $this->userEntities[$userHandle] ?? null;
     }
 
     public function findCredentialsByUserHandle(string $userHandle): array

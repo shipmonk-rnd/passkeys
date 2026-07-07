@@ -119,9 +119,11 @@ challenge and looked up from the response — you never juggle "the" pending cer
 The flow owns no state; you implement two small interfaces:
 
 - **`ShipMonk\WebAuthn\Passkey\PasskeyStore`** — the durable side: your user and credential tables.
-  Four methods: `findUserHandleByUsername()`, `findCredentialsByUserHandle()`,
-  `findCredentialByCredentialId()`, plus the two writes `saveCredential()` and
-  `updateCredential()`. Typically a thin repository over the same database that holds your users.
+  Six methods: the reads `findUserHandleByUsername()`, `findCredentialsByUserHandle()`,
+  `findCredentialByCredentialId()` and `findUserEntityByUserHandle()` (the last only used by the
+  [Signal API](#keeping-credential-providers-in-sync-signal-api)), plus the two writes
+  `saveCredential()` and `updateCredential()`. Typically a thin repository over the same database
+  that holds your users.
 - **`ShipMonk\WebAuthn\Passkey\PendingCeremonyStore`** — the transient side: ceremonies started but not
   yet finished, keyed by challenge. Implement it on something browser-session-scoped (the PHP
   session, a short-TTL cache), never on durable storage. Its consume-on-read semantics make each
@@ -134,6 +136,43 @@ The defaults are right for passkeys: user verification `required`, discoverable 
 To change any of them, subclass `PasskeyFlow` and override the corresponding protected method
 (`getUserVerificationRequirement()`, `getAllowedAlgorithms()`, `getResidentKeyRequirement()`,
 `getTimeout()`, `isCrossOriginAllowed()`, `getAllowedTopOrigins()`, `generateChallenge()`).
+
+### Keeping credential providers in sync (Signal API)
+
+Passkey providers (iCloud Keychain, Google Password Manager, …) keep their own copy of a user's
+passkeys and the metadata shown for them. When your server's state drifts from theirs — a passkey
+deleted server-side, an account renamed — the [WebAuthn Signal API](https://w3c.github.io/webauthn/#sctn-signal-methods)
+lets you push corrections so the provider prunes stale passkeys and refreshes labels. The
+`signal*()` calls run in the browser; the flow builds the two payloads that need data only your
+server has:
+
+```php
+// After a successful sign-in, and whenever the user adds/removes a passkey or is renamed:
+$accepted = $flow->allAcceptedCredentialsSignal($result->userHandle);  // complete accepted-id list
+$details  = $flow->currentUserDetailsSignal($result->userHandle);       // current name/displayName
+echo json_encode(['accepted' => $accepted, 'details' => $details]);
+```
+
+```js
+// …then on the client, hand each payload to its method:
+await PublicKeyCredential.signalAllAcceptedCredentials(accepted);
+await PublicKeyCredential.signalCurrentUserDetails(details);
+```
+
+`allAcceptedCredentialsSignal()` returns the account's **complete** set of accepted credential ids
+(an empty list when the account has none — which prunes them all, e.g. on account deletion). It
+must stay authoritative: a provider hides any of its passkeys you leave out, so never build the
+list from a filtered subset.
+
+The third signal, `signalUnknownCredential()`, needs no server-built payload — the browser already
+holds the credential id it just tried and your RP ID. When `authenticate()` rejects a login with
+`VerificationException::UNKNOWN_CREDENTIAL`, tell the page, and let it prune that one credential:
+
+```js
+if (loginFailedAsUnknownCredential) {
+    await PublicKeyCredential.signalUnknownCredential({ rpId, credentialId: credential.id });
+}
+```
 
 ## Example
 

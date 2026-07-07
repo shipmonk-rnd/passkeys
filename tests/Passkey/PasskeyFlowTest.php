@@ -2,6 +2,7 @@
 
 namespace ShipMonk\WebAuthnTests\Passkey;
 
+use InvalidArgumentException;
 use OpenSSLAsymmetricKey;
 use ShipMonk\WebAuthn\Base64\Base64;
 use ShipMonk\WebAuthn\Ceremony\CredentialRecord;
@@ -396,6 +397,51 @@ class PasskeyFlowTest extends CryptoTestCase
 
         $result = $flow->authenticate($this->aliceAssertion($options->challenge, crossOrigin: true));
         self::assertSame(self::ALICE_HANDLE, $result->userHandle);
+    }
+
+    // --- Signal API -------------------------------------------------------------------------------
+
+    public function testAllAcceptedCredentialsSignalListsTheUsersCredentials(): void
+    {
+        $flow = $this->flowWithAlice();
+
+        $signal = $flow->allAcceptedCredentialsSignal(self::ALICE_HANDLE);
+
+        self::assertSame(self::RP_ID, $signal->rpId);
+        self::assertSame(self::ALICE_HANDLE, $signal->userId);
+        self::assertSame([self::ALICE_CREDENTIAL_ID], $signal->allAcceptedCredentialIds);
+    }
+
+    public function testAllAcceptedCredentialsSignalIsEmptyForAccountWithoutPasskeys(): void
+    {
+        $flow = $this->flowWithAlice();
+        $this->store->addUser('carol@example.com', 'carol-handle-0003');
+
+        // An account that has removed its last passkey yields an empty list — which prunes them all.
+        $signal = $flow->allAcceptedCredentialsSignal('carol-handle-0003');
+
+        self::assertSame([], $signal->allAcceptedCredentialIds);
+    }
+
+    public function testCurrentUserDetailsSignalReflectsTheAccount(): void
+    {
+        $flow = $this->flowWithAlice();
+        $this->store->addUser('renamed@example.com', self::ALICE_HANDLE, 'Alice Renamed');
+
+        $signal = $flow->currentUserDetailsSignal(self::ALICE_HANDLE);
+
+        self::assertSame(self::RP_ID, $signal->rpId);
+        self::assertSame(self::ALICE_HANDLE, $signal->userId);
+        self::assertSame('renamed@example.com', $signal->name);
+        self::assertSame('Alice Renamed', $signal->displayName);
+    }
+
+    public function testCurrentUserDetailsSignalThrowsForUnknownUserHandle(): void
+    {
+        $flow = $this->flowWithAlice();
+
+        $this->expectException(InvalidArgumentException::class);
+        $flow->currentUserDetailsSignal('no-such-handle');
     }
 
     // --- Assertion helpers ------------------------------------------------------------------------
