@@ -44,6 +44,9 @@ interface PasskeyStore extends CredentialStore
      * {@see \ShipMonk\WebAuthn\Signal\CurrentUserDetailsSignal}; typically the same lookup that
      * backs your login/profile pages, keyed by the opaque handle rather than the username.
      *
+     * The returned entity's `id` is authoritative for the signal and is expected to equal the
+     * queried handle (both are the same user handle bytes).
+     *
      * @param string $userHandle raw user handle bytes
      */
     public function findUserEntityByUserHandle(string $userHandle): ?PublicKeyCredentialUserEntity;

@@ -313,8 +313,8 @@ class PasskeyFlow
      *
      * @param string $userHandle raw user handle bytes
      *
-     * @throws InvalidArgumentException if no account exists for the handle
-     *      (per {@see PasskeyStore::findUserEntityByUserHandle()})
+     * @throws InvalidArgumentException if the store has no account for the handle
+     *      (its {@see PasskeyStore::findUserEntityByUserHandle()} returned null)
      */
     public function currentUserDetailsSignal(string $userHandle): CurrentUserDetailsSignal
     {
