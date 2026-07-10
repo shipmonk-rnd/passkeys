@@ -1,14 +1,14 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthnTests\Signal;
+namespace ShipMonk\PasskeysTests\Signal;
 
-use ShipMonk\WebAuthn\Base64\Base64;
-use ShipMonk\WebAuthn\Signal\AllAcceptedCredentialsSignal;
-use ShipMonk\WebAuthnTests\WebAuthnTestCase;
+use ShipMonk\Passkeys\Base64\Base64;
+use ShipMonk\Passkeys\Signal\AllAcceptedCredentialsSignal;
+use ShipMonk\PasskeysTests\PasskeysTestCase;
 use function json_decode;
 use const JSON_THROW_ON_ERROR;
 
-class AllAcceptedCredentialsSignalTest extends WebAuthnTestCase
+class AllAcceptedCredentialsSignalTest extends PasskeysTestCase
 {
 
     public function testSerializesRawBytesAsBase64url(): void

@@ -1,22 +1,22 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthnTests;
+namespace ShipMonk\PasskeysTests;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
-use ShipMonk\WebAuthn\Base64\Base64;
-use ShipMonk\WebAuthn\Ceremony\AuthenticationExpectations;
-use ShipMonk\WebAuthn\Ceremony\CredentialRecord;
-use ShipMonk\WebAuthn\Ceremony\RegistrationExpectations;
-use ShipMonk\WebAuthn\Ceremony\RegistrationResult;
-use ShipMonk\WebAuthn\Ceremony\VerificationException;
-use ShipMonk\WebAuthn\Cose\CoseAlgorithmIdentifier;
-use ShipMonk\WebAuthn\Credential\AuthenticatorAssertionResponse;
-use ShipMonk\WebAuthn\Credential\AuthenticatorAttestationResponse;
-use ShipMonk\WebAuthn\Credential\PublicKeyCredential;
-use ShipMonk\WebAuthn\Json\JsonObject;
-use ShipMonk\WebAuthn\RelyingParty;
-use ShipMonk\WebAuthnTests\Ceremony\InMemoryCredentialStore;
+use ShipMonk\Passkeys\Base64\Base64;
+use ShipMonk\Passkeys\Ceremony\AuthenticationExpectations;
+use ShipMonk\Passkeys\Ceremony\CredentialRecord;
+use ShipMonk\Passkeys\Ceremony\RegistrationExpectations;
+use ShipMonk\Passkeys\Ceremony\RegistrationResult;
+use ShipMonk\Passkeys\Ceremony\VerificationException;
+use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
+use ShipMonk\Passkeys\Credential\AuthenticatorAssertionResponse;
+use ShipMonk\Passkeys\Credential\AuthenticatorAttestationResponse;
+use ShipMonk\Passkeys\Credential\PublicKeyCredential;
+use ShipMonk\Passkeys\Json\JsonObject;
+use ShipMonk\Passkeys\RelyingParty;
+use ShipMonk\PasskeysTests\Ceremony\InMemoryCredentialStore;
 use function bin2hex;
 use function chr;
 use function file_get_contents;
@@ -45,7 +45,7 @@ use function substr;
  *
  * @see https://www.w3.org/TR/webauthn-3/#sctn-test-vectors
  */
-class SpecTestVectorsTest extends WebAuthnTestCase
+class SpecTestVectorsTest extends PasskeysTestCase
 {
 
     private const string RP_ID = 'example.org';

@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthn\Options;
+namespace ShipMonk\Passkeys\Options;
 
 use JsonSerializable;
 

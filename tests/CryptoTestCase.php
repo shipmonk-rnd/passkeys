@@ -1,13 +1,13 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthnTests;
+namespace ShipMonk\PasskeysTests;
 
 use OpenSSLAsymmetricKey;
-use ShipMonk\WebAuthn\Cose\CoseAlgorithmIdentifier;
-use ShipMonk\WebAuthn\Cose\CoseEc2Key;
-use ShipMonk\WebAuthn\Cose\CoseKey;
-use ShipMonk\WebAuthn\Cose\CoseOkpKey;
-use ShipMonk\WebAuthn\Cose\CoseRsaKey;
+use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
+use ShipMonk\Passkeys\Cose\CoseEc2Key;
+use ShipMonk\Passkeys\Cose\CoseKey;
+use ShipMonk\Passkeys\Cose\CoseOkpKey;
+use ShipMonk\Passkeys\Cose\CoseRsaKey;
 use function array_key_exists;
 use function base64_decode;
 use function implode;
@@ -32,7 +32,7 @@ use const STR_PAD_LEFT;
  * Base class for tests that need real OpenSSL key material paired with the
  * equivalent parsed {@see CoseKey}.
  */
-abstract class CryptoTestCase extends WebAuthnTestCase
+abstract class CryptoTestCase extends PasskeysTestCase
 {
 
     /**
@@ -111,7 +111,7 @@ abstract class CryptoTestCase extends WebAuthnTestCase
 
     /**
      * Signs a message with the OpenSSL private key using the digest the given COSE algorithm
-     * mandates, producing exactly the signature encoding {@see \ShipMonk\WebAuthn\Cose\CoseKey::verify()}
+     * mandates, producing exactly the signature encoding {@see \ShipMonk\Passkeys\Cose\CoseKey::verify()}
      * expects (ASN.1 DER for ECDSA, raw PKCS#1 for RSA, raw 64-byte for Ed25519).
      *
      * @param CoseAlgorithmIdentifier::* $alg

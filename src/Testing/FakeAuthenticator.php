@@ -1,19 +1,19 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthn\Testing;
+namespace ShipMonk\Passkeys\Testing;
 
 use LogicException;
 use OpenSSLAsymmetricKey;
-use ShipMonk\WebAuthn\Base64\Base64;
-use ShipMonk\WebAuthn\Base64\InvalidBase64Exception;
-use ShipMonk\WebAuthn\Cbor\CborEncoder;
-use ShipMonk\WebAuthn\Cose\CoseAlgorithmIdentifier;
-use ShipMonk\WebAuthn\Cose\CoseEc2Key;
-use ShipMonk\WebAuthn\Cose\CoseOkpKey;
-use ShipMonk\WebAuthn\Cose\CoseRsaKey;
-use ShipMonk\WebAuthn\Credential\AuthenticatorData;
-use ShipMonk\WebAuthn\Json\JsonObject;
-use ShipMonk\WebAuthn\Json\JsonObjectException;
+use ShipMonk\Passkeys\Base64\Base64;
+use ShipMonk\Passkeys\Base64\InvalidBase64Exception;
+use ShipMonk\Passkeys\Cbor\CborEncoder;
+use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
+use ShipMonk\Passkeys\Cose\CoseEc2Key;
+use ShipMonk\Passkeys\Cose\CoseOkpKey;
+use ShipMonk\Passkeys\Cose\CoseRsaKey;
+use ShipMonk\Passkeys\Credential\AuthenticatorData;
+use ShipMonk\Passkeys\Json\JsonObject;
+use ShipMonk\Passkeys\Json\JsonObjectException;
 use function array_map;
 use function array_reverse;
 use function chr;
@@ -68,7 +68,7 @@ use const STR_PAD_LEFT;
  * Behaviour that is a property of the authenticator/user rather than of one ceremony — user
  * presence/verification, backup state, the algorithm of generated keys — is configured once in
  * the constructor. Since none of this is an HTTP client, it composes with whatever drives your
- * endpoints (a framework test client, direct {@see \ShipMonk\WebAuthn\Passkey\PasskeyFlow} calls, …).
+ * endpoints (a framework test client, direct {@see \ShipMonk\Passkeys\Passkey\PasskeyFlow} calls, …).
  *
  * Malformed or unacceptable options throw a {@see LogicException} — in a test, both indicate a
  * bug, either in the relying party under test or in the test itself.
@@ -104,7 +104,7 @@ final class FakeAuthenticator
 
     /**
      * Emulates `navigator.credentials.create()`: parses the
-     * {@see \ShipMonk\WebAuthn\Options\PublicKeyCredentialCreationOptions} JSON, generates a fresh
+     * {@see \ShipMonk\Passkeys\Options\PublicKeyCredentialCreationOptions} JSON, generates a fresh
      * key pair, remembers the new {@see FakePasskey}, and returns the registration response JSON
      * (`PublicKeyCredential.toJSON()` shape) to post to your verify endpoint.
      *
@@ -184,7 +184,7 @@ final class FakeAuthenticator
 
     /**
      * Emulates `navigator.credentials.get()`: parses the
-     * {@see \ShipMonk\WebAuthn\Options\PublicKeyCredentialRequestOptions} JSON, picks the passkey
+     * {@see \ShipMonk\Passkeys\Options\PublicKeyCredentialRequestOptions} JSON, picks the passkey
      * to assert with — the most recently created one scoped to the RP ID and, when
      * `allowCredentials` is present, listed in it (like a real client, `NotAllowedError` when it
      * holds none) — increments its signature counter, signs, and returns the authentication

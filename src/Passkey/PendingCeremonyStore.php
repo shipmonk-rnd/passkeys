@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthn\Passkey;
+namespace ShipMonk\Passkeys\Passkey;
 
 /**
  * Transient storage for the ceremonies a {@see PasskeyFlow} has started but not yet finished,

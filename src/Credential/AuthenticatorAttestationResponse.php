@@ -1,15 +1,15 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthn\Credential;
+namespace ShipMonk\Passkeys\Credential;
 
-use ShipMonk\WebAuthn\Base64\InvalidBase64Exception;
-use ShipMonk\WebAuthn\Binary\BytesReader;
-use ShipMonk\WebAuthn\Binary\BytesReaderException;
-use ShipMonk\WebAuthn\Cbor\CborMap;
-use ShipMonk\WebAuthn\Cbor\CborMapException;
-use ShipMonk\WebAuthn\Cbor\InvalidCborException;
-use ShipMonk\WebAuthn\Json\JsonObject;
-use ShipMonk\WebAuthn\Json\JsonObjectException;
+use ShipMonk\Passkeys\Base64\InvalidBase64Exception;
+use ShipMonk\Passkeys\Binary\BytesReader;
+use ShipMonk\Passkeys\Binary\BytesReaderException;
+use ShipMonk\Passkeys\Cbor\CborMap;
+use ShipMonk\Passkeys\Cbor\CborMapException;
+use ShipMonk\Passkeys\Cbor\InvalidCborException;
+use ShipMonk\Passkeys\Json\JsonObject;
+use ShipMonk\Passkeys\Json\JsonObjectException;
 
 /**
  * @see https://w3c.github.io/webauthn/#authenticatorattestationresponse

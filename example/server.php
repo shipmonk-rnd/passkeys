@@ -1,7 +1,7 @@
 <?php declare(strict_types = 1);
 
 /**
- * A small but realistic relying party built on ShipMonk\WebAuthn: multiple users (each identified by an
+ * A small but realistic relying party built on ShipMonk\Passkeys: multiple users (each identified by an
  * email), each able to register several passkeys.
  *
  * Run it with PHP's built-in server from the project root:
@@ -29,11 +29,11 @@
  * reveals account existence — fine for a demo, something to obscure in production.)
  */
 
-namespace ShipMonk\WebAuthnDemo;
+namespace ShipMonk\PasskeysDemo;
 
-use ShipMonk\WebAuthn\Ceremony\VerificationException;
-use ShipMonk\WebAuthn\Json\JsonObject;
-use ShipMonk\WebAuthn\Passkey\PasskeyFlow;
+use ShipMonk\Passkeys\Ceremony\VerificationException;
+use ShipMonk\Passkeys\Json\JsonObject;
+use ShipMonk\Passkeys\Passkey\PasskeyFlow;
 use Throwable;
 use function file_get_contents;
 use function filter_var;
@@ -56,7 +56,7 @@ $store = new PasskeyStore(__DIR__ . '/passkeys.sqlite');
 
 $flow = new PasskeyFlow(
     rpId: 'localhost',
-    rpName: 'ShipMonk\WebAuthn Demo',
+    rpName: 'ShipMonk\Passkeys Demo',
     origins: ['http://localhost:8000'],
     store: $store,
     pendingCeremonyStore: new SessionPendingCeremonyStore(),

@@ -1,13 +1,13 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthnTests\Base64;
+namespace ShipMonk\PasskeysTests\Base64;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use ShipMonk\WebAuthn\Base64\Base64;
-use ShipMonk\WebAuthn\Base64\InvalidBase64Exception;
-use ShipMonk\WebAuthnTests\WebAuthnTestCase;
+use ShipMonk\Passkeys\Base64\Base64;
+use ShipMonk\Passkeys\Base64\InvalidBase64Exception;
+use ShipMonk\PasskeysTests\PasskeysTestCase;
 
-class Base64Test extends WebAuthnTestCase
+class Base64Test extends PasskeysTestCase
 {
 
     #[DataProvider('provideRoundtrip')]

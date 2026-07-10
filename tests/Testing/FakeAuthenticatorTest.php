@@ -1,20 +1,20 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthnTests\Testing;
+namespace ShipMonk\PasskeysTests\Testing;
 
 use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
-use ShipMonk\WebAuthn\Base64\Base64;
-use ShipMonk\WebAuthn\Ceremony\VerificationException;
-use ShipMonk\WebAuthn\Cose\CoseAlgorithmIdentifier;
-use ShipMonk\WebAuthn\Enum\AuthenticatorAttachment;
-use ShipMonk\WebAuthn\Passkey\PasskeyFlow;
-use ShipMonk\WebAuthn\Passkey\PasskeyStore;
-use ShipMonk\WebAuthn\Passkey\PendingCeremonyStore;
-use ShipMonk\WebAuthn\Testing\FakeAuthenticator;
-use ShipMonk\WebAuthnTests\Passkey\InMemoryPasskeyStore;
-use ShipMonk\WebAuthnTests\Passkey\InMemoryPendingCeremonyStore;
-use ShipMonk\WebAuthnTests\WebAuthnTestCase;
+use ShipMonk\Passkeys\Base64\Base64;
+use ShipMonk\Passkeys\Ceremony\VerificationException;
+use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
+use ShipMonk\Passkeys\Enum\AuthenticatorAttachment;
+use ShipMonk\Passkeys\Passkey\PasskeyFlow;
+use ShipMonk\Passkeys\Passkey\PasskeyStore;
+use ShipMonk\Passkeys\Passkey\PendingCeremonyStore;
+use ShipMonk\Passkeys\Testing\FakeAuthenticator;
+use ShipMonk\PasskeysTests\Passkey\InMemoryPasskeyStore;
+use ShipMonk\PasskeysTests\Passkey\InMemoryPendingCeremonyStore;
+use ShipMonk\PasskeysTests\PasskeysTestCase;
 use function json_encode;
 use const JSON_THROW_ON_ERROR;
 
@@ -24,7 +24,7 @@ use const JSON_THROW_ON_ERROR;
  * would use it — plus the authenticator-side behaviours (credential selection, refusals,
  * UP/UV/backup flags) a browser would exhibit.
  */
-class FakeAuthenticatorTest extends WebAuthnTestCase
+class FakeAuthenticatorTest extends PasskeysTestCase
 {
 
     private const string RP_ID = 'example.com';

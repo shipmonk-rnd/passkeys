@@ -1,16 +1,16 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthnTests\Cbor;
+namespace ShipMonk\PasskeysTests\Cbor;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use ShipMonk\WebAuthn\Binary\BytesReader;
-use ShipMonk\WebAuthn\Cbor\CborEncoder;
-use ShipMonk\WebAuthn\Cbor\CborMap;
-use ShipMonk\WebAuthnTests\WebAuthnTestCase;
+use ShipMonk\Passkeys\Binary\BytesReader;
+use ShipMonk\Passkeys\Cbor\CborEncoder;
+use ShipMonk\Passkeys\Cbor\CborMap;
+use ShipMonk\PasskeysTests\PasskeysTestCase;
 use function bin2hex;
 use function str_repeat;
 
-class CborEncoderTest extends WebAuthnTestCase
+class CborEncoderTest extends PasskeysTestCase
 {
 
     /**

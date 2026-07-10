@@ -1,12 +1,12 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthnTests\Passkey;
+namespace ShipMonk\PasskeysTests\Passkey;
 
-use ShipMonk\WebAuthn\Ceremony\AuthenticationResult;
-use ShipMonk\WebAuthn\Ceremony\CredentialRecord;
-use ShipMonk\WebAuthn\Options\PublicKeyCredentialUserEntity;
-use ShipMonk\WebAuthn\Passkey\PasskeyStore;
-use ShipMonk\WebAuthn\Passkey\RegisteredPasskey;
+use ShipMonk\Passkeys\Ceremony\AuthenticationResult;
+use ShipMonk\Passkeys\Ceremony\CredentialRecord;
+use ShipMonk\Passkeys\Options\PublicKeyCredentialUserEntity;
+use ShipMonk\Passkeys\Passkey\PasskeyStore;
+use ShipMonk\Passkeys\Passkey\RegisteredPasskey;
 use function base64_encode;
 
 /**

@@ -1,10 +1,10 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthnDemo;
+namespace ShipMonk\PasskeysDemo;
 
-use ShipMonk\WebAuthn\Passkey\PendingAuthentication;
-use ShipMonk\WebAuthn\Passkey\PendingCeremonyStore;
-use ShipMonk\WebAuthn\Passkey\PendingRegistration;
+use ShipMonk\Passkeys\Passkey\PendingAuthentication;
+use ShipMonk\Passkeys\Passkey\PendingCeremonyStore;
+use ShipMonk\Passkeys\Passkey\PendingRegistration;
 use function array_key_exists;
 use function array_shift;
 use function count;

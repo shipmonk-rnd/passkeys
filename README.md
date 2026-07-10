@@ -1,4 +1,4 @@
-# WebAuthn / passkeys for PHP
+# Passkeys for PHP
 
 A from-scratch, spec-compliant [WebAuthn](https://w3c.github.io/webauthn/) **passkey** library for PHP.
 
@@ -8,7 +8,7 @@ A from-scratch, spec-compliant [WebAuthn](https://w3c.github.io/webauthn/) **pas
 - 🧪 **100 % code coverage:** enforced in CI
 - 🔬 **PHPStan max level:** with strict rules and zero ignores in `src/`
 
-The intended entry point is the high-level **`ShipMonk\WebAuthn\Passkey\PasskeyFlow`**: construct it with
+The intended entry point is the high-level **`ShipMonk\Passkeys\Passkey\PasskeyFlow`**: construct it with
 your relying party identity and two small storage interfaces, wire its four methods to four HTTP
 endpoints, and you have passkey registration and login — usernameless, two-step by email, and
 conditional-mediation (autofill), all at once. Everything beneath it (the `RelyingParty` ceremony
@@ -23,7 +23,7 @@ engine, response parsing, COSE/CBOR primitives) is public but considered
 ## Installation
 
 ```sh
-composer require shipmonk/webauthn
+composer require shipmonk/passkeys
 ```
 
 ## Usage
@@ -35,7 +35,7 @@ for you.
 ### Set up the flow
 
 ```php
-use ShipMonk\WebAuthn\Passkey\PasskeyFlow;
+use ShipMonk\Passkeys\Passkey\PasskeyFlow;
 
 $flow = new PasskeyFlow(
     rpId: 'example.com',                  // the domain your passkeys are scoped to
@@ -56,7 +56,7 @@ the email, requiring an authenticated session) is deliberately left in front of 
 authorization must still hold when the ceremony *completes*, not just when the options were issued.
 
 ```php
-use ShipMonk\WebAuthn\Ceremony\VerificationException;
+use ShipMonk\Passkeys\Ceremony\VerificationException;
 
 // POST /register/options
 $options = $flow->registrationOptions($userHandle, $email);
@@ -139,13 +139,13 @@ challenge and looked up from the response — you never juggle "the" pending cer
 
 The flow owns no state; you implement two small interfaces:
 
-- **`ShipMonk\WebAuthn\Passkey\PasskeyStore`** — the durable side: your user and credential tables.
+- **`ShipMonk\Passkeys\Passkey\PasskeyStore`** — the durable side: your user and credential tables.
   Six methods: the reads `findUserHandleByUsername()`, `findCredentialsByUserHandle()`,
   `findCredentialByCredentialId()` and `findUserEntityByUserHandle()` (the last only used by the
   [Signal API](#keeping-credential-providers-in-sync-signal-api)), plus the two writes
   `saveCredential()` and `updateCredential()`. Typically a thin repository over the same database
   that holds your users.
-- **`ShipMonk\WebAuthn\Passkey\PendingCeremonyStore`** — the transient side: ceremonies started but not
+- **`ShipMonk\Passkeys\Passkey\PendingCeremonyStore`** — the transient side: ceremonies started but not
   yet finished, keyed by challenge. Implement it on something browser-session-scoped (the PHP
   session, a short-TTL cache), never on durable storage. Its consume-on-read semantics make each
   challenge single-use — the anti-replay control the library relies on.
@@ -210,13 +210,13 @@ See [`example/README.md`](example/README.md).
 ## Testing your integration
 
 You don't need a browser (or a real authenticator) to integration-test your endpoints:
-`ShipMonk\WebAuthn\Testing\FakeAuthenticator` is an in-memory software authenticator that turns
+`ShipMonk\Passkeys\Testing\FakeAuthenticator` is an in-memory software authenticator that turns
 the options JSON your endpoint produced into the response JSON a browser would post back — a
 `none`-format attestation over a freshly generated key pair for registration, a real signature
 over `authenticatorData || SHA-256(clientDataJSON)` for authentication:
 
 ```php
-use ShipMonk\WebAuthn\Testing\FakeAuthenticator;
+use ShipMonk\Passkeys\Testing\FakeAuthenticator;
 
 $authenticator = new FakeAuthenticator(origin: 'https://example.com');
 
@@ -259,16 +259,16 @@ right fit today.
 Everything below `PasskeyFlow` is public and usable on its own when the flow's shape doesn't fit —
 but it puts challenge storage, single-use enforcement, and result persistence in your hands.
 
-**`ShipMonk\WebAuthn\RelyingParty`** runs the full WebAuthn §7.1 (registration) and §7.2 (authentication)
+**`ShipMonk\Passkeys\RelyingParty`** runs the full WebAuthn §7.1 (registration) and §7.2 (authentication)
 verification procedures against per-ceremony expectations, reading credentials through a
 `CredentialStore` you implement:
 
 ```php
-use ShipMonk\WebAuthn\Ceremony\RegistrationExpectations;
-use ShipMonk\WebAuthn\Cose\CoseAlgorithmIdentifier;
-use ShipMonk\WebAuthn\Credential\PublicKeyCredential;
-use ShipMonk\WebAuthn\Json\JsonObject;
-use ShipMonk\WebAuthn\RelyingParty;
+use ShipMonk\Passkeys\Ceremony\RegistrationExpectations;
+use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
+use ShipMonk\Passkeys\Credential\PublicKeyCredential;
+use ShipMonk\Passkeys\Json\JsonObject;
+use ShipMonk\Passkeys\RelyingParty;
 
 $credential = PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString($rawJson));
 
@@ -281,7 +281,7 @@ $result = (new RelyingParty())->verifyRegistration(
         allowedAlgorithms: [CoseAlgorithmIdentifier::ES256, CoseAlgorithmIdentifier::RS256],
         requireUserVerification: true,
     ),
-    $store,   // your ShipMonk\WebAuthn\Ceremony\CredentialStore
+    $store,   // your ShipMonk\Passkeys\Ceremony\CredentialStore
 );
 
 $store->save($result->toCredentialRecord($userHandle));   // your own persistence

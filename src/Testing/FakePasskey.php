@@ -1,9 +1,9 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthn\Testing;
+namespace ShipMonk\Passkeys\Testing;
 
 use OpenSSLAsymmetricKey;
-use ShipMonk\WebAuthn\Cose\CoseAlgorithmIdentifier;
+use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
 
 /**
  * A credential held by a {@see FakeAuthenticator}: the state a real authenticator keeps per

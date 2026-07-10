@@ -1,10 +1,10 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthn\Json;
+namespace ShipMonk\Passkeys\Json;
 
 use JsonException;
-use ShipMonk\WebAuthn\Base64\Base64;
-use ShipMonk\WebAuthn\Base64\InvalidBase64Exception;
+use ShipMonk\Passkeys\Base64\Base64;
+use ShipMonk\Passkeys\Base64\InvalidBase64Exception;
 use stdClass;
 use function is_array;
 use function is_bool;

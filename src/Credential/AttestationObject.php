@@ -1,9 +1,9 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthn\Credential;
+namespace ShipMonk\Passkeys\Credential;
 
-use ShipMonk\WebAuthn\Cbor\CborMap;
-use ShipMonk\WebAuthn\Cbor\CborMapException;
+use ShipMonk\Passkeys\Cbor\CborMap;
+use ShipMonk\Passkeys\Cbor\CborMapException;
 
 /**
  * @api

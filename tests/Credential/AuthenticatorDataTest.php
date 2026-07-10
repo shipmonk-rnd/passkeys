@@ -1,19 +1,19 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthnTests\Credential;
+namespace ShipMonk\PasskeysTests\Credential;
 
-use ShipMonk\WebAuthn\Base64\Base64;
-use ShipMonk\WebAuthn\Binary\BytesReader;
-use ShipMonk\WebAuthn\Cbor\CborMap;
-use ShipMonk\WebAuthn\Cose\CoseAlgorithmIdentifier;
-use ShipMonk\WebAuthn\Cose\CoseEc2Key;
-use ShipMonk\WebAuthn\Credential\AttestationObject;
-use ShipMonk\WebAuthn\Credential\AuthenticatorData;
-use ShipMonk\WebAuthnTests\WebAuthnTestCase;
+use ShipMonk\Passkeys\Base64\Base64;
+use ShipMonk\Passkeys\Binary\BytesReader;
+use ShipMonk\Passkeys\Cbor\CborMap;
+use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
+use ShipMonk\Passkeys\Cose\CoseEc2Key;
+use ShipMonk\Passkeys\Credential\AttestationObject;
+use ShipMonk\Passkeys\Credential\AuthenticatorData;
+use ShipMonk\PasskeysTests\PasskeysTestCase;
 use function str_repeat;
 use function strlen;
 
-class AuthenticatorDataTest extends WebAuthnTestCase
+class AuthenticatorDataTest extends PasskeysTestCase
 {
 
     public function testFromBytes(): void

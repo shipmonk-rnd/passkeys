@@ -1,12 +1,12 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthnTests\Binary;
+namespace ShipMonk\PasskeysTests\Binary;
 
-use ShipMonk\WebAuthn\Binary\BytesReader;
-use ShipMonk\WebAuthn\Binary\BytesReaderException;
-use ShipMonk\WebAuthnTests\WebAuthnTestCase;
+use ShipMonk\Passkeys\Binary\BytesReader;
+use ShipMonk\Passkeys\Binary\BytesReaderException;
+use ShipMonk\PasskeysTests\PasskeysTestCase;
 
-class BytesReaderTest extends WebAuthnTestCase
+class BytesReaderTest extends PasskeysTestCase
 {
 
     public function testRead(): void
