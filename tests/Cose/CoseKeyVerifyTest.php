@@ -22,12 +22,9 @@ class CoseKeyVerifyTest extends CryptoTestCase
      * @param CoseAlgorithmIdentifier::* $alg
      */
     #[DataProvider('provideAlgorithms')]
-    public function testVerifiesValidSignature(
-        int $alg,
-        int $okpCrv = CoseOkpKey::CRV_ED25519,
-    ): void
+    public function testVerifiesValidSignature(int $alg): void
     {
-        [$coseKey, $privateKey] = self::generateCoseKeyPair($alg, $okpCrv);
+        [$coseKey, $privateKey] = self::generateCoseKeyPair($alg);
         $signature = self::sign($privateKey, self::MESSAGE, $alg);
 
         self::assertTrue($coseKey->verify(self::MESSAGE, $signature));
@@ -37,12 +34,9 @@ class CoseKeyVerifyTest extends CryptoTestCase
      * @param CoseAlgorithmIdentifier::* $alg
      */
     #[DataProvider('provideAlgorithms')]
-    public function testRejectsSignatureOverDifferentData(
-        int $alg,
-        int $okpCrv = CoseOkpKey::CRV_ED25519,
-    ): void
+    public function testRejectsSignatureOverDifferentData(int $alg): void
     {
-        [$coseKey, $privateKey] = self::generateCoseKeyPair($alg, $okpCrv);
+        [$coseKey, $privateKey] = self::generateCoseKeyPair($alg);
         $signature = self::sign($privateKey, self::MESSAGE, $alg);
 
         self::assertFalse($coseKey->verify(self::MESSAGE . '!', $signature));
@@ -52,20 +46,17 @@ class CoseKeyVerifyTest extends CryptoTestCase
      * @param CoseAlgorithmIdentifier::* $alg
      */
     #[DataProvider('provideAlgorithms')]
-    public function testRejectsSignatureFromDifferentKey(
-        int $alg,
-        int $okpCrv = CoseOkpKey::CRV_ED25519,
-    ): void
+    public function testRejectsSignatureFromDifferentKey(int $alg): void
     {
-        [, $privateKey] = self::generateCoseKeyPair($alg, $okpCrv);
-        [$otherCoseKey] = self::generateCoseKeyPair($alg, $okpCrv);
+        [, $privateKey] = self::generateCoseKeyPair($alg);
+        [$otherCoseKey] = self::generateCoseKeyPair($alg);
         $signature = self::sign($privateKey, self::MESSAGE, $alg);
 
         self::assertFalse($otherCoseKey->verify(self::MESSAGE, $signature));
     }
 
     /**
-     * @return iterable<string, array{CoseAlgorithmIdentifier::*, 1?: int}>
+     * @return iterable<string, array{CoseAlgorithmIdentifier::*}>
      */
     public static function provideAlgorithms(): iterable
     {
@@ -73,8 +64,7 @@ class CoseKeyVerifyTest extends CryptoTestCase
         yield 'ES384' => [CoseAlgorithmIdentifier::ES384];
         yield 'ES512' => [CoseAlgorithmIdentifier::ES512];
         yield 'RS256' => [CoseAlgorithmIdentifier::RS256];
-        yield 'EdDSA / Ed25519' => [CoseAlgorithmIdentifier::EdDSA, CoseOkpKey::CRV_ED25519];
-        yield 'EdDSA / Ed448' => [CoseAlgorithmIdentifier::EdDSA, CoseOkpKey::CRV_ED448];
+        yield 'EdDSA' => [CoseAlgorithmIdentifier::EdDSA];
         yield 'Ed25519' => [CoseAlgorithmIdentifier::Ed25519];
         yield 'Ed448' => [CoseAlgorithmIdentifier::Ed448];
     }
@@ -120,12 +110,9 @@ class CoseKeyVerifyTest extends CryptoTestCase
      * @param CoseAlgorithmIdentifier::* $alg
      */
     #[DataProvider('provideAlgorithms')]
-    public function testRejectsMalformedSignature(
-        int $alg,
-        int $okpCrv = CoseOkpKey::CRV_ED25519,
-    ): void
+    public function testRejectsMalformedSignature(int $alg): void
     {
-        [$coseKey, $privateKey] = self::generateCoseKeyPair($alg, $okpCrv);
+        [$coseKey, $privateKey] = self::generateCoseKeyPair($alg);
         $signature = self::sign($privateKey, self::MESSAGE, $alg);
         $malformed = substr($signature, 0, 5);
 

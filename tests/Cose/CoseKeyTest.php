@@ -27,10 +27,9 @@ class CoseKeyTest extends CryptoTestCase
     public function testSubjectPublicKeyInfoMatchesOpenssl(
         int $alg,
         string $expectedClass,
-        int $okpCrv = CoseOkpKey::CRV_ED25519,
     ): void
     {
-        [$coseKey, $privateKey] = self::generateCoseKeyPair($alg, $okpCrv);
+        [$coseKey, $privateKey] = self::generateCoseKeyPair($alg);
 
         self::assertInstanceOf($expectedClass, $coseKey);
         self::assertSame(
@@ -40,7 +39,7 @@ class CoseKeyTest extends CryptoTestCase
     }
 
     /**
-     * @return iterable<string, array{CoseAlgorithmIdentifier::*, class-string<CoseKey>, 2?: int}>
+     * @return iterable<string, array{CoseAlgorithmIdentifier::*, class-string<CoseKey>}>
      */
     public static function provideAlgorithms(): iterable
     {
@@ -48,10 +47,9 @@ class CoseKeyTest extends CryptoTestCase
         yield 'P-384 / ES384' => [CoseAlgorithmIdentifier::ES384, CoseEc2Key::class];
         yield 'P-521 / ES512' => [CoseAlgorithmIdentifier::ES512, CoseEc2Key::class];
         yield 'RSA / RS256' => [CoseAlgorithmIdentifier::RS256, CoseRsaKey::class];
-        yield 'Ed25519 / EdDSA' => [CoseAlgorithmIdentifier::EdDSA, CoseOkpKey::class, CoseOkpKey::CRV_ED25519];
-        yield 'Ed448 / EdDSA' => [CoseAlgorithmIdentifier::EdDSA, CoseOkpKey::class, CoseOkpKey::CRV_ED448];
-        yield 'Ed25519' => [CoseAlgorithmIdentifier::Ed25519, CoseOkpKey::class, CoseOkpKey::CRV_ED25519];
-        yield 'Ed448' => [CoseAlgorithmIdentifier::Ed448, CoseOkpKey::class, CoseOkpKey::CRV_ED448];
+        yield 'Ed25519 / EdDSA' => [CoseAlgorithmIdentifier::EdDSA, CoseOkpKey::class];
+        yield 'Ed25519' => [CoseAlgorithmIdentifier::Ed25519, CoseOkpKey::class];
+        yield 'Ed448' => [CoseAlgorithmIdentifier::Ed448, CoseOkpKey::class];
     }
 
     /**
@@ -87,10 +85,9 @@ class CoseKeyTest extends CryptoTestCase
     public function testToBytesRoundTrips(
         int $alg,
         string $expectedClass,
-        int $okpCrv = CoseOkpKey::CRV_ED25519,
     ): void
     {
-        [$coseKey] = self::generateCoseKeyPair($alg, $okpCrv);
+        [$coseKey] = self::generateCoseKeyPair($alg);
 
         $restored = CoseKey::fromBytes($coseKey->toBytes());
 
@@ -217,6 +214,11 @@ class CoseKeyTest extends CryptoTestCase
             [1 => CoseOkpKey::KTY, 3 => CoseAlgorithmIdentifier::Ed25519, -1 => CoseOkpKey::CRV_ED448, -2 => $x],
         ];
 
+        yield 'OKP generic EdDSA with Ed448 curve (WebAuthn §5.8.5 requires Ed25519)' => [
+            'OKP algorithm -8 does not allow curve 7',
+            [1 => CoseOkpKey::KTY, 3 => CoseAlgorithmIdentifier::EdDSA, -1 => CoseOkpKey::CRV_ED448, -2 => $x],
+        ];
+
         yield 'OKP wrong Ed25519 key length' => [
             'OKP curve 6 requires 32-byte public key',
             [1 => CoseOkpKey::KTY, 3 => CoseAlgorithmIdentifier::EdDSA, -1 => CoseOkpKey::CRV_ED25519, -2 => 'short'],
@@ -224,7 +226,7 @@ class CoseKeyTest extends CryptoTestCase
 
         yield 'OKP wrong Ed448 key length' => [
             'OKP curve 7 requires 57-byte public key',
-            [1 => CoseOkpKey::KTY, 3 => CoseAlgorithmIdentifier::EdDSA, -1 => CoseOkpKey::CRV_ED448, -2 => $x],
+            [1 => CoseOkpKey::KTY, 3 => CoseAlgorithmIdentifier::Ed448, -1 => CoseOkpKey::CRV_ED448, -2 => $x],
         ];
     }
 

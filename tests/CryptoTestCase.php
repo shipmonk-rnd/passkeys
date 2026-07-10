@@ -42,12 +42,9 @@ abstract class CryptoTestCase extends WebAuthnTestCase
      * @param CoseAlgorithmIdentifier::* $alg
      * @return array{CoseKey, OpenSSLAsymmetricKey}
      */
-    protected static function generateCoseKeyPair(
-        int $alg,
-        int $okpCrv = CoseOkpKey::CRV_ED25519,
-    ): array
+    protected static function generateCoseKeyPair(int $alg): array
     {
-        [$privateKey, $entries] = self::generateKeyAndCoseEntries($alg, $okpCrv);
+        [$privateKey, $entries] = self::generateKeyAndCoseEntries($alg);
 
         return [CoseKey::fromCborMap(self::cborMap($entries)), $privateKey];
     }
@@ -55,16 +52,12 @@ abstract class CryptoTestCase extends WebAuthnTestCase
     /**
      * Generates a fresh key pair and returns the OpenSSL private key together with the
      * integer-keyed COSE map entries describing its public key — the same shape an
-     * authenticator embeds in attested credential data. EdDSA is the only COSE algorithm
-     * spanning two curves, so those need the extra `$okpCrv` discriminator.
+     * authenticator embeds in attested credential data.
      *
      * @param CoseAlgorithmIdentifier::* $alg
      * @return array{OpenSSLAsymmetricKey, array<int, int|string>}
      */
-    protected static function generateKeyAndCoseEntries(
-        int $alg,
-        int $okpCrv = CoseOkpKey::CRV_ED25519,
-    ): array
+    protected static function generateKeyAndCoseEntries(int $alg): array
     {
         if ($alg === CoseAlgorithmIdentifier::RS256) {
             $privateKey = self::generateKey(['private_key_type' => OPENSSL_KEYTYPE_RSA, 'private_key_bits' => 2048]);
@@ -79,8 +72,8 @@ abstract class CryptoTestCase extends WebAuthnTestCase
         }
 
         $crv = match ($alg) {
-            CoseAlgorithmIdentifier::EdDSA => $okpCrv,
-            CoseAlgorithmIdentifier::Ed25519 => CoseOkpKey::CRV_ED25519,
+            // WebAuthn §5.8.5 pins the generic EdDSA identifier to Ed25519
+            CoseAlgorithmIdentifier::EdDSA, CoseAlgorithmIdentifier::Ed25519 => CoseOkpKey::CRV_ED25519,
             CoseAlgorithmIdentifier::Ed448 => CoseOkpKey::CRV_ED448,
             default => null,
         };
@@ -89,7 +82,6 @@ abstract class CryptoTestCase extends WebAuthnTestCase
             [$keyType, $detailsField] = match ($crv) {
                 CoseOkpKey::CRV_ED25519 => [OPENSSL_KEYTYPE_ED25519, 'ed25519'],
                 CoseOkpKey::CRV_ED448 => [OPENSSL_KEYTYPE_ED448, 'ed448'],
-                default => self::fail("Unsupported test OKP curve {$crv}"),
             };
 
             $privateKey = self::generateKey(['private_key_type' => $keyType]);
