@@ -319,6 +319,16 @@ final class PasskeyFlowTest extends CryptoTestCase
         self::assertSame(['internal', 'hybrid'], $options->excludeCredentials[0]->transports);
     }
 
+    public function testGenerateUserHandleReturnsFreshRandomBytes(): void
+    {
+        $flow = $this->createFlow();
+
+        $handle = $flow->generateUserHandle();
+
+        self::assertSame(64, strlen($handle));
+        self::assertNotSame($handle, $flow->generateUserHandle());
+    }
+
     public function testReplayedRegistrationResponseIsRejected(): void
     {
         $flow = $this->createFlow();

@@ -199,7 +199,8 @@ class PasskeyFlow
      * a modal registration still applies, most notably that the account is authenticated.
      *
      * @param string      $userHandle           raw user handle bytes (an opaque, immutable, PII-free
-     *      account id, at most 64 bytes — never the email itself)
+     *      account id, at most 64 bytes — never the email itself; {@see self::generateUserHandle()}
+     *      mints a spec-shaped one to store on the account)
      * @param string      $username             the human-readable account identifier (email/username),
      *        shown by authenticator UIs to label the passkey
      * @param string|null $displayName          a friendlier account label ("Alice Doe"), defaulting to the username
@@ -311,6 +312,24 @@ class PasskeyFlow
         $this->store->saveCredential($registered);
 
         return $registered;
+    }
+
+    /**
+     * Mints a fresh user handle for a new account: 64 opaque, cryptographically random, PII-free
+     * bytes — the spec-recommended choice, and one that satisfies WebAuthn §14.6.1 (the user handle
+     * MUST NOT carry personally identifying information such as an email or username) by construction.
+     *
+     * The user handle is the account's WebAuthn identity: every passkey an account enrols shares one
+     * immutable handle. So mint it once, when you create the account, store it there, and pass that
+     * same value to {@see self::registrationOptions()} for every subsequent passkey — never generate
+     * a fresh one per ceremony, or a second passkey would enrol under a different identity and fork
+     * the account (breaking `excludeCredentials` de-duplication and login).
+     *
+     * @return string raw user handle bytes (64 bytes)
+     */
+    public function generateUserHandle(): string
+    {
+        return random_bytes(64);
     }
 
     // --- Signal API: keep credential providers in sync (WebAuthn §5.1.10) -----------------------

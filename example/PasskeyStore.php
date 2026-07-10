@@ -17,7 +17,6 @@ use function base64_encode;
 use function date;
 use function json_decode;
 use function json_encode;
-use function random_bytes;
 use const JSON_THROW_ON_ERROR;
 
 /**
@@ -35,7 +34,8 @@ use const JSON_THROW_ON_ERROR;
  *
  * The primary key is a plain integer id, as in a real schema; the WebAuthn user handle is a
  * separate value — the spec-recommended 64 opaque random bytes — in its own unique BLOB column,
- * generated once per user by {@see insertUser()}. Relations go through the integer id
+ * minted once per user by {@see \ShipMonk\Passkeys\PasskeyFlow::generateUserHandle()} and stored by
+ * {@see insertUser()}. Relations go through the integer id
  * (credentials.user_id); the handle only crosses the wire in ceremonies and is joined back in when
  * a {@see CredentialRecord} is hydrated. Handle parameters are bound as PDO::PARAM_LOB — a PHP
  * string binds as text by default, and in SQLite a TEXT value never compares equal to a BLOB.
@@ -81,18 +81,21 @@ final class PasskeyStore implements PasskeyStoreInterface
     // -- users table --------------------------------------------------------------------------
 
     /**
+     * @param string $userHandle raw user handle bytes minted by {@see \ShipMonk\Passkeys\PasskeyFlow::generateUserHandle()}
+     *      — the spec-recommended 64 opaque random bytes, unrelated to the primary key
      * @return array{id: int, passkey_user_handle: string, email: string}
      */
-    public function insertUser(string $email): array
+    public function insertUser(
+        string $email,
+        string $userHandle,
+    ): array
     {
-        $handle = random_bytes(64); // The spec-recommended user handle: 64 opaque random bytes, unrelated to the primary key.
-
         $statement = $this->db->prepare('INSERT INTO users (passkey_user_handle, email) VALUES (:handle, :email)');
-        $this->bindParameter($statement, ':handle', $handle, PDO::PARAM_LOB);
+        $this->bindParameter($statement, ':handle', $userHandle, PDO::PARAM_LOB);
         $this->bindParameter($statement, ':email', $email);
         $statement->execute();
 
-        return ['id' => (int) $this->db->lastInsertId(), 'passkey_user_handle' => $handle, 'email' => $email];
+        return ['id' => (int) $this->db->lastInsertId(), 'passkey_user_handle' => $userHandle, 'email' => $email];
     }
 
     /**

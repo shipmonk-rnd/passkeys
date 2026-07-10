@@ -161,14 +161,16 @@ match ($path) {
                     return;
                 }
 
-                // The email is free: create the account and enrol its first passkey in one go. A
-                // cancelled prompt leaves a credential-less row that blocks the email for good
-                // (delete the row to retry). That is deliberate, not resumed: a pending ceremony
-                // stays completable for as long as the session keeps it, so whoever requested
-                // options for this email first could still attach their passkey to the account
-                // after the real user enrolled. A real service side-steps the whole problem by
-                // gating first enrolment on email verification.
-                $user = $store->insertUser($email);
+                // The email is free: create the account and enrol its first passkey in one go. The
+                // account is minted with a fresh WebAuthn user handle — the flow generates the
+                // spec-recommended 64 random bytes; the store persists them and reuses that same
+                // handle for every passkey the account later enrols. A cancelled prompt leaves a
+                // credential-less row that blocks the email for good (delete the row to retry). That
+                // is deliberate, not resumed: a pending ceremony stays completable for as long as the
+                // session keeps it, so whoever requested options for this email first could still
+                // attach their passkey to the account after the real user enrolled. A real service
+                // side-steps the whole problem by gating first enrolment on email verification.
+                $user = $store->insertUser($email, $flow->generateUserHandle());
             }
 
             // The flow issues the challenge, excludes already-enrolled authenticators, and asks
