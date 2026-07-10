@@ -2,12 +2,14 @@
 
 namespace ShipMonk\PasskeysTests\Cbor;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use ShipMonk\Passkeys\Binary\BytesReader;
 use ShipMonk\Passkeys\Cbor\CborDecoder;
 use ShipMonk\Passkeys\Cbor\InvalidCborException;
 use ShipMonk\PasskeysTests\PasskeysTestCase;
 
+#[CoversClass(CborDecoder::class)]
 final class CborDecoderTest extends PasskeysTestCase
 {
 

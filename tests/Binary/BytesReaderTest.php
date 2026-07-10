@@ -2,10 +2,12 @@
 
 namespace ShipMonk\PasskeysTests\Binary;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use ShipMonk\Passkeys\Binary\BytesReader;
 use ShipMonk\Passkeys\Binary\BytesReaderException;
 use ShipMonk\PasskeysTests\PasskeysTestCase;
 
+#[CoversClass(BytesReader::class)]
 final class BytesReaderTest extends PasskeysTestCase
 {
 

@@ -2,17 +2,23 @@
 
 namespace ShipMonk\PasskeysTests\Credential;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use ShipMonk\Passkeys\Base64\Base64;
 use ShipMonk\Passkeys\Binary\BytesReader;
 use ShipMonk\Passkeys\Cbor\CborMap;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
 use ShipMonk\Passkeys\Cose\CoseEc2Key;
 use ShipMonk\Passkeys\Credential\AttestationObject;
+use ShipMonk\Passkeys\Credential\AttestedCredentialData;
 use ShipMonk\Passkeys\Credential\AuthenticatorData;
+use ShipMonk\Passkeys\Credential\MalformedDataException;
 use ShipMonk\PasskeysTests\PasskeysTestCase;
 use function str_repeat;
 use function strlen;
 
+#[CoversClass(AuthenticatorData::class)]
+#[CoversClass(AttestationObject::class)]
+#[CoversClass(AttestedCredentialData::class)]
 final class AuthenticatorDataTest extends PasskeysTestCase
 {
 
@@ -94,6 +100,16 @@ final class AuthenticatorDataTest extends PasskeysTestCase
         self::assertNull($authenticatorData->attestedCredentialData);
         self::assertTrue($authenticatorData->hasExtensionData());
         self::assertNotNull($authenticatorData->extensions);
+    }
+
+    public function testFromBytesRejectsTruncatedData(): void
+    {
+        // Fewer than the 32 rpIdHash bytes: the underlying read failure is repacked as MalformedDataException.
+        self::assertException(
+            MalformedDataException::class,
+            'Malformed authenticator data',
+            static fn () => AuthenticatorData::fromBytes(self::bytesFromHex('000102')),
+        );
     }
 
 }

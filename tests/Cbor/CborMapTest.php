@@ -2,11 +2,13 @@
 
 namespace ShipMonk\PasskeysTests\Cbor;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use ShipMonk\Passkeys\Binary\BytesReader;
 use ShipMonk\Passkeys\Cbor\CborMap;
 use ShipMonk\Passkeys\Cbor\CborMapException;
 use ShipMonk\PasskeysTests\PasskeysTestCase;
 
+#[CoversClass(CborMap::class)]
 final class CborMapTest extends PasskeysTestCase
 {
 
@@ -37,6 +39,16 @@ final class CborMapTest extends PasskeysTestCase
         self::assertSame('abc', $map->getString(3));
         self::assertSame("\x01\x02\x03\x04", $map->getString(4)); // byte strings decode to plain strings too
         self::assertSame(2, $map->getMap(5)->getInt(1));
+    }
+
+    public function testHasReportsKeyPresence(): void
+    {
+        $map = self::sampleMap();
+
+        self::assertTrue($map->has(1));
+        self::assertTrue($map->has('neg'));
+        self::assertFalse($map->has(99));
+        self::assertFalse($map->has('absent'));
     }
 
     public function testMissingKeyThrows(): void

@@ -4,6 +4,7 @@ namespace ShipMonk\PasskeysTests;
 
 use InvalidArgumentException;
 use OpenSSLAsymmetricKey;
+use PHPUnit\Framework\Attributes\CoversClass;
 use ShipMonk\Passkeys\Base64\Base64;
 use ShipMonk\Passkeys\Ceremony\CredentialRecord;
 use ShipMonk\Passkeys\Ceremony\VerificationException;
@@ -17,7 +18,10 @@ use ShipMonk\Passkeys\Options\PublicKeyCredentialParameters;
 use ShipMonk\Passkeys\Options\PublicKeyCredentialRequestOptions;
 use ShipMonk\Passkeys\PasskeyFlow;
 use ShipMonk\Passkeys\PasskeyStore;
+use ShipMonk\Passkeys\PendingAuthentication;
 use ShipMonk\Passkeys\PendingCeremonyStore;
+use ShipMonk\Passkeys\PendingRegistration;
+use ShipMonk\Passkeys\RegisteredPasskey;
 use ShipMonk\PasskeysTests\Cbor\CborTestEncoder;
 use function array_map;
 use function base64_encode;
@@ -38,6 +42,11 @@ use const JSON_THROW_ON_ERROR;
  * The §7.2 checks themselves are covered by {@see RelyingPartyTest}; here only a representative
  * failure per layer asserts that the flow wires expectations and state correctly.
  */
+#[CoversClass(PasskeyFlow::class)]
+#[CoversClass(RegisteredPasskey::class)]
+#[CoversClass(PendingAuthentication::class)]
+#[CoversClass(PendingRegistration::class)]
+#[CoversClass(CredentialRecord::class)]
 final class PasskeyFlowTest extends CryptoTestCase
 {
 

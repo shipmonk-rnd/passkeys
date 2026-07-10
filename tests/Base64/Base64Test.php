@@ -2,11 +2,13 @@
 
 namespace ShipMonk\PasskeysTests\Base64;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use ShipMonk\Passkeys\Base64\Base64;
 use ShipMonk\Passkeys\Base64\InvalidBase64Exception;
 use ShipMonk\PasskeysTests\PasskeysTestCase;
 
+#[CoversClass(Base64::class)]
 final class Base64Test extends PasskeysTestCase
 {
 

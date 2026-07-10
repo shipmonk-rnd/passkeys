@@ -2,6 +2,7 @@
 
 namespace ShipMonk\PasskeysTests;
 
+use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\DataProvider;
 use ShipMonk\Passkeys\Base64\Base64;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
@@ -32,6 +33,7 @@ use const JSON_THROW_ON_ERROR;
  * independent oracles are the RFC 8032 Ed25519 known-answer vector in the crypto tests and
  * the official WebAuthn §16 test vectors in {@see SpecTestVectorsTest}.
  */
+#[CoversNothing]
 final class CeremonyEndToEndTest extends CryptoTestCase
 {
 

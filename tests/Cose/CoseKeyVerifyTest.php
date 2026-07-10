@@ -2,10 +2,13 @@
 
 namespace ShipMonk\PasskeysTests\Cose;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
+use ShipMonk\Passkeys\Cose\CoseEc2Key;
 use ShipMonk\Passkeys\Cose\CoseKey;
 use ShipMonk\Passkeys\Cose\CoseOkpKey;
+use ShipMonk\Passkeys\Cose\CoseRsaKey;
 use ShipMonk\Passkeys\Cose\SignatureVerificationException;
 use ShipMonk\PasskeysTests\CryptoTestCase;
 use function chr;
@@ -13,6 +16,11 @@ use function ord;
 use function substr;
 use const OPENSSL_ALGO_SHA256;
 
+#[CoversClass(CoseKey::class)]
+#[CoversClass(CoseEc2Key::class)]
+#[CoversClass(CoseOkpKey::class)]
+#[CoversClass(CoseRsaKey::class)]
+#[CoversClass(SignatureVerificationException::class)]
 final class CoseKeyVerifyTest extends CryptoTestCase
 {
 

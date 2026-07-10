@@ -2,6 +2,7 @@
 
 namespace ShipMonk\PasskeysTests;
 
+use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use ShipMonk\Passkeys\Base64\Base64;
@@ -45,6 +46,7 @@ use function substr;
  *
  * @see https://www.w3.org/TR/webauthn-3/#sctn-test-vectors
  */
+#[CoversNothing]
 final class SpecTestVectorsTest extends PasskeysTestCase
 {
 

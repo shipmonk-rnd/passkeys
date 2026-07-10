@@ -4,9 +4,11 @@ namespace ShipMonk\PasskeysTests\Ceremony;
 
 use InvalidArgumentException;
 use OpenSSLAsymmetricKey;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use ShipMonk\Passkeys\Base64\Base64;
 use ShipMonk\Passkeys\Ceremony\AuthenticationExpectations;
+use ShipMonk\Passkeys\Ceremony\AuthenticationResult;
 use ShipMonk\Passkeys\Ceremony\CredentialRecord;
 use ShipMonk\Passkeys\Ceremony\RegistrationExpectations;
 use ShipMonk\Passkeys\Ceremony\RegistrationResult;
@@ -38,6 +40,12 @@ use const JSON_THROW_ON_ERROR;
  * Fixtures are assembled the way an authenticator/browser would emit them (see the builders at
  * the bottom); signatures are produced live because ECDSA output is non-deterministic.
  */
+#[CoversClass(RelyingParty::class)]
+#[CoversClass(RegistrationResult::class)]
+#[CoversClass(AuthenticationResult::class)]
+#[CoversClass(RegistrationExpectations::class)]
+#[CoversClass(AuthenticationExpectations::class)]
+#[CoversClass(VerificationException::class)]
 final class RelyingPartyTest extends CryptoTestCase
 {
 
