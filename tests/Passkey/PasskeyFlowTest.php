@@ -16,8 +16,7 @@ use ShipMonk\WebAuthn\Enum\UserVerificationRequirement;
 use ShipMonk\WebAuthn\Options\PublicKeyCredentialParameters;
 use ShipMonk\WebAuthn\Options\PublicKeyCredentialRequestOptions;
 use ShipMonk\WebAuthn\Passkey\PasskeyFlow;
-use ShipMonk\WebAuthn\Passkey\PasskeyStore;
-use ShipMonk\WebAuthn\Passkey\PendingCeremonyStore;
+use ShipMonk\WebAuthn\Passkey\PasskeyPolicy;
 use ShipMonk\WebAuthnTests\Cbor\CborTestEncoder;
 use ShipMonk\WebAuthnTests\CryptoTestCase;
 use function array_map;
@@ -452,6 +451,31 @@ class PasskeyFlowTest extends CryptoTestCase
         self::assertSame(self::ALICE_HANDLE, $result->userHandle);
     }
 
+    public function testProtectedMethodOverrideWinsOverPolicy(): void
+    {
+        // The policy explicitly demands `required`; the subclass hook — the escape hatch for
+        // dynamic/exotic policies — must still have the last word.
+        $flow = new class (self::RP_ID, 'Example RP', [self::ORIGIN], $this->store, $this->pending, new PasskeyPolicy(userVerification: UserVerificationRequirement::REQUIRED)) extends PasskeyFlow {
+
+            protected function getUserVerificationRequirement(): UserVerificationRequirement
+            {
+                return UserVerificationRequirement::PREFERRED;
+            }
+
+        };
+        $this->store->addUser(self::ALICE, self::ALICE_HANDLE);
+        $this->store->addCredential($this->record(self::ALICE_CREDENTIAL_ID, self::ALICE_HANDLE, $this->coseEntries));
+
+        $options = $flow->authenticationOptions();
+
+        self::assertSame(UserVerificationRequirement::PREFERRED, $options->userVerification);
+
+        $result = $flow->authenticate(
+            $this->aliceAssertion($options->challenge, flags: AuthenticatorData::FLAG_USER_PRESENT),
+        );
+        self::assertFalse($result->userVerified);
+    }
+
     // --- Signal API -------------------------------------------------------------------------------
 
     public function testAllAcceptedCredentialsSignalListsTheUsersCredentials(): void
@@ -545,7 +569,7 @@ class PasskeyFlowTest extends CryptoTestCase
 
     /**
      * With the passkey defaults, the concrete {@see PasskeyFlow} is used as-is; a policy override
-     * exercises the intended customisation path — a subclass overriding the protected hook.
+     * exercises the intended customisation path — a {@see PasskeyPolicy} passed to the constructor.
      */
     private function createFlow(
         ?UserVerificationRequirement $userVerification = null,
@@ -556,34 +580,17 @@ class PasskeyFlowTest extends CryptoTestCase
             return new PasskeyFlow(self::RP_ID, 'Example RP', [self::ORIGIN], $this->store, $this->pending);
         }
 
-        return new class (self::RP_ID, [self::ORIGIN], $this->store, $this->pending, $userVerification, $crossOriginAllowed) extends PasskeyFlow {
-
-            /**
-             * @param list<string> $origins
-             */
-            public function __construct(
-                string $rpId,
-                array $origins,
-                PasskeyStore $store,
-                PendingCeremonyStore $pendingStore,
-                private readonly ?UserVerificationRequirement $userVerification,
-                private readonly bool $crossOriginAllowed,
-            )
-            {
-                parent::__construct($rpId, 'Example RP', $origins, $store, $pendingStore);
-            }
-
-            protected function getUserVerificationRequirement(): UserVerificationRequirement
-            {
-                return $this->userVerification ?? parent::getUserVerificationRequirement();
-            }
-
-            protected function isCrossOriginAllowed(): bool
-            {
-                return $this->crossOriginAllowed || parent::isCrossOriginAllowed();
-            }
-
-        };
+        return new PasskeyFlow(
+            self::RP_ID,
+            'Example RP',
+            [self::ORIGIN],
+            $this->store,
+            $this->pending,
+            new PasskeyPolicy(
+                userVerification: $userVerification ?? UserVerificationRequirement::REQUIRED,
+                allowCrossOrigin: $crossOriginAllowed,
+            ),
+        );
     }
 
     /**

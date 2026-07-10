@@ -62,8 +62,9 @@ use function random_bytes;
  * when the options were issued, or a stale ceremony can attach a passkey to an account whose
  * ownership has since changed.
  *
- * Policy knobs (user verification, algorithms, timeout…) are protected methods with defaults that
- * are right for passkeys; subclass only to override those.
+ * Policy knobs (user verification, algorithms, timeout…) default to what is right for passkeys;
+ * pass a {@see PasskeyPolicy} to deviate, or subclass and override the protected methods for
+ * dynamic/exotic policies.
  *
  * @api
  */
@@ -81,6 +82,7 @@ class PasskeyFlow
         private readonly array $origins,
         private readonly PasskeyStore $store,
         private readonly PendingCeremonyStore $pendingCeremonyStore,
+        private readonly PasskeyPolicy $policy = new PasskeyPolicy(),
         private readonly RelyingParty $relyingParty = new RelyingParty(),
     )
     {
@@ -372,70 +374,65 @@ class PasskeyFlow
         );
     }
 
-    // --- Policy defaults: sensible for passkeys, override to taste ------------------------------
+    // --- Policy: configured via PasskeyPolicy, or override for dynamic/exotic cases -------------
 
     /**
      * How much the ceremony must prove about the human ({@see UserVerificationRequirement}).
-     * Defaults to `required` — a passkey then carries both factors (possession + PIN/biometric).
-     * Override to `preferred` for maximal authenticator compatibility (e.g. security keys without
-     * a PIN), trading away the second factor.
+     * Defaults to {@see PasskeyPolicy::$userVerification}.
      */
     protected function getUserVerificationRequirement(): UserVerificationRequirement
     {
-        return UserVerificationRequirement::REQUIRED;
+        return $this->policy->userVerification;
     }
 
     /**
      * The COSE algorithms offered at registration, best first, and enforced on the attested key
-     * (WebAuthn §7.1 step 20). The default triple covers what real-world authenticators produce.
+     * (WebAuthn §7.1 step 20). Defaults to {@see PasskeyPolicy::$allowedAlgorithms}.
      *
      * @return non-empty-list<CoseAlgorithmIdentifier::*>
      */
     protected function getAllowedAlgorithms(): array
     {
-        return [
-            CoseAlgorithmIdentifier::ES256,
-            CoseAlgorithmIdentifier::RS256,
-            CoseAlgorithmIdentifier::EdDSA,
-        ];
+        return $this->policy->allowedAlgorithms;
     }
 
     /**
-     * Whether new credentials must be discoverable (client-side). Defaults to `required` — that
-     * is what makes the credential a passkey, and what the usernameless flow depends on.
+     * Whether new credentials must be discoverable (client-side). Defaults to
+     * {@see PasskeyPolicy::$residentKey}.
      */
     protected function getResidentKeyRequirement(): ResidentKeyRequirement
     {
-        return ResidentKeyRequirement::REQUIRED;
+        return $this->policy->residentKey;
     }
 
     /**
-     * The ceremony timeout in milliseconds sent to the client (a hint; clients ignore it for
-     * conditional mediation), or null to omit it. Defaults to the spec-recommended 300 s.
+     * The ceremony timeout in milliseconds sent to the client, or null to omit it. Defaults to
+     * {@see PasskeyPolicy::$timeout}.
      */
     protected function getTimeout(): ?int
     {
-        return PublicKeyCredentialRequestOptions::RECOMMENDED_TIMEOUT;
+        return $this->policy->timeout;
     }
 
     /**
-     * Whether an assertion made in a cross-origin iframe is acceptable. When enabling this, also
-     * override {@see self::getAllowedTopOrigins()}.
+     * Whether an assertion made in a cross-origin iframe is acceptable. Defaults to
+     * {@see PasskeyPolicy::$allowCrossOrigin}.
      */
     protected function isCrossOriginAllowed(): bool
     {
-        return false;
+        return $this->policy->allowCrossOrigin;
     }
 
     /**
      * The exact top-level origins allowed to embed your login page in an iframe. Only consulted
      * when {@see self::isCrossOriginAllowed()} returns true and the client reports a top origin.
+     * Defaults to {@see PasskeyPolicy::$allowedTopOrigins}.
      *
      * @return list<string>
      */
     protected function getAllowedTopOrigins(): array
     {
-        return [];
+        return $this->policy->allowedTopOrigins;
     }
 
     /**

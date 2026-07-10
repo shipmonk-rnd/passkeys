@@ -151,9 +151,20 @@ The flow owns no state; you implement two small interfaces:
 
 The defaults are right for passkeys: user verification `required`, discoverable credentials
 `required`, ES256/RS256/EdDSA, the spec-recommended 300 s timeout, cross-origin iframes rejected.
-To change any of them, subclass `PasskeyFlow` and override the corresponding protected method
-(`getUserVerificationRequirement()`, `getAllowedAlgorithms()`, `getResidentKeyRequirement()`,
-`getTimeout()`, `isCrossOriginAllowed()`, `getAllowedTopOrigins()`, `generateChallenge()`).
+To change any of them, pass a `PasskeyPolicy` to the constructor — the natural fit for
+DI-container wiring:
+
+```php
+$flow = new PasskeyFlow(
+    // …,
+    policy: new PasskeyPolicy(userVerification: UserVerificationRequirement::PREFERRED),
+);
+```
+
+For dynamic or exotic policies you can still subclass `PasskeyFlow` and override the corresponding
+protected method (`getUserVerificationRequirement()`, `getAllowedAlgorithms()`,
+`getResidentKeyRequirement()`, `getTimeout()`, `isCrossOriginAllowed()`,
+`getAllowedTopOrigins()`, `generateChallenge()`); an override wins over the policy value.
 
 ### Keeping credential providers in sync (Signal API)
 
