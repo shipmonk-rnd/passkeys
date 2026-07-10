@@ -1,14 +1,8 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\Passkeys;
+namespace ShipMonk\Passkeys\Ceremony;
 
 use ShipMonk\Passkeys\Cbor\CborMapException;
-use ShipMonk\Passkeys\Ceremony\AuthenticationExpectations;
-use ShipMonk\Passkeys\Ceremony\AuthenticationResult;
-use ShipMonk\Passkeys\Ceremony\CredentialStore;
-use ShipMonk\Passkeys\Ceremony\RegistrationExpectations;
-use ShipMonk\Passkeys\Ceremony\RegistrationResult;
-use ShipMonk\Passkeys\Ceremony\VerificationException;
 use ShipMonk\Passkeys\Cose\CoseKey;
 use ShipMonk\Passkeys\Cose\SignatureVerificationException;
 use ShipMonk\Passkeys\Credential\AttestationObject;

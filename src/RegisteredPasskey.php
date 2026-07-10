@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\Passkeys\Passkey;
+namespace ShipMonk\Passkeys;
 
 use ShipMonk\Passkeys\Ceremony\CredentialRecord;
 use ShipMonk\Passkeys\Ceremony\RegistrationResult;

@@ -2,9 +2,9 @@
 
 namespace ShipMonk\PasskeysDemo;
 
-use ShipMonk\Passkeys\Passkey\PendingAuthentication;
-use ShipMonk\Passkeys\Passkey\PendingCeremonyStore;
-use ShipMonk\Passkeys\Passkey\PendingRegistration;
+use ShipMonk\Passkeys\PendingAuthentication;
+use ShipMonk\Passkeys\PendingCeremonyStore;
+use ShipMonk\Passkeys\PendingRegistration;
 use function array_key_exists;
 use function array_shift;
 use function count;

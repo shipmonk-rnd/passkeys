@@ -33,7 +33,7 @@ namespace ShipMonk\PasskeysDemo;
 
 use ShipMonk\Passkeys\Ceremony\VerificationException;
 use ShipMonk\Passkeys\Json\JsonObject;
-use ShipMonk\Passkeys\Passkey\PasskeyFlow;
+use ShipMonk\Passkeys\PasskeyFlow;
 use Throwable;
 use function file_get_contents;
 use function filter_var;

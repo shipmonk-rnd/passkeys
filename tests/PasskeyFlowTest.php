@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\PasskeysTests\Passkey;
+namespace ShipMonk\PasskeysTests;
 
 use InvalidArgumentException;
 use OpenSSLAsymmetricKey;
@@ -15,11 +15,10 @@ use ShipMonk\Passkeys\Enum\ResidentKeyRequirement;
 use ShipMonk\Passkeys\Enum\UserVerificationRequirement;
 use ShipMonk\Passkeys\Options\PublicKeyCredentialParameters;
 use ShipMonk\Passkeys\Options\PublicKeyCredentialRequestOptions;
-use ShipMonk\Passkeys\Passkey\PasskeyFlow;
-use ShipMonk\Passkeys\Passkey\PasskeyStore;
-use ShipMonk\Passkeys\Passkey\PendingCeremonyStore;
+use ShipMonk\Passkeys\PasskeyFlow;
+use ShipMonk\Passkeys\PasskeyStore;
+use ShipMonk\Passkeys\PendingCeremonyStore;
 use ShipMonk\PasskeysTests\Cbor\CborTestEncoder;
-use ShipMonk\PasskeysTests\CryptoTestCase;
 use function array_map;
 use function base64_encode;
 use function chr;

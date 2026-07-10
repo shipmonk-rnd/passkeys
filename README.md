@@ -8,7 +8,7 @@ A from-scratch, spec-compliant [WebAuthn](https://w3c.github.io/webauthn/) **pas
 - 🧪 **100 % code coverage:** enforced in CI
 - 🔬 **PHPStan max level:** with strict rules and zero ignores in `src/`
 
-The intended entry point is the high-level **`ShipMonk\Passkeys\Passkey\PasskeyFlow`**: construct it with
+The intended entry point is the high-level **`ShipMonk\Passkeys\PasskeyFlow`**: construct it with
 your relying party identity and two small storage interfaces, wire its four methods to four HTTP
 endpoints, and you have passkey registration and login — usernameless, two-step by email, and
 conditional-mediation (autofill), all at once. Everything beneath it (the `RelyingParty` ceremony
@@ -35,7 +35,7 @@ for you.
 ### Set up the flow
 
 ```php
-use ShipMonk\Passkeys\Passkey\PasskeyFlow;
+use ShipMonk\Passkeys\PasskeyFlow;
 
 $flow = new PasskeyFlow(
     rpId: 'example.com',                  // the domain your passkeys are scoped to
@@ -139,13 +139,13 @@ challenge and looked up from the response — you never juggle "the" pending cer
 
 The flow owns no state; you implement two small interfaces:
 
-- **`ShipMonk\Passkeys\Passkey\PasskeyStore`** — the durable side: your user and credential tables.
+- **`ShipMonk\Passkeys\PasskeyStore`** — the durable side: your user and credential tables.
   Six methods: the reads `findUserHandleByUsername()`, `findCredentialsByUserHandle()`,
   `findCredentialByCredentialId()` and `findUserEntityByUserHandle()` (the last only used by the
   [Signal API](#keeping-credential-providers-in-sync-signal-api)), plus the two writes
   `saveCredential()` and `updateCredential()`. Typically a thin repository over the same database
   that holds your users.
-- **`ShipMonk\Passkeys\Passkey\PendingCeremonyStore`** — the transient side: ceremonies started but not
+- **`ShipMonk\Passkeys\PendingCeremonyStore`** — the transient side: ceremonies started but not
   yet finished, keyed by challenge. Implement it on something browser-session-scoped (the PHP
   session, a short-TTL cache), never on durable storage. Its consume-on-read semantics make each
   challenge single-use — the anti-replay control the library relies on.
@@ -259,7 +259,7 @@ right fit today.
 Everything below `PasskeyFlow` is public and usable on its own when the flow's shape doesn't fit —
 but it puts challenge storage, single-use enforcement, and result persistence in your hands.
 
-**`ShipMonk\Passkeys\RelyingParty`** runs the full WebAuthn §7.1 (registration) and §7.2 (authentication)
+**`ShipMonk\Passkeys\Ceremony\RelyingParty`** runs the full WebAuthn §7.1 (registration) and §7.2 (authentication)
 verification procedures against per-ceremony expectations, reading credentials through a
 `CredentialStore` you implement:
 
@@ -268,7 +268,7 @@ use ShipMonk\Passkeys\Ceremony\RegistrationExpectations;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
 use ShipMonk\Passkeys\Credential\PublicKeyCredential;
 use ShipMonk\Passkeys\Json\JsonObject;
-use ShipMonk\Passkeys\RelyingParty;
+use ShipMonk\Passkeys\Ceremony\RelyingParty;
 
 $credential = PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString($rawJson));
 

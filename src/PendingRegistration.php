@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\Passkeys\Passkey;
+namespace ShipMonk\Passkeys;
 
 /**
  * The server-side state of one registration ceremony started by

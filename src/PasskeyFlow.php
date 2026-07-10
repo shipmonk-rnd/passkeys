@@ -1,12 +1,13 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\Passkeys\Passkey;
+namespace ShipMonk\Passkeys;
 
 use InvalidArgumentException;
 use ShipMonk\Passkeys\Ceremony\AuthenticationExpectations;
 use ShipMonk\Passkeys\Ceremony\AuthenticationResult;
 use ShipMonk\Passkeys\Ceremony\CredentialRecord;
 use ShipMonk\Passkeys\Ceremony\RegistrationExpectations;
+use ShipMonk\Passkeys\Ceremony\RelyingParty;
 use ShipMonk\Passkeys\Ceremony\VerificationException;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
 use ShipMonk\Passkeys\Credential\MalformedDataException;
@@ -23,7 +24,6 @@ use ShipMonk\Passkeys\Options\PublicKeyCredentialParameters;
 use ShipMonk\Passkeys\Options\PublicKeyCredentialRequestOptions;
 use ShipMonk\Passkeys\Options\PublicKeyCredentialRpEntity;
 use ShipMonk\Passkeys\Options\PublicKeyCredentialUserEntity;
-use ShipMonk\Passkeys\RelyingParty;
 use ShipMonk\Passkeys\Signal\AllAcceptedCredentialsSignal;
 use ShipMonk\Passkeys\Signal\CurrentUserDetailsSignal;
 use function array_map;

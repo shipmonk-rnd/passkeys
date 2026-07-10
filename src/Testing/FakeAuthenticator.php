@@ -68,7 +68,7 @@ use const STR_PAD_LEFT;
  * Behaviour that is a property of the authenticator/user rather than of one ceremony — user
  * presence/verification, backup state, the algorithm of generated keys — is configured once in
  * the constructor. Since none of this is an HTTP client, it composes with whatever drives your
- * endpoints (a framework test client, direct {@see \ShipMonk\Passkeys\Passkey\PasskeyFlow} calls, …).
+ * endpoints (a framework test client, direct {@see \ShipMonk\Passkeys\PasskeyFlow} calls, …).
  *
  * Malformed or unacceptable options throw a {@see LogicException} — in a test, both indicate a
  * bug, either in the relying party under test or in the test itself.

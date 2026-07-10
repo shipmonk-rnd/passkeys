@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\PasskeysTests;
+namespace ShipMonk\PasskeysTests\Ceremony;
 
 use InvalidArgumentException;
 use OpenSSLAsymmetricKey;
@@ -10,6 +10,7 @@ use ShipMonk\Passkeys\Ceremony\AuthenticationExpectations;
 use ShipMonk\Passkeys\Ceremony\CredentialRecord;
 use ShipMonk\Passkeys\Ceremony\RegistrationExpectations;
 use ShipMonk\Passkeys\Ceremony\RegistrationResult;
+use ShipMonk\Passkeys\Ceremony\RelyingParty;
 use ShipMonk\Passkeys\Ceremony\VerificationException;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
 use ShipMonk\Passkeys\Cose\CoseKey;
@@ -18,9 +19,8 @@ use ShipMonk\Passkeys\Credential\AuthenticatorAttestationResponse;
 use ShipMonk\Passkeys\Credential\AuthenticatorData;
 use ShipMonk\Passkeys\Credential\PublicKeyCredential;
 use ShipMonk\Passkeys\Json\JsonObject;
-use ShipMonk\Passkeys\RelyingParty;
 use ShipMonk\PasskeysTests\Cbor\CborTestEncoder;
-use ShipMonk\PasskeysTests\Ceremony\InMemoryCredentialStore;
+use ShipMonk\PasskeysTests\CryptoTestCase;
 use function chr;
 use function hash;
 use function json_encode;
