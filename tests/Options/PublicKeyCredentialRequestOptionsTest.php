@@ -15,7 +15,6 @@ use function json_decode;
 use const JSON_THROW_ON_ERROR;
 
 #[CoversClass(PublicKeyCredentialRequestOptions::class)]
-#[CoversClass(PublicKeyCredentialDescriptor::class)]
 final class PublicKeyCredentialRequestOptionsTest extends PasskeysTestCase
 {
 

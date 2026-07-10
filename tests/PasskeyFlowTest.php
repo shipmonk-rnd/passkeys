@@ -6,9 +6,7 @@ use InvalidArgumentException;
 use OpenSSLAsymmetricKey;
 use PHPUnit\Framework\Attributes\CoversClass;
 use ShipMonk\Passkeys\Base64\Base64;
-use ShipMonk\Passkeys\Ceremony\AuthenticationResult;
 use ShipMonk\Passkeys\Ceremony\CredentialRecord;
-use ShipMonk\Passkeys\Ceremony\RegistrationResult;
 use ShipMonk\Passkeys\Ceremony\VerificationException;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
 use ShipMonk\Passkeys\Cose\CoseKey;
@@ -49,9 +47,6 @@ use const JSON_THROW_ON_ERROR;
 #[CoversClass(PendingAuthentication::class)]
 #[CoversClass(PendingRegistration::class)]
 #[CoversClass(CredentialRecord::class)]
-#[CoversClass(AuthenticationResult::class)]
-#[CoversClass(RegistrationResult::class)]
-#[CoversClass(VerificationException::class)]
 final class PasskeyFlowTest extends CryptoTestCase
 {
 

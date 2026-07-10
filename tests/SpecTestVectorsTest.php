@@ -2,20 +2,17 @@
 
 namespace ShipMonk\PasskeysTests;
 
-use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use ShipMonk\Passkeys\Base64\Base64;
 use ShipMonk\Passkeys\Ceremony\AuthenticationExpectations;
-use ShipMonk\Passkeys\Ceremony\AuthenticationResult;
 use ShipMonk\Passkeys\Ceremony\CredentialRecord;
 use ShipMonk\Passkeys\Ceremony\RegistrationExpectations;
 use ShipMonk\Passkeys\Ceremony\RegistrationResult;
 use ShipMonk\Passkeys\Ceremony\RelyingParty;
 use ShipMonk\Passkeys\Ceremony\VerificationException;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
-use ShipMonk\Passkeys\Credential\AttestationObject;
-use ShipMonk\Passkeys\Credential\AttestedCredentialData;
 use ShipMonk\Passkeys\Credential\AuthenticatorAssertionResponse;
 use ShipMonk\Passkeys\Credential\AuthenticatorAttestationResponse;
 use ShipMonk\Passkeys\Credential\PublicKeyCredential;
@@ -49,12 +46,7 @@ use function substr;
  *
  * @see https://www.w3.org/TR/webauthn-3/#sctn-test-vectors
  */
-#[CoversClass(RelyingParty::class)]
-#[CoversClass(RegistrationResult::class)]
-#[CoversClass(AuthenticationResult::class)]
-#[CoversClass(VerificationException::class)]
-#[CoversClass(AttestationObject::class)]
-#[CoversClass(AttestedCredentialData::class)]
+#[CoversNothing]
 final class SpecTestVectorsTest extends PasskeysTestCase
 {
 
