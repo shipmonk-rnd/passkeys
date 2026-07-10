@@ -3,6 +3,7 @@
 namespace ShipMonk\PasskeysTests\Der;
 
 use LogicException;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use ShipMonk\Passkeys\Der\DerEncoder;
 use ShipMonk\PasskeysTests\PasskeysTestCase;
@@ -15,6 +16,7 @@ use function random_int;
 use function strlen;
 use function substr;
 
+#[CoversClass(DerEncoder::class)]
 final class DerEncoderTest extends PasskeysTestCase
 {
 
@@ -90,6 +92,13 @@ final class DerEncoderTest extends PasskeysTestCase
             "\x30\x06\x02\x01\x01\x02\x01\x02",
             DerEncoder::encodeSequence(DerEncoder::encodeUnsignedInt("\x01"), DerEncoder::encodeUnsignedInt("\x02")),
         );
+    }
+
+    public function testEncodeBitString(): void
+    {
+        // tag 0x03, length (content + 1 leading "unused bits" byte), then 0x00 and the content bytes.
+        self::assertSame("\x03\x01\x00", DerEncoder::encodeBitString(''));
+        self::assertSame("\x03\x04\x00\x01\x02\x03", DerEncoder::encodeBitString("\x01\x02\x03"));
     }
 
     /**

@@ -2,12 +2,14 @@
 
 namespace ShipMonk\PasskeysTests\Signal;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use ShipMonk\Passkeys\Base64\Base64;
 use ShipMonk\Passkeys\Signal\CurrentUserDetailsSignal;
 use ShipMonk\PasskeysTests\PasskeysTestCase;
 use function json_decode;
 use const JSON_THROW_ON_ERROR;
 
+#[CoversClass(CurrentUserDetailsSignal::class)]
 final class CurrentUserDetailsSignalTest extends PasskeysTestCase
 {
 

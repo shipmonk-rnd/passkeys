@@ -2,9 +2,11 @@
 
 namespace ShipMonk\PasskeysTests\Credential;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use ShipMonk\Passkeys\Base64\Base64;
 use ShipMonk\Passkeys\Credential\AuthenticatorAssertionResponse;
 use ShipMonk\Passkeys\Credential\AuthenticatorAttestationResponse;
+use ShipMonk\Passkeys\Credential\AuthenticatorResponse;
 use ShipMonk\Passkeys\Credential\MalformedDataException;
 use ShipMonk\Passkeys\Credential\PublicKeyCredential;
 use ShipMonk\Passkeys\Enum\AuthenticatorAttachment;
@@ -15,6 +17,11 @@ use ShipMonk\PasskeysTests\PasskeysTestCase;
 use function json_encode;
 use const JSON_THROW_ON_ERROR;
 
+#[CoversClass(PublicKeyCredential::class)]
+#[CoversClass(AuthenticatorAttestationResponse::class)]
+#[CoversClass(AuthenticatorAssertionResponse::class)]
+#[CoversClass(AuthenticatorResponse::class)]
+#[CoversClass(MalformedDataException::class)]
 final class PublicKeyCredentialTest extends PasskeysTestCase
 {
 
@@ -90,6 +97,29 @@ final class PublicKeyCredentialTest extends PasskeysTestCase
 
         self::assertInstanceOf(AuthenticatorAttestationResponse::class, $credential->response);
         self::assertNull($credential->response->transports);
+    }
+
+    public function testParseAttestationObjectRejectsMalformedCbor(): void
+    {
+        $credential = PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
+            'id' => Base64::urlEncode('credential-id'),
+            'rawId' => Base64::urlEncode('credential-id'),
+            'type' => 'public-key',
+            'response' => [
+                'clientDataJSON' => Base64::urlEncode('{"type":"webauthn.create"}'),
+                'attestationObject' => Base64::urlEncode('not-valid-cbor'),
+            ],
+        ], JSON_THROW_ON_ERROR)));
+
+        $response = $credential->response;
+        self::assertInstanceOf(AuthenticatorAttestationResponse::class, $response);
+
+        // The attestation object is stored raw and only parsed on demand, so the failure surfaces here.
+        self::assertException(
+            MalformedDataException::class,
+            'Malformed attestation object',
+            static fn () => $response->parseAttestationObject(),
+        );
     }
 
     public function testFromAuthenticationResponseJson(): void

@@ -2,6 +2,7 @@
 
 namespace ShipMonk\PasskeysTests\Cbor;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use ShipMonk\Passkeys\Binary\BytesReader;
 use ShipMonk\Passkeys\Cbor\CborEncoder;
@@ -10,6 +11,7 @@ use ShipMonk\PasskeysTests\PasskeysTestCase;
 use function bin2hex;
 use function str_repeat;
 
+#[CoversClass(CborEncoder::class)]
 final class CborEncoderTest extends PasskeysTestCase
 {
 
@@ -50,6 +52,14 @@ final class CborEncoderTest extends PasskeysTestCase
         self::assertSame('43616263', bin2hex(CborEncoder::encodeByteString('abc')));
         // 32-byte coordinate: head 0x58 0x20, then the bytes.
         self::assertSame('5820' . str_repeat('01', 32), bin2hex(CborEncoder::encodeByteString(str_repeat("\x01", 32))));
+    }
+
+    public function testEncodeTextString(): void
+    {
+        self::assertSame('60', bin2hex(CborEncoder::encodeTextString('')));
+        // fmt 'none' as emitted in an attestation object: head 0x64, then the 4 bytes.
+        self::assertSame('646e6f6e65', bin2hex(CborEncoder::encodeTextString('none')));
+        self::assertSame('6568656c6c6f', bin2hex(CborEncoder::encodeTextString('hello')));
     }
 
     public function testEncodeMapKeepsOrderAndRoundTripsThroughTheDecoder(): void

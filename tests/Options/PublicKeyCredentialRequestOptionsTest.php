@@ -2,6 +2,7 @@
 
 namespace ShipMonk\PasskeysTests\Options;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use ShipMonk\Passkeys\Base64\Base64;
 use ShipMonk\Passkeys\Enum\AuthenticatorTransport;
 use ShipMonk\Passkeys\Enum\PublicKeyCredentialHint;
@@ -13,6 +14,8 @@ use ShipMonk\PasskeysTests\PasskeysTestCase;
 use function json_decode;
 use const JSON_THROW_ON_ERROR;
 
+#[CoversClass(PublicKeyCredentialRequestOptions::class)]
+#[CoversClass(PublicKeyCredentialDescriptor::class)]
 final class PublicKeyCredentialRequestOptionsTest extends PasskeysTestCase
 {
 

@@ -3,6 +3,7 @@
 namespace ShipMonk\PasskeysTests\Testing;
 
 use LogicException;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use ShipMonk\Passkeys\Base64\Base64;
 use ShipMonk\Passkeys\Ceremony\VerificationException;
@@ -12,6 +13,7 @@ use ShipMonk\Passkeys\PasskeyFlow;
 use ShipMonk\Passkeys\PasskeyStore;
 use ShipMonk\Passkeys\PendingCeremonyStore;
 use ShipMonk\Passkeys\Testing\FakeAuthenticator;
+use ShipMonk\Passkeys\Testing\FakePasskey;
 use ShipMonk\PasskeysTests\InMemoryPasskeyStore;
 use ShipMonk\PasskeysTests\InMemoryPendingCeremonyStore;
 use ShipMonk\PasskeysTests\PasskeysTestCase;
@@ -24,6 +26,8 @@ use const JSON_THROW_ON_ERROR;
  * would use it — plus the authenticator-side behaviours (credential selection, refusals,
  * UP/UV/backup flags) a browser would exhibit.
  */
+#[CoversClass(FakeAuthenticator::class)]
+#[CoversClass(FakePasskey::class)]
 final class FakeAuthenticatorTest extends PasskeysTestCase
 {
 

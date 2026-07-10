@@ -3,6 +3,7 @@
 namespace ShipMonk\PasskeysTests\Options;
 
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\CoversClass;
 use ShipMonk\Passkeys\Base64\Base64;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
 use ShipMonk\Passkeys\Enum\AuthenticatorAttachment;
@@ -14,6 +15,7 @@ use ShipMonk\Passkeys\Enum\UserVerificationRequirement;
 use ShipMonk\Passkeys\Options\AuthenticatorSelectionCriteria;
 use ShipMonk\Passkeys\Options\PublicKeyCredentialCreationOptions;
 use ShipMonk\Passkeys\Options\PublicKeyCredentialDescriptor;
+use ShipMonk\Passkeys\Options\PublicKeyCredentialEntity;
 use ShipMonk\Passkeys\Options\PublicKeyCredentialParameters;
 use ShipMonk\Passkeys\Options\PublicKeyCredentialRpEntity;
 use ShipMonk\Passkeys\Options\PublicKeyCredentialUserEntity;
@@ -23,6 +25,13 @@ use function str_repeat;
 use function strlen;
 use const JSON_THROW_ON_ERROR;
 
+#[CoversClass(PublicKeyCredentialCreationOptions::class)]
+#[CoversClass(PublicKeyCredentialRpEntity::class)]
+#[CoversClass(PublicKeyCredentialUserEntity::class)]
+#[CoversClass(PublicKeyCredentialParameters::class)]
+#[CoversClass(AuthenticatorSelectionCriteria::class)]
+#[CoversClass(PublicKeyCredentialDescriptor::class)]
+#[CoversClass(PublicKeyCredentialEntity::class)]
 final class PublicKeyCredentialCreationOptionsTest extends PasskeysTestCase
 {
 

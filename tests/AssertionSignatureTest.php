@@ -2,8 +2,10 @@
 
 namespace ShipMonk\PasskeysTests;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use ShipMonk\Passkeys\Base64\Base64;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
+use ShipMonk\Passkeys\Cose\CoseKey;
 use ShipMonk\Passkeys\Credential\AuthenticatorAssertionResponse;
 use function hash;
 use function is_string;
@@ -17,6 +19,7 @@ use const OPENSSL_ALGO_SHA256;
  * (WebAuthn Level 3 §7.2 step 19): the signed message is
  * {@code authenticatorData || SHA-256(clientDataJSON)}.
  */
+#[CoversClass(CoseKey::class)]
 final class AssertionSignatureTest extends CryptoTestCase
 {
 

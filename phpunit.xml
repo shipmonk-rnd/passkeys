@@ -10,6 +10,7 @@
     displayDetailsOnAllIssues="true"
     executionOrder="depends,defects"
     failOnAllIssues="true"
+    requireCoverageMetadata="true"
 >
     <testsuites>
         <testsuite name="default">

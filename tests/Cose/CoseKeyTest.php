@@ -2,6 +2,7 @@
 
 namespace ShipMonk\PasskeysTests\Cose;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
 use ShipMonk\Passkeys\Cose\CoseEc2Key;
@@ -13,6 +14,10 @@ use ShipMonk\PasskeysTests\CryptoTestCase;
 use function bin2hex;
 use function str_pad;
 
+#[CoversClass(CoseKey::class)]
+#[CoversClass(CoseEc2Key::class)]
+#[CoversClass(CoseOkpKey::class)]
+#[CoversClass(CoseRsaKey::class)]
 final class CoseKeyTest extends CryptoTestCase
 {
 
