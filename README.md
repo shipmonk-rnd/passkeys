@@ -112,7 +112,9 @@ same page:
 - a **two-step login form** (email first): pass the entered username. If the account is known, the
   ceremony is pinned to it — an assertion by any other user's credential is rejected. An unknown
   username silently falls back to the usernameless options, so the response does not by itself
-  confirm whether an account exists.
+  confirm whether an account exists. By default a *known* account still reveals it has passkeys
+  through a non-empty `allowCredentials`; override `getEnumerationHardeningSecret()` to close that
+  leak too (see [Policy knobs](#policy-knobs)).
 
 ```php
 // POST /login/options
@@ -159,6 +161,32 @@ The defaults are right for passkeys: user verification `required`, discoverable 
 To change any of them, subclass `PasskeyFlow` and override the corresponding protected method
 (`getUserVerificationRequirement()`, `getAllowedAlgorithms()`, `getResidentKeyRequirement()`,
 `getTimeout()`, `isCrossOriginAllowed()`, `getAllowedTopOrigins()`, `generateChallenge()`).
+
+#### Username-enumeration hardening
+
+In the two-step flow, an account with passkeys returns a non-empty `allowCredentials` while a
+non-existent one (or an account without passkeys) returns none — so a probing attacker can tell,
+from the shape of `/login/options`, which usernames have passkeys (WebAuthn
+[§14.6.2](https://www.w3.org/TR/webauthn-3/#sctn-username-enumeration)). Override
+`getEnumerationHardeningSecret()` to return a fixed, high-entropy secret (≥16 bytes, the same on
+every request, kept out of source control) and those responses instead carry a **stable, plausible
+fabricated descriptor** derived from the username — indistinguishable from a real one, so the
+distinction disappears:
+
+```php
+final class MyFlow extends PasskeyFlow
+{
+    protected function getEnumerationHardeningSecret(): ?string
+    {
+        return $this->appSecrets->passkeyEnumerationKey();  // fixed 32 random bytes from config
+    }
+}
+```
+
+The decoy only shapes the options response; verification is untouched, so a ceremony for a
+non-existent account still fails closed. It equalizes the response, not every side channel — the
+per-account response *timing* and the credential *count* can still differ slightly; override
+`fabricateAllowCredentials()` if you need to narrow those too.
 
 ### Keeping credential providers in sync (Signal API)
 

@@ -12,6 +12,7 @@ use ShipMonk\Passkeys\Ceremony\VerificationException;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
 use ShipMonk\Passkeys\Credential\MalformedDataException;
 use ShipMonk\Passkeys\Credential\PublicKeyCredential;
+use ShipMonk\Passkeys\Enum\AuthenticatorTransport;
 use ShipMonk\Passkeys\Enum\PublicKeyCredentialType;
 use ShipMonk\Passkeys\Enum\ResidentKeyRequirement;
 use ShipMonk\Passkeys\Enum\UserVerificationRequirement;
@@ -28,7 +29,9 @@ use ShipMonk\Passkeys\Signal\AllAcceptedCredentialsSignal;
 use ShipMonk\Passkeys\Signal\CurrentUserDetailsSignal;
 use function array_map;
 use function hash_equals;
+use function hash_hmac;
 use function random_bytes;
+use function strlen;
 
 /**
  * A high-level, passkey-only login flow on top of the {@see RelyingParty} façade: construct it
@@ -44,9 +47,11 @@ use function random_bytes;
  *     username. If the account is known, the options list its credentials in `allowCredentials`
  *     and the ceremony is pinned to that account — an assertion by any other user's credential is
  *     rejected. An unknown username silently falls back to the usernameless options above, so the
- *     response does not by itself confirm whether an account exists (note that a *known* account's
- *     non-empty `allowCredentials` still reveals that it has passkeys; if that distinction matters
- *     to you, respond with fabricated descriptors yourself instead of calling this method).
+ *     response does not by itself confirm whether an account exists. By default a *known* account's
+ *     non-empty `allowCredentials` still reveals that it has passkeys; override
+ *     {@see self::getEnumerationHardeningSecret()} to close that leak too — the options for a
+ *     username with no passkeys then carry a stable fabricated descriptor, indistinguishable from a
+ *     real one (WebAuthn §14.6.2).
  *
  * Because both flows can run concurrently in one browser session (conditional mediation starts at
  * page load, a button click starts another ceremony), pending ceremonies are keyed by challenge:
@@ -102,6 +107,17 @@ class PasskeyFlow
     {
         $userHandle = $username === null ? null : $this->store->findUserHandleByUsername($username);
         $allowCredentials = $userHandle === null ? null : $this->credentialDescriptorsFor($userHandle);
+
+        // Username-enumeration hardening (WebAuthn §14.6.2): when a username was supplied but produced
+        // no real descriptors — the account does not exist, or exists but has no passkeys — substitute
+        // a stable, plausible fabricated descriptor so this response is indistinguishable from that of
+        // an account that does have passkeys. A no-op unless getEnumerationHardeningSecret() is set;
+        // it only shapes the response — verification (below, keyed by the pinned user handle) is
+        // unchanged, so a ceremony for a non-existent account still fails closed.
+        if ($username !== null && $allowCredentials === null) {
+            $allowCredentials = $this->fabricateAllowCredentials($username);
+        }
+
         $challenge = $this->generateChallenge();
         $this->pendingCeremonyStore->rememberPendingAuthentication(new PendingAuthentication($challenge, $userHandle));
 
@@ -488,6 +504,62 @@ class PasskeyFlow
     protected function generateChallenge(): string
     {
         return random_bytes(32);
+    }
+
+    /**
+     * The secret that switches on username-enumeration hardening for the two-step flow (WebAuthn
+     * §14.6.2). It defaults to null — the mitigation off — and then {@see self::authenticationOptions()}
+     * leaves `allowCredentials` empty for a username with no passkeys, so an empty-vs-non-empty
+     * response reveals which accounts have passkeys. Return a fixed, high-entropy secret (≥16 bytes,
+     * e.g. 32 random bytes kept in app config — the *same* value on every request) and those
+     * responses instead carry a plausible fabricated descriptor, so a probing attacker can no longer
+     * tell passkey-bearing accounts from the rest.
+     *
+     * The secret MUST be stable across requests (a fresh one each time would make the fake
+     * descriptors change between probes, exposing them as fake) and MUST stay secret (anyone who
+     * knows it can recompute the fabricated ids and distinguish them from real ones). This equalizes
+     * the *response*; a determined attacker may still find residual side channels (per-account
+     * response timing, or the credential count) — override {@see self::fabricateAllowCredentials()}
+     * if you need to narrow those too.
+     *
+     * @return string|null raw secret bytes, or null to disable the mitigation
+     */
+    protected function getEnumerationHardeningSecret(): ?string
+    {
+        return null;
+    }
+
+    /**
+     * The fabricated `allowCredentials` served for a username that has no real credentials — the
+     * §14.6.2 mitigation's decoy. The default derives one plausible descriptor deterministically from
+     * the username with HMAC-SHA-256 keyed by {@see self::getEnumerationHardeningSecret()} (so it is
+     * stable per username across probes yet unguessable without the secret), and returns null — the
+     * mitigation off — when no secret is configured.
+     *
+     * Override to better match your real descriptors when the defaults are distinguishable from them
+     * — e.g. a different credential-id length, transports, or more than one entry.
+     *
+     * @return list<PublicKeyCredentialDescriptor>|null
+     *
+     * @throws InvalidArgumentException if a configured secret is shorter than 16 bytes
+     */
+    protected function fabricateAllowCredentials(string $username): ?array
+    {
+        $secret = $this->getEnumerationHardeningSecret();
+
+        if ($secret === null) {
+            return null;
+        }
+
+        if (strlen($secret) < 16) {
+            throw new InvalidArgumentException('The enumeration-hardening secret must be at least 16 bytes');
+        }
+
+        return [new PublicKeyCredentialDescriptor(
+            PublicKeyCredentialType::PUBLIC_KEY,
+            hash_hmac('sha256', $username, $secret, binary: true),
+            [AuthenticatorTransport::INTERNAL, AuthenticatorTransport::HYBRID],
+        )];
     }
 
 }
