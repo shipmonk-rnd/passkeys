@@ -1,10 +1,10 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthn\Options;
+namespace ShipMonk\Passkeys\Options;
 
 use JsonSerializable;
-use ShipMonk\WebAuthn\Cose\CoseAlgorithmIdentifier;
-use ShipMonk\WebAuthn\Enum\PublicKeyCredentialType;
+use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
+use ShipMonk\Passkeys\Enum\PublicKeyCredentialType;
 
 /**
  * @see https://w3c.github.io/webauthn/#dictdef-publickeycredentialparameters

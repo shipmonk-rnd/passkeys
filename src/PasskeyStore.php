@@ -1,11 +1,11 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthn\Passkey;
+namespace ShipMonk\Passkeys;
 
-use ShipMonk\WebAuthn\Ceremony\AuthenticationResult;
-use ShipMonk\WebAuthn\Ceremony\CredentialRecord;
-use ShipMonk\WebAuthn\Ceremony\CredentialStore;
-use ShipMonk\WebAuthn\Options\PublicKeyCredentialUserEntity;
+use ShipMonk\Passkeys\Ceremony\AuthenticationResult;
+use ShipMonk\Passkeys\Ceremony\CredentialRecord;
+use ShipMonk\Passkeys\Ceremony\CredentialStore;
+use ShipMonk\Passkeys\Options\PublicKeyCredentialUserEntity;
 
 /**
  * The relying party's durable passkey storage behind a {@see PasskeyFlow} — the user and
@@ -41,7 +41,7 @@ interface PasskeyStore extends CredentialStore
     /**
      * The account's current identity (user handle, username, display name) as a
      * {@see PublicKeyCredentialUserEntity}, or null when no such account exists. Used to build a
-     * {@see \ShipMonk\WebAuthn\Signal\CurrentUserDetailsSignal}; typically the same lookup that
+     * {@see \ShipMonk\Passkeys\Signal\CurrentUserDetailsSignal}; typically the same lookup that
      * backs your login/profile pages, keyed by the opaque handle rather than the username.
      *
      * The returned entity's `id` is authoritative for the signal and is expected to equal the

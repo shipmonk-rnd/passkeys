@@ -1,11 +1,11 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthn\Options;
+namespace ShipMonk\Passkeys\Options;
 
 use JsonSerializable;
-use ShipMonk\WebAuthn\Enum\AuthenticatorAttachment;
-use ShipMonk\WebAuthn\Enum\ResidentKeyRequirement;
-use ShipMonk\WebAuthn\Enum\UserVerificationRequirement;
+use ShipMonk\Passkeys\Enum\AuthenticatorAttachment;
+use ShipMonk\Passkeys\Enum\ResidentKeyRequirement;
+use ShipMonk\Passkeys\Enum\UserVerificationRequirement;
 
 /**
  * @see https://w3c.github.io/webauthn/#dictdef-authenticatorselectioncriteria

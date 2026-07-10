@@ -1,9 +1,9 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthnTests\Ceremony;
+namespace ShipMonk\PasskeysTests\Ceremony;
 
-use ShipMonk\WebAuthn\Ceremony\CredentialRecord;
-use ShipMonk\WebAuthn\Ceremony\CredentialStore;
+use ShipMonk\Passkeys\Ceremony\CredentialRecord;
+use ShipMonk\Passkeys\Ceremony\CredentialStore;
 
 /**
  * A trivial in-memory {@see CredentialStore} for the ceremony tests, standing in for the

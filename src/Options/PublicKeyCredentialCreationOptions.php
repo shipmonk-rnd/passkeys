@@ -1,10 +1,10 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthn\Options;
+namespace ShipMonk\Passkeys\Options;
 
 use JsonSerializable;
-use ShipMonk\WebAuthn\Base64\Base64;
-use ShipMonk\WebAuthn\Enum\PublicKeyCredentialHint;
+use ShipMonk\Passkeys\Base64\Base64;
+use ShipMonk\Passkeys\Enum\PublicKeyCredentialHint;
 use stdClass;
 use function json_encode;
 use const JSON_THROW_ON_ERROR;

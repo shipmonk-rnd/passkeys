@@ -1,10 +1,10 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthn\Credential;
+namespace ShipMonk\Passkeys\Credential;
 
-use ShipMonk\WebAuthn\Base64\InvalidBase64Exception;
-use ShipMonk\WebAuthn\Json\JsonObject;
-use ShipMonk\WebAuthn\Json\JsonObjectException;
+use ShipMonk\Passkeys\Base64\InvalidBase64Exception;
+use ShipMonk\Passkeys\Json\JsonObject;
+use ShipMonk\Passkeys\Json\JsonObjectException;
 
 /**
  * The client data collected by the browser, parsed from `clientDataJSON`.

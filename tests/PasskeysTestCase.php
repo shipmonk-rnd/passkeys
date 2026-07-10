@@ -1,20 +1,20 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthnTests;
+namespace ShipMonk\PasskeysTests;
 
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use ShipMonk\WebAuthn\Binary\BytesReader;
-use ShipMonk\WebAuthn\Cbor\CborMap;
-use ShipMonk\WebAuthn\Json\JsonObject;
-use ShipMonk\WebAuthnTests\Cbor\CborTestEncoder;
+use ShipMonk\Passkeys\Binary\BytesReader;
+use ShipMonk\Passkeys\Cbor\CborMap;
+use ShipMonk\Passkeys\Json\JsonObject;
+use ShipMonk\PasskeysTests\Cbor\CborTestEncoder;
 use Throwable;
 use function hex2bin;
 use function json_encode;
 use function str_replace;
 use const JSON_THROW_ON_ERROR;
 
-abstract class WebAuthnTestCase extends TestCase
+abstract class PasskeysTestCase extends TestCase
 {
 
     /**

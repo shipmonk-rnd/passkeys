@@ -1,6 +1,6 @@
-# ShipMonk\WebAuthn passkey demo
+# ShipMonk\Passkeys demo
 
-A small but realistic relying party built on `ShipMonk\WebAuthn`: multiple accounts (each identified by an
+A small but realistic relying party built on `ShipMonk\Passkeys`: multiple accounts (each identified by an
 email), each able to register several passkeys — so you can see the full registration + login flow,
 plus a per-account passkey list.
 

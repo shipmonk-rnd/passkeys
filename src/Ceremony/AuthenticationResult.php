@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthn\Ceremony;
+namespace ShipMonk\Passkeys\Ceremony;
 
 /**
  * The outcome of a successful authentication ceremony (WebAuthn §7.2). Reaching this object means

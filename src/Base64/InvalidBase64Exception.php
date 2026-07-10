@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthn\Base64;
+namespace ShipMonk\Passkeys\Base64;
 
 use RuntimeException;
 

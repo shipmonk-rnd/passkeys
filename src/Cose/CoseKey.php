@@ -1,12 +1,12 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthn\Cose;
+namespace ShipMonk\Passkeys\Cose;
 
-use ShipMonk\WebAuthn\Binary\BytesReader;
-use ShipMonk\WebAuthn\Binary\BytesReaderException;
-use ShipMonk\WebAuthn\Cbor\CborMap;
-use ShipMonk\WebAuthn\Cbor\CborMapException;
-use ShipMonk\WebAuthn\Cbor\InvalidCborException;
+use ShipMonk\Passkeys\Binary\BytesReader;
+use ShipMonk\Passkeys\Binary\BytesReaderException;
+use ShipMonk\Passkeys\Cbor\CborMap;
+use ShipMonk\Passkeys\Cbor\CborMapException;
+use ShipMonk\Passkeys\Cbor\InvalidCborException;
 use function base64_encode;
 use function chunk_split;
 use function implode;

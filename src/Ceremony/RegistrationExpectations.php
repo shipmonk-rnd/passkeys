@@ -1,9 +1,9 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthn\Ceremony;
+namespace ShipMonk\Passkeys\Ceremony;
 
 use InvalidArgumentException;
-use ShipMonk\WebAuthn\Cose\CoseAlgorithmIdentifier;
+use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
 use function strlen;
 
 /**

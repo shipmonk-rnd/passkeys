@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>ShipMonk\WebAuthn passkey demo</title>
+	<title>ShipMonk\Passkeys passkey demo</title>
 	<style>
 		body { font: 16px/1.5 system-ui, sans-serif; max-width: 42rem; margin: 3rem auto; padding: 0 1rem; color: #1a1a1a; }
 		h1 { font-size: 1.4rem; }
@@ -22,11 +22,11 @@
 	</style>
 </head>
 <body>
-	<h1>🔑 ShipMonk\WebAuthn passkey demo</h1>
+	<h1>🔑 ShipMonk\Passkeys passkey demo</h1>
 	<p class="lead">Multiple accounts, each identified by an email, each able to hold several passkeys.
 		Sign in via the button (with or without typing your email first) or via autofill on the email
-		field (conditional mediation). Login is verified server-side by <code>ShipMonk\WebAuthn\Passkey\PasskeyFlow</code>,
-		registration by <code>ShipMonk\WebAuthn\RelyingParty</code>.</p>
+		field (conditional mediation). Login is verified server-side by <code>ShipMonk\Passkeys\PasskeyFlow</code>,
+		registration by <code>ShipMonk\Passkeys\Ceremony\RelyingParty</code>.</p>
 
 	<section id="signed-out" class="hidden">
 		<p><input id="email" type="email" placeholder="you@example.com" autocomplete="username webauthn"></p>

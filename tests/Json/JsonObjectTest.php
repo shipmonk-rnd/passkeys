@@ -1,13 +1,13 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthnTests\Json;
+namespace ShipMonk\PasskeysTests\Json;
 
-use ShipMonk\WebAuthn\Json\JsonObject;
-use ShipMonk\WebAuthn\Json\JsonObjectException;
-use ShipMonk\WebAuthnTests\WebAuthnTestCase;
+use ShipMonk\Passkeys\Json\JsonObject;
+use ShipMonk\Passkeys\Json\JsonObjectException;
+use ShipMonk\PasskeysTests\PasskeysTestCase;
 use function array_map;
 
-class JsonObjectTest extends WebAuthnTestCase
+class JsonObjectTest extends PasskeysTestCase
 {
 
     public function testFromStringRejectsInvalidJson(): void

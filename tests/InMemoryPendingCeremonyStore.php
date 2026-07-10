@@ -1,10 +1,10 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthnTests\Passkey;
+namespace ShipMonk\PasskeysTests;
 
-use ShipMonk\WebAuthn\Passkey\PendingAuthentication;
-use ShipMonk\WebAuthn\Passkey\PendingCeremonyStore;
-use ShipMonk\WebAuthn\Passkey\PendingRegistration;
+use ShipMonk\Passkeys\PendingAuthentication;
+use ShipMonk\Passkeys\PendingCeremonyStore;
+use ShipMonk\Passkeys\PendingRegistration;
 use function base64_encode;
 
 /**

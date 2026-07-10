@@ -1,19 +1,19 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthnTests\Options;
+namespace ShipMonk\PasskeysTests\Options;
 
-use ShipMonk\WebAuthn\Base64\Base64;
-use ShipMonk\WebAuthn\Enum\AuthenticatorTransport;
-use ShipMonk\WebAuthn\Enum\PublicKeyCredentialHint;
-use ShipMonk\WebAuthn\Enum\PublicKeyCredentialType;
-use ShipMonk\WebAuthn\Enum\UserVerificationRequirement;
-use ShipMonk\WebAuthn\Options\PublicKeyCredentialDescriptor;
-use ShipMonk\WebAuthn\Options\PublicKeyCredentialRequestOptions;
-use ShipMonk\WebAuthnTests\WebAuthnTestCase;
+use ShipMonk\Passkeys\Base64\Base64;
+use ShipMonk\Passkeys\Enum\AuthenticatorTransport;
+use ShipMonk\Passkeys\Enum\PublicKeyCredentialHint;
+use ShipMonk\Passkeys\Enum\PublicKeyCredentialType;
+use ShipMonk\Passkeys\Enum\UserVerificationRequirement;
+use ShipMonk\Passkeys\Options\PublicKeyCredentialDescriptor;
+use ShipMonk\Passkeys\Options\PublicKeyCredentialRequestOptions;
+use ShipMonk\PasskeysTests\PasskeysTestCase;
 use function json_decode;
 use const JSON_THROW_ON_ERROR;
 
-class PublicKeyCredentialRequestOptionsTest extends WebAuthnTestCase
+class PublicKeyCredentialRequestOptionsTest extends PasskeysTestCase
 {
 
     public function testSerializesAllMembers(): void

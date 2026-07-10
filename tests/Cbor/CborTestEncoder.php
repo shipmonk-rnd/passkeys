@@ -1,8 +1,8 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthnTests\Cbor;
+namespace ShipMonk\PasskeysTests\Cbor;
 
-use ShipMonk\WebAuthn\Cbor\CborEncoder;
+use ShipMonk\Passkeys\Cbor\CborEncoder;
 use function is_int;
 
 /**

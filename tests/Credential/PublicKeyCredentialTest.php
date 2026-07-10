@@ -1,21 +1,21 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthnTests\Credential;
+namespace ShipMonk\PasskeysTests\Credential;
 
-use ShipMonk\WebAuthn\Base64\Base64;
-use ShipMonk\WebAuthn\Credential\AuthenticatorAssertionResponse;
-use ShipMonk\WebAuthn\Credential\AuthenticatorAttestationResponse;
-use ShipMonk\WebAuthn\Credential\MalformedDataException;
-use ShipMonk\WebAuthn\Credential\PublicKeyCredential;
-use ShipMonk\WebAuthn\Enum\AuthenticatorAttachment;
-use ShipMonk\WebAuthn\Enum\PublicKeyCredentialType;
-use ShipMonk\WebAuthn\Json\JsonObject;
-use ShipMonk\WebAuthn\Json\JsonObjectException;
-use ShipMonk\WebAuthnTests\WebAuthnTestCase;
+use ShipMonk\Passkeys\Base64\Base64;
+use ShipMonk\Passkeys\Credential\AuthenticatorAssertionResponse;
+use ShipMonk\Passkeys\Credential\AuthenticatorAttestationResponse;
+use ShipMonk\Passkeys\Credential\MalformedDataException;
+use ShipMonk\Passkeys\Credential\PublicKeyCredential;
+use ShipMonk\Passkeys\Enum\AuthenticatorAttachment;
+use ShipMonk\Passkeys\Enum\PublicKeyCredentialType;
+use ShipMonk\Passkeys\Json\JsonObject;
+use ShipMonk\Passkeys\Json\JsonObjectException;
+use ShipMonk\PasskeysTests\PasskeysTestCase;
 use function json_encode;
 use const JSON_THROW_ON_ERROR;
 
-class PublicKeyCredentialTest extends WebAuthnTestCase
+class PublicKeyCredentialTest extends PasskeysTestCase
 {
 
     private const string ATTESTATION_OBJECT = 'o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikdKbqkhPJnC90siSSsyDPQCYql'

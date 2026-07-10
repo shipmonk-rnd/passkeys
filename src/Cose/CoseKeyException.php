@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthn\Cose;
+namespace ShipMonk\Passkeys\Cose;
 
 use RuntimeException;
 

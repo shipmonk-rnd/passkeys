@@ -1,16 +1,16 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthnDemo;
+namespace ShipMonk\PasskeysDemo;
 
 use PDO;
 use PDOStatement;
 use RuntimeException;
-use ShipMonk\WebAuthn\Ceremony\AuthenticationResult;
-use ShipMonk\WebAuthn\Ceremony\CredentialRecord;
-use ShipMonk\WebAuthn\Cose\CoseKey;
-use ShipMonk\WebAuthn\Options\PublicKeyCredentialUserEntity;
-use ShipMonk\WebAuthn\Passkey\PasskeyStore as PasskeyStoreInterface;
-use ShipMonk\WebAuthn\Passkey\RegisteredPasskey;
+use ShipMonk\Passkeys\Ceremony\AuthenticationResult;
+use ShipMonk\Passkeys\Ceremony\CredentialRecord;
+use ShipMonk\Passkeys\Cose\CoseKey;
+use ShipMonk\Passkeys\Options\PublicKeyCredentialUserEntity;
+use ShipMonk\Passkeys\PasskeyStore as PasskeyStoreInterface;
+use ShipMonk\Passkeys\RegisteredPasskey;
 use function array_map;
 use function base64_decode;
 use function base64_encode;
@@ -23,7 +23,7 @@ use const JSON_THROW_ON_ERROR;
 /**
  * The demo's database: a SQLite file (pdo_sqlite), so accounts and passkeys survive server
  * restarts. It implements the library's {@see PasskeyStoreInterface PasskeyStore} — the durable
- * storage a {@see \ShipMonk\WebAuthn\Passkey\PasskeyFlow} runs against — plus the account methods the
+ * storage a {@see \ShipMonk\Passkeys\PasskeyFlow} runs against — plus the account methods the
  * demo's own endpoints need (insertUser, findUserByEmail, …). One user (identified by email) has
  * many credentials (a user_id foreign key):
  *

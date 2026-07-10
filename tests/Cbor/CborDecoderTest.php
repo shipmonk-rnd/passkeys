@@ -1,14 +1,14 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthnTests\Cbor;
+namespace ShipMonk\PasskeysTests\Cbor;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use ShipMonk\WebAuthn\Binary\BytesReader;
-use ShipMonk\WebAuthn\Cbor\CborDecoder;
-use ShipMonk\WebAuthn\Cbor\InvalidCborException;
-use ShipMonk\WebAuthnTests\WebAuthnTestCase;
+use ShipMonk\Passkeys\Binary\BytesReader;
+use ShipMonk\Passkeys\Cbor\CborDecoder;
+use ShipMonk\Passkeys\Cbor\InvalidCborException;
+use ShipMonk\PasskeysTests\PasskeysTestCase;
 
-class CborDecoderTest extends WebAuthnTestCase
+class CborDecoderTest extends PasskeysTestCase
 {
 
     #[DataProvider('provideDecodeData')]

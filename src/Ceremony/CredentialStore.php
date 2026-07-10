@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthn\Ceremony;
+namespace ShipMonk\Passkeys\Ceremony;
 
 /**
  * The relying party's read access to its stored credentials, keyed by credential id.

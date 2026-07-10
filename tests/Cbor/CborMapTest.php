@@ -1,13 +1,13 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthnTests\Cbor;
+namespace ShipMonk\PasskeysTests\Cbor;
 
-use ShipMonk\WebAuthn\Binary\BytesReader;
-use ShipMonk\WebAuthn\Cbor\CborMap;
-use ShipMonk\WebAuthn\Cbor\CborMapException;
-use ShipMonk\WebAuthnTests\WebAuthnTestCase;
+use ShipMonk\Passkeys\Binary\BytesReader;
+use ShipMonk\Passkeys\Cbor\CborMap;
+use ShipMonk\Passkeys\Cbor\CborMapException;
+use ShipMonk\PasskeysTests\PasskeysTestCase;
 
-class CborMapTest extends WebAuthnTestCase
+class CborMapTest extends PasskeysTestCase
 {
 
     /**

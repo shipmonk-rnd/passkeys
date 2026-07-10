@@ -1,9 +1,9 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthn\Signal;
+namespace ShipMonk\Passkeys\Signal;
 
 use JsonSerializable;
-use ShipMonk\WebAuthn\Base64\Base64;
+use ShipMonk\Passkeys\Base64\Base64;
 use function json_encode;
 use const JSON_THROW_ON_ERROR;
 

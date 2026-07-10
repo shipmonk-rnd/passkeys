@@ -1,13 +1,13 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthnTests\Cose;
+namespace ShipMonk\PasskeysTests\Cose;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use ShipMonk\WebAuthn\Cose\CoseAlgorithmIdentifier;
-use ShipMonk\WebAuthn\Cose\CoseKey;
-use ShipMonk\WebAuthn\Cose\CoseOkpKey;
-use ShipMonk\WebAuthn\Cose\SignatureVerificationException;
-use ShipMonk\WebAuthnTests\CryptoTestCase;
+use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
+use ShipMonk\Passkeys\Cose\CoseKey;
+use ShipMonk\Passkeys\Cose\CoseOkpKey;
+use ShipMonk\Passkeys\Cose\SignatureVerificationException;
+use ShipMonk\PasskeysTests\CryptoTestCase;
 use function chr;
 use function ord;
 use function substr;

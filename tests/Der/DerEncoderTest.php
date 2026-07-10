@@ -1,11 +1,11 @@
 <?php declare(strict_types = 1);
 
-namespace ShipMonk\WebAuthnTests\Der;
+namespace ShipMonk\PasskeysTests\Der;
 
 use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
-use ShipMonk\WebAuthn\Der\DerEncoder;
-use ShipMonk\WebAuthnTests\WebAuthnTestCase;
+use ShipMonk\Passkeys\Der\DerEncoder;
+use ShipMonk\PasskeysTests\PasskeysTestCase;
 use function bin2hex;
 use function chr;
 use function intdiv;
@@ -15,7 +15,7 @@ use function random_int;
 use function strlen;
 use function substr;
 
-class DerEncoderTest extends WebAuthnTestCase
+class DerEncoderTest extends PasskeysTestCase
 {
 
     #[DataProvider('provideEncodeIntData')]
