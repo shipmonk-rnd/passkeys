@@ -169,7 +169,7 @@ final class FakeAuthenticator
 
         $this->passkeys[] = new FakePasskey($credentialId, $rpId, $userHandle, $this->algorithm, $privateKey);
 
-        return json_encode([
+        return self::encodeJson([
             'id' => Base64::urlEncode($credentialId),
             'rawId' => Base64::urlEncode($credentialId),
             'type' => 'public-key',
@@ -179,7 +179,7 @@ final class FakeAuthenticator
                 'attestationObject' => Base64::urlEncode($attestationObject),
                 'transports' => ['internal'],
             ],
-        ], JSON_THROW_ON_ERROR);
+        ]);
     }
 
     /**
@@ -217,7 +217,7 @@ final class FakeAuthenticator
         $clientDataJson = $this->clientDataJson('webauthn.get', $challenge);
         $signature = self::sign($passkey->privateKey, $authData . hash('sha256', $clientDataJson, binary: true), $passkey->algorithm);
 
-        return json_encode([
+        return self::encodeJson([
             'id' => Base64::urlEncode($passkey->credentialId),
             'rawId' => Base64::urlEncode($passkey->credentialId),
             'type' => 'public-key',
@@ -227,7 +227,7 @@ final class FakeAuthenticator
                 'signature' => Base64::urlEncode($signature),
                 'userHandle' => Base64::urlEncode($passkey->userHandle),
             ],
-        ], JSON_THROW_ON_ERROR);
+        ]);
     }
 
     /**
@@ -272,12 +272,20 @@ final class FakeAuthenticator
         string $encodedChallenge,
     ): string
     {
-        return json_encode([
+        return self::encodeJson([
             'type' => $type,
             'challenge' => $encodedChallenge,
             'origin' => $this->origin,
             'crossOrigin' => false,
-        ], JSON_THROW_ON_ERROR);
+        ]);
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private static function encodeJson(array $data): string
+    {
+        return json_encode($data, JSON_THROW_ON_ERROR);
     }
 
     private function originHost(): string
