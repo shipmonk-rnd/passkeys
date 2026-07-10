@@ -5,7 +5,6 @@ namespace ShipMonk\WebAuthnTests;
 use PHPUnit\Framework\Attributes\DataProvider;
 use ShipMonk\WebAuthn\Base64\Base64;
 use ShipMonk\WebAuthn\Cose\CoseAlgorithmIdentifier;
-use ShipMonk\WebAuthn\Cose\CoseOkpKey;
 use ShipMonk\WebAuthn\Credential\AuthenticatorAttestationResponse;
 use ShipMonk\WebAuthn\Credential\AuthenticatorData;
 use ShipMonk\WebAuthn\Credential\PublicKeyCredential;
@@ -43,12 +42,9 @@ class CeremonyEndToEndTest extends CryptoTestCase
      * @param CoseAlgorithmIdentifier::* $alg
      */
     #[DataProvider('provideAlgorithms')]
-    public function testRegistrationThenAuthentication(
-        int $alg,
-        int $okpCrv = CoseOkpKey::CRV_ED25519,
-    ): void
+    public function testRegistrationThenAuthentication(int $alg): void
     {
-        [$privateKey, $coseEntries] = self::generateKeyAndCoseEntries($alg, $okpCrv);
+        [$privateKey, $coseEntries] = self::generateKeyAndCoseEntries($alg);
         $rpIdHash = hash('sha256', self::RP_ID, binary: true);
 
         // --- Registration ceremony: parse the attestation and recover the credential public key. ---
@@ -108,7 +104,7 @@ class CeremonyEndToEndTest extends CryptoTestCase
     }
 
     /**
-     * @return iterable<string, array{CoseAlgorithmIdentifier::*, 1?: int}>
+     * @return iterable<string, array{CoseAlgorithmIdentifier::*}>
      */
     public static function provideAlgorithms(): iterable
     {
@@ -116,8 +112,7 @@ class CeremonyEndToEndTest extends CryptoTestCase
         yield 'ES384' => [CoseAlgorithmIdentifier::ES384];
         yield 'ES512' => [CoseAlgorithmIdentifier::ES512];
         yield 'RS256' => [CoseAlgorithmIdentifier::RS256];
-        yield 'EdDSA / Ed25519' => [CoseAlgorithmIdentifier::EdDSA, CoseOkpKey::CRV_ED25519];
-        yield 'EdDSA / Ed448' => [CoseAlgorithmIdentifier::EdDSA, CoseOkpKey::CRV_ED448];
+        yield 'EdDSA' => [CoseAlgorithmIdentifier::EdDSA];
         yield 'Ed25519' => [CoseAlgorithmIdentifier::Ed25519];
         yield 'Ed448' => [CoseAlgorithmIdentifier::Ed448];
     }

@@ -47,11 +47,13 @@ final class CoseOkpKey extends CoseKey
     private const int LABEL_X = -2;
 
     /**
-     * Maps each supported algorithm to the curves it allows: the generic EdDSA identifier
-     * spans both Edwards curves, while the fully-specified RFC 9864 identifiers pin one.
+     * Maps each supported algorithm to the curves it allows. WebAuthn §5.8.5 requires keys
+     * with the generic EdDSA identifier to use Ed25519, so despite being polymorphic in
+     * plain COSE it pins a single curve here just like the fully-specified RFC 9864
+     * identifiers; Ed448 keys must use the fully-specified identifier.
      */
     private const array ALGORITHMS = [
-        CoseAlgorithmIdentifier::EdDSA => [self::CRV_ED25519, self::CRV_ED448],
+        CoseAlgorithmIdentifier::EdDSA => [self::CRV_ED25519],
         CoseAlgorithmIdentifier::Ed25519 => [self::CRV_ED25519],
         CoseAlgorithmIdentifier::Ed448 => [self::CRV_ED448],
     ];
