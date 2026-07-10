@@ -284,7 +284,7 @@ class PasskeyFlow
         if ($expectedUserHandle !== null && !hash_equals($expectedUserHandle, $pending->userHandle)) {
             throw new VerificationException(
                 VerificationException::USER_HANDLE_MISMATCH,
-                'The pending registration ceremony belongs to a different user handle than expected',
+                'Pending registration ceremony does not belong to the identified user',
             );
         }
 
