@@ -27,6 +27,7 @@ use ShipMonk\WebAuthn\RelyingParty;
 use ShipMonk\WebAuthn\Signal\AllAcceptedCredentialsSignal;
 use ShipMonk\WebAuthn\Signal\CurrentUserDetailsSignal;
 use function array_map;
+use function hash_equals;
 use function random_bytes;
 
 /**
@@ -60,7 +61,8 @@ use function random_bytes;
  * pending registration stays completable for as long as the {@see PendingCeremonyStore} keeps it:
  * the enrolment authorization must still hold when {@see self::register()} is called, not just
  * when the options were issued, or a stale ceremony can attach a passkey to an account whose
- * ownership has since changed.
+ * ownership has since changed — pass the current account's handle as `$expectedUserHandle` to
+ * have {@see self::register()} enforce exactly that.
  *
  * Policy knobs (user verification, algorithms, timeout…) are protected methods with defaults that
  * are right for passkeys; subclass only to override those.
@@ -240,11 +242,23 @@ class PasskeyFlow
      * The returned {@see RegisteredPasskey} identifies the enrolled account (e.g. to sign the user
      * in after a passkey-first signup); failures throw, exactly as in {@see self::authenticate()}.
      *
-     * @param string $responseJson raw request body containing the registration response JSON
+     * When the account the passkey may attach to is known at completion time — the usual case: the
+     * signed-in user adding a passkey — pass its user handle as `$expectedUserHandle`. A pending
+     * ceremony minted for any other account is then rejected *before* anything is verified or
+     * persisted, so a ceremony started in user A's session can never complete in user B's and
+     * attach a cross-user credential. Omit it only when the caller genuinely cannot know the
+     * account yet (e.g. a passkey-first signup completing in a not-yet-authenticated session).
+     *
+     * @param string      $responseJson       raw request body containing the registration response JSON
+     * @param string|null $expectedUserHandle raw user handle bytes of the account the completed ceremony
+     *      must belong to, rejected with {@see VerificationException::USER_HANDLE_MISMATCH} otherwise
      *
      * @throws VerificationException
      */
-    public function register(string $responseJson): RegisteredPasskey
+    public function register(
+        string $responseJson,
+        ?string $expectedUserHandle = null,
+    ): RegisteredPasskey
     {
         try {
             $credential = PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString($responseJson));
@@ -264,6 +278,13 @@ class PasskeyFlow
             throw new VerificationException(
                 VerificationException::CHALLENGE_MISMATCH,
                 'No pending registration ceremony matches the challenge — it may have expired or been used already',
+            );
+        }
+
+        if ($expectedUserHandle !== null && !hash_equals($expectedUserHandle, $pending->userHandle)) {
+            throw new VerificationException(
+                VerificationException::USER_HANDLE_MISMATCH,
+                'The pending registration ceremony belongs to a different user handle than expected',
             );
         }
 

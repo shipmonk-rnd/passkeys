@@ -322,6 +322,37 @@ class PasskeyFlowTest extends CryptoTestCase
         self::assertCount(1, $this->store->savedPasskeys);
     }
 
+    public function testRegisterAcceptsMatchingExpectedUserHandle(): void
+    {
+        $flow = $this->createFlow();
+        $options = $flow->registrationOptions(self::DAVE_HANDLE, self::DAVE);
+
+        $registered = $flow->register($this->registrationBody($options->challenge), expectedUserHandle: self::DAVE_HANDLE);
+
+        self::assertSame(self::DAVE_HANDLE, $registered->userHandle);
+        self::assertSame([$registered], $this->store->savedPasskeys);
+    }
+
+    public function testRegisterRejectsCeremonyOfAnotherUserHandleBeforePersisting(): void
+    {
+        $flow = $this->createFlow();
+
+        // The ceremony was minted for dave, but completes in a session authenticated as alice —
+        // e.g. options issued in another tab/session of the same browser.
+        $options = $flow->registrationOptions(self::DAVE_HANDLE, self::DAVE);
+
+        $this->assertRegistrationFails(
+            VerificationException::USER_HANDLE_MISMATCH,
+            $flow,
+            $this->registrationBody($options->challenge),
+            expectedUserHandle: self::ALICE_HANDLE,
+        );
+        self::assertSame([], $this->store->savedPasskeys);
+
+        // The mismatching response still burned the ceremony — a challenge is single-use.
+        self::assertSame([], $this->pending->pendingRegistrations);
+    }
+
     public function testRegistrationRejectsDisallowedAlgorithm(): void
     {
         $flow = $this->createFlow();
@@ -518,10 +549,11 @@ class PasskeyFlowTest extends CryptoTestCase
         string $reason,
         PasskeyFlow $flow,
         string $body,
+        ?string $expectedUserHandle = null,
     ): void
     {
         try {
-            $flow->register($body);
+            $flow->register($body, $expectedUserHandle);
             self::fail('Expected registration to fail with ' . $reason);
 
         } catch (VerificationException $e) {

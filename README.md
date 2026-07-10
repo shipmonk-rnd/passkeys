@@ -64,7 +64,10 @@ echo $options->toJson();   // hand to navigator.credentials.create() on the clie
 
 // POST /register/verify — body is the PublicKeyCredential.toJSON() output posted by your page
 try {
-    $registered = $flow->register($rawRequestBody);
+    // Passing the signed-in user's handle rejects a ceremony minted for any other account
+    // before anything is persisted; omit it only when the account cannot be known yet
+    // (e.g. a passkey-first signup).
+    $registered = $flow->register($rawRequestBody, expectedUserHandle: $signedInUserHandle);
     // The passkey is verified and persisted. $registered->userHandle identifies the account —
     // e.g. sign the user in after a passkey-first signup.
 } catch (VerificationException $e) {
