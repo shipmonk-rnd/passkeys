@@ -5,6 +5,7 @@ namespace ShipMonk\WebAuthnTests\Json;
 use ShipMonk\WebAuthn\Json\JsonObject;
 use ShipMonk\WebAuthn\Json\JsonObjectException;
 use ShipMonk\WebAuthnTests\WebAuthnTestCase;
+use function array_map;
 
 class JsonObjectTest extends WebAuthnTestCase
 {
@@ -46,6 +47,68 @@ class JsonObjectTest extends WebAuthnTestCase
             JsonObjectException::class,
             "Value of key 'flag' is not a boolean",
             static fn () => self::jsonObject(['flag' => 'true'])->getOptionalBoolean('flag'),
+        );
+    }
+
+    public function testGetIntReturnsValue(): void
+    {
+        self::assertSame(-7, self::jsonObject(['alg' => -7])->getInt('alg'));
+    }
+
+    public function testGetIntRejectsMissingKey(): void
+    {
+        self::assertException(
+            JsonObjectException::class,
+            "Missing key 'alg' in JSON object",
+            static fn () => self::jsonObject([])->getInt('alg'),
+        );
+    }
+
+    public function testGetIntRejectsNonInteger(): void
+    {
+        self::assertException(
+            JsonObjectException::class,
+            "Value of key 'alg' is not an integer",
+            static fn () => self::jsonObject(['alg' => '-7'])->getInt('alg'),
+        );
+    }
+
+    public function testGetObjectListReturnsValues(): void
+    {
+        $list = self::jsonObject(['params' => [['alg' => -7], ['alg' => -257]]])->getObjectList('params');
+
+        self::assertSame([-7, -257], array_map(static fn (JsonObject $item) => $item->getInt('alg'), $list));
+    }
+
+    public function testGetObjectListRejectsMissingKey(): void
+    {
+        self::assertException(
+            JsonObjectException::class,
+            "Missing key 'params' in JSON object",
+            static fn () => self::jsonObject([])->getObjectList('params'),
+        );
+    }
+
+    public function testGetOptionalObjectListReturnsNullWhenAbsent(): void
+    {
+        self::assertNull(self::jsonObject([])->getOptionalObjectList('params'));
+    }
+
+    public function testGetOptionalObjectListRejectsNonArray(): void
+    {
+        self::assertException(
+            JsonObjectException::class,
+            "Value of key 'params' is not an array",
+            static fn () => self::jsonObject(['params' => 'nope'])->getOptionalObjectList('params'),
+        );
+    }
+
+    public function testGetOptionalObjectListRejectsNonObjectItem(): void
+    {
+        self::assertException(
+            JsonObjectException::class,
+            "Value of key 'params' is not an array of objects",
+            static fn () => self::jsonObject(['params' => [1, 2]])->getOptionalObjectList('params'),
         );
     }
 

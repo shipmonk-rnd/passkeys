@@ -8,6 +8,7 @@ use ShipMonk\WebAuthn\Base64\InvalidBase64Exception;
 use stdClass;
 use function is_array;
 use function is_bool;
+use function is_int;
 use function is_string;
 use function json_decode;
 use const JSON_THROW_ON_ERROR;
@@ -73,6 +74,66 @@ readonly class JsonObject
         }
 
         return $this->object->$key;
+    }
+
+    /**
+     * @throws JsonObjectException
+     */
+    public function getInt(string $key): int
+    {
+        if (!isset($this->object->$key)) {
+            throw new JsonObjectException("Missing key '$key' in JSON object");
+        }
+
+        if (!is_int($this->object->$key)) {
+            throw new JsonObjectException("Value of key '$key' is not an integer");
+        }
+
+        return $this->object->$key;
+    }
+
+    /**
+     * @return list<self>
+     *
+     * @throws JsonObjectException
+     */
+    public function getObjectList(string $key): array
+    {
+        $list = $this->getOptionalObjectList($key);
+
+        if ($list === null) {
+            throw new JsonObjectException("Missing key '$key' in JSON object");
+        }
+
+        return $list;
+    }
+
+    /**
+     * @return list<self>|null
+     *
+     * @throws JsonObjectException
+     */
+    public function getOptionalObjectList(string $key): ?array
+    {
+        if (!isset($this->object->$key)) {
+            return null;
+        }
+
+        if (!is_array($this->object->$key)) {
+            throw new JsonObjectException("Value of key '$key' is not an array");
+        }
+
+        $list = [];
+
+        foreach ($this->object->$key as $item) {
+            if (!$item instanceof stdClass) {
+                throw new JsonObjectException("Value of key '$key' is not an array of objects");
+            }
+
+            $list[] = new self($item);
+        }
+
+        return $list;
     }
 
     /**

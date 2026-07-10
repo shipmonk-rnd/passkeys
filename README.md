@@ -204,6 +204,35 @@ php -S localhost:8000 example/server.php   # then open http://localhost:8000
 
 See [`example/README.md`](example/README.md).
 
+## Testing your integration
+
+You don't need a browser (or a real authenticator) to integration-test your endpoints:
+`ShipMonk\WebAuthn\Testing\FakeAuthenticator` is an in-memory software authenticator that turns
+the options JSON your endpoint produced into the response JSON a browser would post back — a
+`none`-format attestation over a freshly generated key pair for registration, a real signature
+over `authenticatorData || SHA-256(clientDataJSON)` for authentication:
+
+```php
+use ShipMonk\WebAuthn\Testing\FakeAuthenticator;
+
+$authenticator = new FakeAuthenticator(origin: 'https://example.com');
+
+// Registration: drive your endpoints end-to-end.
+$optionsJson = $client->post('/register/options');
+$client->post('/register/verify', $authenticator->createPasskey($optionsJson));
+
+// Authentication: the fake holds the passkey it just created and signs with it.
+$optionsJson = $client->post('/login/options');
+$client->post('/login/verify', $authenticator->authenticate($optionsJson));
+```
+
+Like a real authenticator it keeps per-credential state across ceremonies (key pair, user handle,
+signature counter — inspect it via `getPasskeys()`), refuses creation when `excludeCredentials`
+lists a passkey it already holds, and honours `allowCredentials` when picking the passkey to
+assert with. Constructor knobs cover the authenticator-side variations worth testing against:
+the key algorithm, user presence/verification (e.g. emulate a PIN-less security key and assert
+your policy rejects it), and backup state.
+
 ## Attestation is intentionally not supported
 
 This library targets passkeys as a general-purpose authentication mechanism, and for that use case
