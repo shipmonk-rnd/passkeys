@@ -75,11 +75,13 @@ try {
 }
 ```
 
-The user handle is an opaque, immutable, PII-free account id of at most 64 bytes (the
-spec-recommended choice is 64 random bytes stored on the account) — never the email itself. The
-options automatically list the account's existing credentials in `excludeCredentials` so the same
-authenticator cannot enrol twice, and request a discoverable credential with user verification —
-the defaults that make the credential a passkey.
+The user handle is an opaque, immutable, PII-free account id of at most 64 bytes — never the email
+itself. Mint one with `$flow->generateUserHandle()` (64 random bytes, the spec-recommended choice)
+when you create the account, store it there, and reuse that same handle for every passkey the
+account enrols — it is the account's WebAuthn identity, so a fresh one per ceremony would fork the
+account. The options automatically list the account's existing credentials in `excludeCredentials`
+so the same authenticator cannot enrol twice, and request a discoverable credential with user
+verification — the defaults that make the credential a passkey.
 
 #### Conditional mediation (automatic passkey upgrade)
 
