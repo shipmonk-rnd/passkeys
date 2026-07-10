@@ -45,7 +45,7 @@ use function substr;
  *
  * @see https://www.w3.org/TR/webauthn-3/#sctn-test-vectors
  */
-class SpecTestVectorsTest extends PasskeysTestCase
+final class SpecTestVectorsTest extends PasskeysTestCase
 {
 
     private const string RP_ID = 'example.org';

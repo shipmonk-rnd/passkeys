@@ -7,7 +7,7 @@ use ShipMonk\Passkeys\Base64\Base64;
 use ShipMonk\Passkeys\Base64\InvalidBase64Exception;
 use ShipMonk\PasskeysTests\PasskeysTestCase;
 
-class Base64Test extends PasskeysTestCase
+final class Base64Test extends PasskeysTestCase
 {
 
     #[DataProvider('provideRoundtrip')]

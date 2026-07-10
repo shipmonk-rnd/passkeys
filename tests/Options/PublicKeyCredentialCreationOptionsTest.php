@@ -23,7 +23,7 @@ use function str_repeat;
 use function strlen;
 use const JSON_THROW_ON_ERROR;
 
-class PublicKeyCredentialCreationOptionsTest extends PasskeysTestCase
+final class PublicKeyCredentialCreationOptionsTest extends PasskeysTestCase
 {
 
     public function testSerializesAllMembers(): void

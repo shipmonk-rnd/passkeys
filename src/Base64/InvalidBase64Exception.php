@@ -4,7 +4,7 @@ namespace ShipMonk\Passkeys\Base64;
 
 use RuntimeException;
 
-class InvalidBase64Exception extends RuntimeException
+final class InvalidBase64Exception extends RuntimeException
 {
 
 }

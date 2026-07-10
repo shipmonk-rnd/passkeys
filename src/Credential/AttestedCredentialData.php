@@ -13,7 +13,7 @@ use ShipMonk\Passkeys\Cose\CoseKeyException;
 /**
  * @api
  */
-readonly class AttestedCredentialData
+final readonly class AttestedCredentialData
 {
 
     /**

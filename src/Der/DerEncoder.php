@@ -13,7 +13,7 @@ use function ord;
 use function pack;
 use function strlen;
 
-class DerEncoder
+final class DerEncoder
 {
 
     public static function encodeUnsignedInt(string $bytes): string

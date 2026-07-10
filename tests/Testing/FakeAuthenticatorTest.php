@@ -24,7 +24,7 @@ use const JSON_THROW_ON_ERROR;
  * would use it — plus the authenticator-side behaviours (credential selection, refusals,
  * UP/UV/backup flags) a browser would exhibit.
  */
-class FakeAuthenticatorTest extends PasskeysTestCase
+final class FakeAuthenticatorTest extends PasskeysTestCase
 {
 
     private const string RP_ID = 'example.com';

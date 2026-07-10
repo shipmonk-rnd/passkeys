@@ -8,7 +8,7 @@ use function is_array;
 use function is_int;
 use function is_string;
 
-readonly class CborMap
+final readonly class CborMap
 {
 
     /**

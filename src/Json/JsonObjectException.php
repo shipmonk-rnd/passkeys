@@ -4,7 +4,7 @@ namespace ShipMonk\Passkeys\Json;
 
 use RuntimeException;
 
-class JsonObjectException extends RuntimeException
+final class JsonObjectException extends RuntimeException
 {
 
 }

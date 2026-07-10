@@ -4,7 +4,7 @@ namespace ShipMonk\Passkeys\Binary;
 
 use RuntimeException;
 
-class BytesReaderException extends RuntimeException
+final class BytesReaderException extends RuntimeException
 {
 
 }

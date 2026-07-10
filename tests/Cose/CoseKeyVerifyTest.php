@@ -13,7 +13,7 @@ use function ord;
 use function substr;
 use const OPENSSL_ALGO_SHA256;
 
-class CoseKeyVerifyTest extends CryptoTestCase
+final class CoseKeyVerifyTest extends CryptoTestCase
 {
 
     private const string MESSAGE = 'authenticatorData||clientDataHash 0123456789abcdef';
@@ -71,7 +71,7 @@ class CoseKeyVerifyTest extends CryptoTestCase
 
     public function testThrowsWhenPublicKeyCannotBeLoaded(): void
     {
-        $key = new class (CoseAlgorithmIdentifier::ES256) extends CoseKey {
+        $key = new readonly class (CoseAlgorithmIdentifier::ES256) extends CoseKey {
 
             public function __construct(int $alg)
             {

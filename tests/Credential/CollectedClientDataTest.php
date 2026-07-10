@@ -9,7 +9,7 @@ use ShipMonk\PasskeysTests\PasskeysTestCase;
 use function json_encode;
 use const JSON_THROW_ON_ERROR;
 
-class CollectedClientDataTest extends PasskeysTestCase
+final class CollectedClientDataTest extends PasskeysTestCase
 {
 
     public function testReadsAllMembers(): void

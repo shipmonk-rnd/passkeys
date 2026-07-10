@@ -12,7 +12,7 @@ use ShipMonk\Passkeys\Cose\CoseKeyException;
 /**
  * @api
  */
-readonly class AuthenticatorData
+final readonly class AuthenticatorData
 {
 
     public const int FLAG_USER_PRESENT = 1 << 0;

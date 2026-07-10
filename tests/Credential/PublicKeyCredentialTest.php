@@ -15,7 +15,7 @@ use ShipMonk\PasskeysTests\PasskeysTestCase;
 use function json_encode;
 use const JSON_THROW_ON_ERROR;
 
-class PublicKeyCredentialTest extends PasskeysTestCase
+final class PublicKeyCredentialTest extends PasskeysTestCase
 {
 
     private const string ATTESTATION_OBJECT = 'o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikdKbqkhPJnC90siSSsyDPQCYql'

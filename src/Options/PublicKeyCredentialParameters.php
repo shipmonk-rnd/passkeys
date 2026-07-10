@@ -10,7 +10,7 @@ use ShipMonk\Passkeys\Enum\PublicKeyCredentialType;
  * @see https://w3c.github.io/webauthn/#dictdef-publickeycredentialparameters
  * @api
  */
-readonly class PublicKeyCredentialParameters implements JsonSerializable
+final readonly class PublicKeyCredentialParameters implements JsonSerializable
 {
 
     /**

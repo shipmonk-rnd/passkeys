@@ -16,7 +16,7 @@ use const JSON_THROW_ON_ERROR;
 /**
  * @api
  */
-readonly class JsonObject
+final readonly class JsonObject
 {
 
     private function __construct(

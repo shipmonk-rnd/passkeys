@@ -38,7 +38,7 @@ use const JSON_THROW_ON_ERROR;
  * Fixtures are assembled the way an authenticator/browser would emit them (see the builders at
  * the bottom); signatures are produced live because ECDSA output is non-deterministic.
  */
-class RelyingPartyTest extends CryptoTestCase
+final class RelyingPartyTest extends CryptoTestCase
 {
 
     private const string RP_ID = 'example.com';

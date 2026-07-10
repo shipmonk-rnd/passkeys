@@ -7,7 +7,7 @@ use ShipMonk\Passkeys\Cbor\CborMap;
 use ShipMonk\Passkeys\Cbor\CborMapException;
 use ShipMonk\PasskeysTests\PasskeysTestCase;
 
-class CborMapTest extends PasskeysTestCase
+final class CborMapTest extends PasskeysTestCase
 {
 
     /**

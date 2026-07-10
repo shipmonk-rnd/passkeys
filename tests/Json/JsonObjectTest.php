@@ -7,7 +7,7 @@ use ShipMonk\Passkeys\Json\JsonObjectException;
 use ShipMonk\PasskeysTests\PasskeysTestCase;
 use function array_map;
 
-class JsonObjectTest extends PasskeysTestCase
+final class JsonObjectTest extends PasskeysTestCase
 {
 
     public function testFromStringRejectsInvalidJson(): void
