@@ -13,7 +13,7 @@ use ShipMonk\PasskeysTests\PasskeysTestCase;
 use function str_repeat;
 use function strlen;
 
-class AuthenticatorDataTest extends PasskeysTestCase
+final class AuthenticatorDataTest extends PasskeysTestCase
 {
 
     public function testFromBytes(): void

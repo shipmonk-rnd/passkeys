@@ -8,7 +8,7 @@ use ShipMonk\Passkeys\Cbor\CborMapException;
 /**
  * @api
  */
-readonly class AttestationObject
+final readonly class AttestationObject
 {
 
     /**

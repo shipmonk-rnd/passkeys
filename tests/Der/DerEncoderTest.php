@@ -15,7 +15,7 @@ use function random_int;
 use function strlen;
 use function substr;
 
-class DerEncoderTest extends PasskeysTestCase
+final class DerEncoderTest extends PasskeysTestCase
 {
 
     #[DataProvider('provideEncodeIntData')]

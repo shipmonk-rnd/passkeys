@@ -38,7 +38,7 @@ use const JSON_THROW_ON_ERROR;
  * The §7.2 checks themselves are covered by {@see RelyingPartyTest}; here only a representative
  * failure per layer asserts that the flow wires expectations and state correctly.
  */
-class PasskeyFlowTest extends CryptoTestCase
+final class PasskeyFlowTest extends CryptoTestCase
 {
 
     private const string RP_ID = 'example.com';

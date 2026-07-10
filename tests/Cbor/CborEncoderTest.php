@@ -10,7 +10,7 @@ use ShipMonk\PasskeysTests\PasskeysTestCase;
 use function bin2hex;
 use function str_repeat;
 
-class CborEncoderTest extends PasskeysTestCase
+final class CborEncoderTest extends PasskeysTestCase
 {
 
     /**

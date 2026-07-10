@@ -4,7 +4,7 @@ namespace ShipMonk\Passkeys\Cose;
 
 use RuntimeException;
 
-class CoseKeyException extends RuntimeException
+final class CoseKeyException extends RuntimeException
 {
 
 }

@@ -21,7 +21,7 @@ use const OPENSSL_ALGO_SHA256;
  * @see https://www.rfc-editor.org/rfc/rfc8230.html#section-4 RSA key parameters
  * @api
  */
-final class CoseRsaKey extends CoseKey
+final readonly class CoseRsaKey extends CoseKey
 {
 
     /**
@@ -63,8 +63,8 @@ final class CoseRsaKey extends CoseKey
      */
     private function __construct(
         int $alg,
-        public readonly string $n,
-        public readonly string $e,
+        public string $n,
+        public string $e,
     )
     {
         parent::__construct($alg);

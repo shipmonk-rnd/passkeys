@@ -8,7 +8,7 @@ use ShipMonk\Passkeys\Cbor\CborDecoder;
 use ShipMonk\Passkeys\Cbor\InvalidCborException;
 use ShipMonk\PasskeysTests\PasskeysTestCase;
 
-class CborDecoderTest extends PasskeysTestCase
+final class CborDecoderTest extends PasskeysTestCase
 {
 
     #[DataProvider('provideDecodeData')]

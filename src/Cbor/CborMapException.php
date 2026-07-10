@@ -4,7 +4,7 @@ namespace ShipMonk\Passkeys\Cbor;
 
 use RuntimeException;
 
-class CborMapException extends RuntimeException
+final class CborMapException extends RuntimeException
 {
 
 }

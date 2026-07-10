@@ -18,7 +18,7 @@ use const JSON_THROW_ON_ERROR;
  * @see https://w3c.github.io/webauthn/#dictdef-publickeycredentialrequestoptions
  * @api
  */
-readonly class PublicKeyCredentialRequestOptions implements JsonSerializable
+final readonly class PublicKeyCredentialRequestOptions implements JsonSerializable
 {
 
     /**

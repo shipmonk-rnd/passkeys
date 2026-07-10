@@ -8,7 +8,7 @@ use ShipMonk\PasskeysTests\PasskeysTestCase;
 use function json_decode;
 use const JSON_THROW_ON_ERROR;
 
-class AllAcceptedCredentialsSignalTest extends PasskeysTestCase
+final class AllAcceptedCredentialsSignalTest extends PasskeysTestCase
 {
 
     public function testSerializesRawBytesAsBase64url(): void

@@ -8,7 +8,7 @@ use JsonSerializable;
  * @see https://w3c.github.io/webauthn/#dictdef-publickeycredentialrpentity
  * @api
  */
-readonly class PublicKeyCredentialRpEntity extends PublicKeyCredentialEntity implements JsonSerializable
+final readonly class PublicKeyCredentialRpEntity extends PublicKeyCredentialEntity implements JsonSerializable
 {
 
     /**

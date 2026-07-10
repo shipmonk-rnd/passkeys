@@ -32,7 +32,7 @@ use const JSON_THROW_ON_ERROR;
  * independent oracles are the RFC 8032 Ed25519 known-answer vector in the crypto tests and
  * the official WebAuthn §16 test vectors in {@see SpecTestVectorsTest}.
  */
-class CeremonyEndToEndTest extends CryptoTestCase
+final class CeremonyEndToEndTest extends CryptoTestCase
 {
 
     private const string RP_ID = 'example.com';

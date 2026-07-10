@@ -16,7 +16,7 @@ use const JSON_THROW_ON_ERROR;
  * @see https://w3c.github.io/webauthn/#sctn-signalCurrentUserDetails
  * @api
  */
-readonly class CurrentUserDetailsSignal implements JsonSerializable
+final readonly class CurrentUserDetailsSignal implements JsonSerializable
 {
 
     /**

@@ -19,7 +19,7 @@ use const OPENSSL_ALGO_SHA512;
  * @see https://www.rfc-editor.org/rfc/rfc9053.html#section-7.1 EC2 key parameters
  * @api
  */
-final class CoseEc2Key extends CoseKey
+final readonly class CoseEc2Key extends CoseKey
 {
 
     /**
@@ -82,9 +82,9 @@ final class CoseEc2Key extends CoseKey
      */
     private function __construct(
         int $alg,
-        public readonly int $crv,
-        public readonly string $x,
-        public readonly string $y,
+        public int $crv,
+        public string $x,
+        public string $y,
     )
     {
         parent::__construct($alg);

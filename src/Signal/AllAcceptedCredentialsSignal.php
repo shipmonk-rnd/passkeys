@@ -22,7 +22,7 @@ use const JSON_THROW_ON_ERROR;
  * @see https://w3c.github.io/webauthn/#sctn-signalAllAcceptedCredentials
  * @api
  */
-readonly class AllAcceptedCredentialsSignal implements JsonSerializable
+final readonly class AllAcceptedCredentialsSignal implements JsonSerializable
 {
 
     /**

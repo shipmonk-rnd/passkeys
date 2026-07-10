@@ -13,7 +13,7 @@ use function strtr;
 /**
  * @see https://www.rfc-editor.org/rfc/rfc4648.html#section-5
  */
-class Base64
+final class Base64
 {
 
     public static function urlEncode(string $data): string

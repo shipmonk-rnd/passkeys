@@ -12,7 +12,7 @@ use ShipMonk\Passkeys\Json\JsonObjectException;
  * @see https://w3c.github.io/webauthn/#dictionary-client-data
  * @api
  */
-readonly class CollectedClientData
+final readonly class CollectedClientData
 {
 
     /**

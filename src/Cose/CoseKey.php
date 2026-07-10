@@ -23,7 +23,7 @@ use function openssl_verify;
  * @see https://www.rfc-editor.org/rfc/rfc9053.html key type / algorithm parameters
  * @api
  */
-abstract class CoseKey
+abstract readonly class CoseKey
 {
 
     /**
@@ -40,7 +40,7 @@ abstract class CoseKey
      * @param TAlg $alg
      */
     protected function __construct(
-        public readonly int $alg,
+        public int $alg,
     )
     {
     }

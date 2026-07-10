@@ -13,7 +13,7 @@ use ShipMonk\PasskeysTests\PasskeysTestCase;
 use function json_decode;
 use const JSON_THROW_ON_ERROR;
 
-class PublicKeyCredentialRequestOptionsTest extends PasskeysTestCase
+final class PublicKeyCredentialRequestOptionsTest extends PasskeysTestCase
 {
 
     public function testSerializesAllMembers(): void

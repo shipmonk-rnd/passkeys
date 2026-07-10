@@ -13,7 +13,7 @@ use ShipMonk\PasskeysTests\CryptoTestCase;
 use function bin2hex;
 use function str_pad;
 
-class CoseKeyTest extends CryptoTestCase
+final class CoseKeyTest extends CryptoTestCase
 {
 
     /**

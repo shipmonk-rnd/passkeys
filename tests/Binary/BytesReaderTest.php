@@ -6,7 +6,7 @@ use ShipMonk\Passkeys\Binary\BytesReader;
 use ShipMonk\Passkeys\Binary\BytesReaderException;
 use ShipMonk\PasskeysTests\PasskeysTestCase;
 
-class BytesReaderTest extends PasskeysTestCase
+final class BytesReaderTest extends PasskeysTestCase
 {
 
     public function testRead(): void

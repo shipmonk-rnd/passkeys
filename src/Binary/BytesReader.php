@@ -13,7 +13,7 @@ use function substr;
  * substrings while tracking the current offset. The whole input must be consumed — leftover
  * bytes are an error, so a parser cannot silently ignore trailing data.
  */
-class BytesReader
+final class BytesReader
 {
 
     private readonly int $length;

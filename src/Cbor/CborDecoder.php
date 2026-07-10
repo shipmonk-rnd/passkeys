@@ -25,7 +25,7 @@ use function is_string;
  * (text strings are additionally validated as UTF-8). This too is deliberate leniency: no consumer
  * needs to tell the two apart at the same map key, only the decoded value matters.
  */
-class CborDecoder
+final class CborDecoder
 {
 
     /**

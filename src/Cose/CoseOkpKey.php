@@ -18,7 +18,7 @@ use function strlen;
  * @see https://www.rfc-editor.org/rfc/rfc9053.html#section-7.2 OKP key parameters
  * @api
  */
-final class CoseOkpKey extends CoseKey
+final readonly class CoseOkpKey extends CoseKey
 {
 
     /**
@@ -74,8 +74,8 @@ final class CoseOkpKey extends CoseKey
      */
     private function __construct(
         int $alg,
-        public readonly int $crv,
-        public readonly string $x,
+        public int $crv,
+        public string $x,
     )
     {
         parent::__construct($alg);
