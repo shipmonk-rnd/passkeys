@@ -9,8 +9,9 @@ use function strlen;
 
 /**
  * A minimal CBOR encoder — the inverse of {@see CborDecoder}, scoped to what the library needs in
- * order to re-serialise a COSE key ({@see \ShipMonk\WebAuthn\Cose\CoseKey::toBytes()}): signed integers,
- * byte strings, and an integer-keyed map. Encodings are definite-length; map entries are emitted in
+ * order to re-serialise a COSE key ({@see \ShipMonk\WebAuthn\Cose\CoseKey::toBytes()}) and to build
+ * authenticator outputs in {@see \ShipMonk\WebAuthn\Testing\FakeAuthenticator}: signed integers,
+ * byte strings, text strings, and a map. Encodings are definite-length; map entries are emitted in
  * the order given (the decoder is order-insensitive, so no canonical sort is required for a
  * round-trip).
  *
@@ -35,6 +36,14 @@ final class CborEncoder
     public static function encodeByteString(string $bytes): string
     {
         return self::head(2, strlen($bytes)) . $bytes;
+    }
+
+    /**
+     * Major type 3: a UTF-8 text string.
+     */
+    public static function encodeTextString(string $text): string
+    {
+        return self::head(3, strlen($text)) . $text;
     }
 
     /**

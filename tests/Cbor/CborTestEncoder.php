@@ -3,10 +3,7 @@
 namespace ShipMonk\WebAuthnTests\Cbor;
 
 use ShipMonk\WebAuthn\Cbor\CborEncoder;
-use function chr;
 use function is_int;
-use function ord;
-use function substr;
 
 /**
  * Builds CBOR test fixtures (COSE keys, attestation objects) on top of {@see CborEncoder},
@@ -32,14 +29,11 @@ final class CborTestEncoder
     }
 
     /**
-     * Major type 3: a UTF-8 text string. It differs from a byte string only in the major
-     * type (2 vs 3), i.e. bit 0x20 of the initial byte.
+     * Major type 3: a UTF-8 text string.
      */
     public static function textString(string $text): string
     {
-        $encoded = CborEncoder::encodeByteString($text);
-
-        return chr(ord($encoded[0]) | 0x20) . substr($encoded, 1);
+        return CborEncoder::encodeTextString($text);
     }
 
     /**
