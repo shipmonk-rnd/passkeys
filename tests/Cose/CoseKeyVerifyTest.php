@@ -2,6 +2,7 @@
 
 namespace ShipMonk\PasskeysTests\Cose;
 
+use OpenSSLAsymmetricKey;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
@@ -85,9 +86,9 @@ final class CoseKeyVerifyTest extends CryptoTestCase
                 parent::__construct($alg);
             }
 
-            protected function toDerSubjectPublicKeyInfo(): string
+            protected function toOpenSslPublicKey(): OpenSSLAsymmetricKey|false
             {
-                return "\x00\x01\x02";
+                return false;
             }
 
             public function toBytes(): string

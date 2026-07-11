@@ -2,12 +2,17 @@
 
 namespace ShipMonk\Passkeys\Cose;
 
+use LogicException;
+use OpenSSLAsymmetricKey;
 use ShipMonk\Passkeys\Cbor\CborEncoder;
 use ShipMonk\Passkeys\Cbor\CborMap;
 use ShipMonk\Passkeys\Cbor\CborMapException;
-use ShipMonk\Passkeys\Der\DerEncoder;
 use function in_array;
+use function is_string;
 use function ltrim;
+use function openssl_pkey_get_details;
+use function openssl_pkey_get_public;
+use function openssl_pkey_new;
 use function ord;
 use function strlen;
 use function substr;
@@ -38,11 +43,6 @@ final readonly class CoseRsaKey extends CoseKey
      * RSA key label: public exponent (e).
      */
     private const int LABEL_E = -2;
-
-    /**
-     * OID for rsaEncryption (RFC 8017 App. C / RFC 3279 §2.3.1).
-     */
-    private const string OID_RSA_ENCRYPTION = '1.2.840.113549.1.1.1';
 
     /**
      * Algorithms that use an RSA key.
@@ -112,21 +112,34 @@ final readonly class CoseRsaKey extends CoseKey
         ]);
     }
 
-    protected function toDerSubjectPublicKeyInfo(): string
+    protected function toOpenSslPublicKey(): OpenSSLAsymmetricKey|false
     {
-        // RSAPublicKey ::= SEQUENCE { modulus INTEGER, publicExponent INTEGER } (RFC 8017 App. A.1.1).
-        $rsaPublicKey = DerEncoder::encodeSequence(
-            DerEncoder::encodeUnsignedInt($this->n),
-            DerEncoder::encodeUnsignedInt($this->e),
-        );
+        // Unlike EC2 and OKP, openssl_pkey_new() cannot build a public-only RSA key: it
+        // requires a private exponent d and always flags the result private, which
+        // openssl_verify() then refuses. So build a throwaway key with an empty, unused d
+        // (openssl_pkey_new() only requires d to be present; solely n and e feed the
+        // exported public key) and hand OpenSSL's own re-exported public key to
+        // openssl_pkey_get_public(), which yields a usable public key.
+        $throwawayKey = openssl_pkey_new([
+            'rsa' => [
+                'n' => $this->n,
+                'e' => $this->e,
+                'd' => '',
+            ],
+        ]);
 
-        return DerEncoder::encodeSequence(
-            DerEncoder::encodeSequence(
-                DerEncoder::encodeObjectIdentifier(self::OID_RSA_ENCRYPTION),
-                DerEncoder::encodeNull(),
-            ),
-            DerEncoder::encodeBitString($rsaPublicKey),
-        );
+        if ($throwawayKey === false) {
+            throw new LogicException('openssl_pkey_new() unexpectedly failed to build an RSA key');
+        }
+
+        $details = openssl_pkey_get_details($throwawayKey);
+        $publicKeyPem = $details === false ? null : ($details['key'] ?? null);
+
+        if (!is_string($publicKeyPem)) {
+            throw new LogicException('Failed to export the public key of a freshly built RSA key');
+        }
+
+        return openssl_pkey_get_public($publicKeyPem);
     }
 
     protected function opensslAlgorithm(): int

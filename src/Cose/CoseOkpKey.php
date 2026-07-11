@@ -2,10 +2,11 @@
 
 namespace ShipMonk\Passkeys\Cose;
 
+use OpenSSLAsymmetricKey;
 use ShipMonk\Passkeys\Cbor\CborEncoder;
 use ShipMonk\Passkeys\Cbor\CborMap;
 use ShipMonk\Passkeys\Cbor\CborMapException;
-use ShipMonk\Passkeys\Der\DerEncoder;
+use function openssl_pkey_new;
 use function strlen;
 
 /**
@@ -47,15 +48,15 @@ final readonly class CoseOkpKey extends CoseKey
 
     /**
      * Maps each supported algorithm to its mandated curve, public-key length in bytes,
-     * and id-Ed* curve OID (RFC 8410 §3; these OIDs carry no algorithm parameters).
+     * and OpenSSL key-type name.
      *
      * WebAuthn §5.8.5 requires keys with the generic EdDSA identifier to use Ed25519, so
      * despite being polymorphic in plain COSE it pins a single curve here; Ed448 keys must
      * use the fully-specified RFC 9864 identifier.
      */
     private const array ALGORITHMS = [
-        CoseAlgorithmIdentifier::EdDSA => [self::CRV_ED25519, 32, '1.3.101.112'],
-        CoseAlgorithmIdentifier::Ed448 => [self::CRV_ED448, 57, '1.3.101.113'],
+        CoseAlgorithmIdentifier::EdDSA => [self::CRV_ED25519, 32, 'ed25519'],
+        CoseAlgorithmIdentifier::Ed448 => [self::CRV_ED448, 57, 'ed448'],
     ];
 
     /**
@@ -109,14 +110,13 @@ final readonly class CoseOkpKey extends CoseKey
         ]);
     }
 
-    protected function toDerSubjectPublicKeyInfo(): string
+    protected function toOpenSslPublicKey(): OpenSSLAsymmetricKey|false
     {
-        $curveOid = self::ALGORITHMS[$this->alg][2];
-
-        return DerEncoder::encodeSequence(
-            DerEncoder::encodeSequence(DerEncoder::encodeObjectIdentifier($curveOid)),
-            DerEncoder::encodeBitString($this->x),
-        );
+        return openssl_pkey_new([
+            self::ALGORITHMS[$this->alg][2] => [
+                'pub_key' => $this->x,
+            ],
+        ]);
     }
 
     protected function opensslAlgorithm(): int
