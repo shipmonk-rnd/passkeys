@@ -102,7 +102,7 @@ final readonly class AuthenticatorData
 
     /**
      * Whether attested credential data is included (AT flag). Always matches
-     * {@see $attestedCredentialData} being non-null, since parsing is driven by this flag.
+     * {@see $attestedCredentialData} being non-null.
      */
     public function hasAttestedCredentialData(): bool
     {

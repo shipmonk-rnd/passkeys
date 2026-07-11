@@ -9,8 +9,7 @@ namespace ShipMonk\Passkeys;
  * user handle the assertion must belong to.
  *
  * The flow keys pending ceremonies by their challenge, so several may exist at once per browser
- * session (a page typically starts a conditional-mediation ceremony on load and a modal one when
- * a button is clicked).
+ * session.
  *
  * @api
  */

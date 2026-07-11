@@ -20,7 +20,7 @@ final readonly class PublicKeyCredentialUserEntity extends PublicKeyCredentialEn
     private const int MAX_ID_LENGTH = 64;
 
     /**
-     * @param string $id raw user handle bytes (an opaque identifier — not an email or username); base64url encoding happens on serialization
+     * @param string $id raw user handle bytes — an opaque identifier, not an email or username
      *
      * @throws InvalidArgumentException if the id is empty or longer than 64 bytes
      */

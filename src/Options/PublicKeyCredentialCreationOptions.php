@@ -28,7 +28,7 @@ final readonly class PublicKeyCredentialCreationOptions implements JsonSerializa
     public const int RECOMMENDED_TIMEOUT = 300_000;
 
     /**
-     * @param string                                   $challenge          raw challenge bytes (e.g. from {@see \random_bytes()}); base64url encoding happens on serialization
+     * @param string                                   $challenge          raw challenge bytes (e.g. from {@see \random_bytes()})
      * @param list<PublicKeyCredentialParameters>      $pubKeyCredParams
      * @param list<PublicKeyCredentialDescriptor>|null $excludeCredentials
      * @param list<PublicKeyCredentialHint>|null       $hints
