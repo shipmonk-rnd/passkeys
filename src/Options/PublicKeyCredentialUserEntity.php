@@ -17,7 +17,7 @@ final readonly class PublicKeyCredentialUserEntity extends PublicKeyCredentialEn
     /**
      * The {@link https://w3c.github.io/webauthn/#user-handle user handle} must be 1 to 64 bytes.
      */
-    private const int MAX_ID_LENGTH = 64;
+    public const int MAX_ID_LENGTH = 64;
 
     /**
      * @param string $id raw user handle bytes — an opaque identifier, not an email or username

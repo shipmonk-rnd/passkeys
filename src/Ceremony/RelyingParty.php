@@ -51,7 +51,7 @@ final class RelyingParty
     /**
      * {@link https://w3c.github.io/webauthn/#credential-id Credential IDs} are at most 1023 bytes (§7.1 step 25).
      */
-    private const int MAX_CREDENTIAL_ID_LENGTH = 1023;
+    public const int MAX_CREDENTIAL_ID_LENGTH = 1023;
 
     private const string FMT_NONE = 'none';
     private const string FMT_PACKED = 'packed';
