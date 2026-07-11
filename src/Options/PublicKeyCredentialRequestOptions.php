@@ -29,7 +29,7 @@ final readonly class PublicKeyCredentialRequestOptions implements JsonSerializab
     public const int RECOMMENDED_TIMEOUT = 300_000;
 
     /**
-     * @param string                                   $challenge        raw challenge bytes (e.g. from {@see \random_bytes()}); base64url encoding happens on serialization
+     * @param string                                   $challenge        raw challenge bytes (e.g. from {@see \random_bytes()})
      * @param list<PublicKeyCredentialDescriptor>|null $allowCredentials
      * @param list<PublicKeyCredentialHint>|null       $hints
      * @param array<string, mixed>|null                $extensions       client extension inputs in their JSON form ({@link https://w3c.github.io/webauthn/#dictdef-authenticationextensionsclientinputsjson AuthenticationExtensionsClientInputsJSON})

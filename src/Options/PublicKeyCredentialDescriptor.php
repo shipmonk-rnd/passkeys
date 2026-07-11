@@ -14,7 +14,7 @@ final readonly class PublicKeyCredentialDescriptor implements JsonSerializable
 {
 
     /**
-     * @param string            $id         raw credential id bytes; base64url encoding happens on serialization
+     * @param string            $id         raw credential id bytes
      * @param list<string>|null $transports usually {@see AuthenticatorTransport} values,
      *              but a relying party should echo whatever it stored at registration — clients ignore
      *              unknown values

@@ -9,15 +9,13 @@ use function json_encode;
 use const JSON_THROW_ON_ERROR;
 
 /**
- * The payload for `PublicKeyCredential.signalAllAcceptedCredentials()` (WebAuthn §5.1.10.3): gives
- * the credential provider the *complete* set of credential ids the relying party currently accepts
- * for a user, so it can prune any passkey no longer in the list. Signal it after a successful
- * sign-in and whenever the user's credential set changes (a passkey removed, the account deleted —
- * pass an empty list to prune them all).
+ * The payload for `PublicKeyCredential.signalAllAcceptedCredentials()` (WebAuthn §5.1.10.3): the
+ * *complete*, authoritative set of credential ids the relying party still accepts for a user, so the
+ * credential provider can prune any passkey no longer in the list. It only ever prunes — omitting a
+ * still-valid credential hides it from the provider and can lock the user out — and never adds one
+ * the provider does not already hold.
  *
- * The list must be authoritative and complete: a provider hides any of its passkeys you omit, so an
- * incomplete list can lock the user out of a valid passkey. It only ever prunes — it cannot add a
- * credential the provider does not already hold.
+ * {@see \ShipMonk\Passkeys\PasskeyFlow::allAcceptedCredentialsSignal()} builds it and documents when to send it.
  *
  * @see https://w3c.github.io/webauthn/#sctn-signalAllAcceptedCredentials
  * @api
@@ -27,8 +25,8 @@ final readonly class AllAcceptedCredentialsSignal implements JsonSerializable
 
     /**
      * @param string       $rpId                     the {@link https://w3c.github.io/webauthn/#rp-id RP ID} the credentials are scoped to
-     * @param string       $userId                   raw user handle bytes; base64url encoding happens on serialization
-     * @param list<string> $allAcceptedCredentialIds raw credential id bytes for every credential still accepted for the user; base64url encoding happens on serialization
+     * @param string       $userId                   raw user handle bytes
+     * @param list<string> $allAcceptedCredentialIds raw credential id bytes for every credential still accepted for the user
      */
     public function __construct(
         public string $rpId,

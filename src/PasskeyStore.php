@@ -59,10 +59,9 @@ interface PasskeyStore extends CredentialStore
     public function saveCredential(RegisteredPasskey $passkey): void;
 
     /**
-     * Persists the post-authentication credential state: set the record's `signCount` to
-     * {@see AuthenticationResult::$newSignCount}, `backupState` to {@see AuthenticationResult::$backupState},
-     * and — if it was not already — `uvInitialized` to {@see AuthenticationResult::$userVerified}.
-     * This is also the place to react to {@see AuthenticationResult::$possibleClone} if you want to.
+     * Persists the new credential state after a successful assertion — {@see AuthenticationResult}
+     * spells out which fields to copy onto the record — and is where you can act on
+     * {@see AuthenticationResult::$possibleClone}.
      */
     public function updateCredential(AuthenticationResult $result): void;
 
