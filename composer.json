@@ -1,6 +1,6 @@
 {
     "name": "shipmonk/passkeys",
-    "description": "Spec-compliant passkeys (WebAuthn) library for PHP with minimal dependencies",
+    "description": "Passkeys (WebAuthn) library for PHP with zero dependencies",
     "license": "MIT",
     "require": {
         "php": ">=8.4",
