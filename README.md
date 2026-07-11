@@ -111,10 +111,11 @@ same page:
   user via its user handle;
 - a **two-step login form** (email first): pass the entered username. If the account is known, the
   ceremony is pinned to it — an assertion by any other user's credential is rejected. An unknown
-  username silently falls back to the usernameless options, so the response does not by itself
-  confirm whether an account exists. By default a *known* account still reveals it has passkeys
-  through a non-empty `allowCredentials`; override `getEnumerationHardeningSecret()` to close that
-  leak too (see [Policy knobs](#policy-knobs)).
+  username always leaves the ceremony unpinned; by default it also gets the usernameless empty
+  `allowCredentials`, so a non-existent account and one without passkeys look alike. A *known*
+  account with passkeys still stands out through its non-empty `allowCredentials`; override
+  `getEnumerationHardeningSecret()` to close that leak too, so every username returns the same
+  response shape (see [Policy knobs](#policy-knobs)).
 
 ```php
 // POST /login/options

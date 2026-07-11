@@ -46,12 +46,13 @@ use function strlen;
  *  2. A two-step login form (username/email first, password or passkey second): pass the entered
  *     username. If the account is known, the options list its credentials in `allowCredentials`
  *     and the ceremony is pinned to that account — an assertion by any other user's credential is
- *     rejected. An unknown username silently falls back to the usernameless options above, so the
- *     response does not by itself confirm whether an account exists. By default a *known* account's
- *     non-empty `allowCredentials` still reveals that it has passkeys; override
- *     {@see self::getEnumerationHardeningSecret()} to close that leak too — the options for a
- *     username with no passkeys then carry a stable fabricated descriptor, indistinguishable from a
- *     real one (WebAuthn §14.6.2).
+ *     rejected. An unknown username always leaves the ceremony unpinned; by default it also gets
+ *     the usernameless empty `allowCredentials`, so a non-existent account and a known one without
+ *     passkeys look alike — but a *known* account with passkeys still stands out through its
+ *     non-empty list. Override {@see self::getEnumerationHardeningSecret()} to close that gap: a
+ *     username with no passkeys is then served a stable fabricated descriptor indistinguishable
+ *     from a real one, so every username yields the same response shape (the ceremony stays
+ *     unpinned regardless; WebAuthn §14.6.2).
  *
  * Because both flows can run concurrently in one browser session (conditional mediation starts at
  * page load, a button click starts another ceremony), pending ceremonies are keyed by challenge:
@@ -555,11 +556,13 @@ class PasskeyFlow
             throw new InvalidArgumentException('The enumeration-hardening secret must be at least 16 bytes');
         }
 
-        return [new PublicKeyCredentialDescriptor(
-            PublicKeyCredentialType::PUBLIC_KEY,
-            hash_hmac('sha256', $username, $secret, binary: true),
-            [AuthenticatorTransport::INTERNAL, AuthenticatorTransport::HYBRID],
-        )];
+        return [
+            new PublicKeyCredentialDescriptor(
+                PublicKeyCredentialType::PUBLIC_KEY,
+                hash_hmac('sha256', $username, $secret, binary: true),
+                [AuthenticatorTransport::INTERNAL, AuthenticatorTransport::HYBRID],
+            ),
+        ];
     }
 
 }
