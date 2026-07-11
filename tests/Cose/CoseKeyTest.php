@@ -209,17 +209,17 @@ final class CoseKeyTest extends CryptoTestCase
         ];
 
         yield 'unsupported OKP curve' => [
-            'OKP algorithm -8 does not allow curve 99',
+            'OKP algorithm -8 requires curve 6, got 99',
             [1 => CoseOkpKey::KTY, 3 => CoseAlgorithmIdentifier::EdDSA, -1 => 99, -2 => $x],
         ];
 
         yield 'OKP fully-specified algorithm / curve mismatch' => [
-            'OKP algorithm -53 does not allow curve 6',
+            'OKP algorithm -53 requires curve 7, got 6',
             [1 => CoseOkpKey::KTY, 3 => CoseAlgorithmIdentifier::Ed448, -1 => CoseOkpKey::CRV_ED25519, -2 => $x],
         ];
 
         yield 'OKP generic EdDSA with Ed448 curve (WebAuthn §5.8.5 requires Ed25519)' => [
-            'OKP algorithm -8 does not allow curve 7',
+            'OKP algorithm -8 requires curve 6, got 7',
             [1 => CoseOkpKey::KTY, 3 => CoseAlgorithmIdentifier::EdDSA, -1 => CoseOkpKey::CRV_ED448, -2 => $x],
         ];
 

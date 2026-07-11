@@ -6,7 +6,6 @@ use ShipMonk\Passkeys\Cbor\CborEncoder;
 use ShipMonk\Passkeys\Cbor\CborMap;
 use ShipMonk\Passkeys\Cbor\CborMapException;
 use ShipMonk\Passkeys\Der\DerEncoder;
-use function in_array;
 use function strlen;
 
 /**
@@ -47,28 +46,21 @@ final readonly class CoseOkpKey extends CoseKey
     private const int LABEL_X = -2;
 
     /**
-     * Maps each supported algorithm to the curves it allows. WebAuthn §5.8.5 requires keys
-     * with the generic EdDSA identifier to use Ed25519, so despite being polymorphic in
-     * plain COSE it pins a single curve here; Ed448 keys must use the fully-specified
-     * RFC 9864 identifier.
+     * Maps each supported algorithm to its mandated curve, public-key length in bytes,
+     * and id-Ed* curve OID (RFC 8410 §3; these OIDs carry no algorithm parameters).
+     *
+     * WebAuthn §5.8.5 requires keys with the generic EdDSA identifier to use Ed25519, so
+     * despite being polymorphic in plain COSE it pins a single curve here; Ed448 keys must
+     * use the fully-specified RFC 9864 identifier.
      */
     private const array ALGORITHMS = [
-        CoseAlgorithmIdentifier::EdDSA => [self::CRV_ED25519],
-        CoseAlgorithmIdentifier::Ed448 => [self::CRV_ED448],
-    ];
-
-    /**
-     * Maps each supported curve to its public-key length in bytes and its id-Ed* OID
-     * (RFC 8410 §3); note these OIDs carry no algorithm parameters.
-     */
-    private const array CURVES = [
-        self::CRV_ED25519 => [32, '1.3.101.112'],
-        self::CRV_ED448 => [57, '1.3.101.113'],
+        CoseAlgorithmIdentifier::EdDSA => [self::CRV_ED25519, 32, '1.3.101.112'],
+        CoseAlgorithmIdentifier::Ed448 => [self::CRV_ED448, 57, '1.3.101.113'],
     ];
 
     /**
      * @param key-of<self::ALGORITHMS> $alg
-     * @param key-of<self::CURVES>     $crv
+     * @param self::CRV_*              $crv
      * @param string                   $x   raw public key bytes (fixed length for the curve)
      */
     private function __construct(
@@ -94,11 +86,11 @@ final readonly class CoseOkpKey extends CoseKey
             throw new CoseKeyException("Unsupported OKP algorithm {$alg}");
         }
 
-        if (!in_array($crv, self::ALGORITHMS[$alg], true)) {
-            throw new CoseKeyException("OKP algorithm {$alg} does not allow curve {$crv}");
-        }
+        [$expectedCrv, $keyLength] = self::ALGORITHMS[$alg];
 
-        [$keyLength] = self::CURVES[$crv];
+        if ($crv !== $expectedCrv) {
+            throw new CoseKeyException("OKP algorithm {$alg} requires curve {$expectedCrv}, got {$crv}");
+        }
 
         if (strlen($x) !== $keyLength) {
             throw new CoseKeyException("OKP curve {$crv} requires {$keyLength}-byte public key");
@@ -119,7 +111,7 @@ final readonly class CoseOkpKey extends CoseKey
 
     public function toDerSubjectPublicKeyInfo(): string
     {
-        $curveOid = self::CURVES[$this->crv][1];
+        $curveOid = self::ALGORITHMS[$this->alg][2];
 
         return DerEncoder::encodeSequence(
             DerEncoder::encodeSequence(DerEncoder::encodeObjectIdentifier($curveOid)),
