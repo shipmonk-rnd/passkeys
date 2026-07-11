@@ -4,7 +4,6 @@ namespace ShipMonk\PasskeysTests\Cose;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
-use ReflectionMethod;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
 use ShipMonk\Passkeys\Cose\CoseEc2Key;
 use ShipMonk\Passkeys\Cose\CoseKey;
@@ -23,28 +22,6 @@ final class CoseKeyTest extends CryptoTestCase
 {
 
     /**
-     * The DER SubjectPublicKeyInfo we build from a COSE key must be byte-for-byte
-     * identical to what OpenSSL emits for the same key.
-     *
-     * @param CoseAlgorithmIdentifier::* $alg
-     * @param class-string<CoseKey>      $expectedClass
-     */
-    #[DataProvider('provideAlgorithms')]
-    public function testSubjectPublicKeyInfoMatchesOpenssl(
-        int $alg,
-        string $expectedClass,
-    ): void
-    {
-        [$coseKey, $privateKey] = self::generateCoseKeyPair($alg);
-
-        self::assertInstanceOf($expectedClass, $coseKey);
-        self::assertSame(
-            bin2hex(self::pemToDer(self::stringField(self::keyDetails($privateKey), 'key'))),
-            bin2hex(self::derSubjectPublicKeyInfo($coseKey)),
-        );
-    }
-
-    /**
      * @return iterable<string, array{CoseAlgorithmIdentifier::*, class-string<CoseKey>}>
      */
     public static function provideAlgorithms(): iterable
@@ -55,27 +32,6 @@ final class CoseKeyTest extends CryptoTestCase
         yield 'RSA / RS256' => [CoseAlgorithmIdentifier::RS256, CoseRsaKey::class];
         yield 'Ed25519 / EdDSA' => [CoseAlgorithmIdentifier::EdDSA, CoseOkpKey::class];
         yield 'Ed448' => [CoseAlgorithmIdentifier::Ed448, CoseOkpKey::class];
-    }
-
-    /**
-     * Fixed vector (independent of the OpenSSL oracle): the RFC 8032 §7.1 Test 1
-     * public key must encode to the exact RFC 8410 §4 Ed25519 SubjectPublicKeyInfo.
-     */
-    public function testEd25519SubjectPublicKeyInfoKnownAnswer(): void
-    {
-        $publicKey = self::bytesFromHex('d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a');
-
-        $coseKey = CoseKey::fromCborMap(self::cborMap([
-            1 => CoseOkpKey::KTY,
-            3 => CoseAlgorithmIdentifier::EdDSA,
-            -1 => CoseOkpKey::CRV_ED25519,
-            -2 => $publicKey,
-        ]));
-
-        self::assertSame(
-            '302a300506032b6570032100d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a',
-            bin2hex(self::derSubjectPublicKeyInfo($coseKey)),
-        );
     }
 
     /**
@@ -97,10 +53,6 @@ final class CoseKeyTest extends CryptoTestCase
         $restored = CoseKey::fromBytes($coseKey->toBytes());
 
         self::assertInstanceOf($expectedClass, $restored);
-        self::assertSame(
-            bin2hex(self::derSubjectPublicKeyInfo($coseKey)),
-            bin2hex(self::derSubjectPublicKeyInfo($restored)),
-        );
         self::assertSame(
             bin2hex($coseKey->toBytes()),
             bin2hex($restored->toBytes()),
@@ -233,18 +185,6 @@ final class CoseKeyTest extends CryptoTestCase
             'OKP curve 7 requires 57-byte public key',
             [1 => CoseOkpKey::KTY, 3 => CoseAlgorithmIdentifier::Ed448, -1 => CoseOkpKey::CRV_ED448, -2 => $x],
         ];
-    }
-
-    /**
-     * Reaches the now-protected DER encoder — an internal detail of {@see CoseKey::verify()}
-     * this test still asserts against directly.
-     */
-    private static function derSubjectPublicKeyInfo(CoseKey $coseKey): string
-    {
-        $der = new ReflectionMethod($coseKey, 'toDerSubjectPublicKeyInfo')->invoke($coseKey);
-        self::assertIsString($der);
-
-        return $der;
     }
 
 }

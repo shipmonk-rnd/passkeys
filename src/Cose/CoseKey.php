@@ -2,16 +2,14 @@
 
 namespace ShipMonk\Passkeys\Cose;
 
+use OpenSSLAsymmetricKey;
 use ShipMonk\Passkeys\Binary\BytesReader;
 use ShipMonk\Passkeys\Binary\BytesReaderException;
 use ShipMonk\Passkeys\Cbor\CborMap;
 use ShipMonk\Passkeys\Cbor\CborMapException;
 use ShipMonk\Passkeys\Cbor\InvalidCborException;
-use function base64_encode;
-use function chunk_split;
 use function implode;
 use function openssl_error_string;
-use function openssl_pkey_get_public;
 use function openssl_verify;
 
 /**
@@ -86,10 +84,11 @@ abstract readonly class CoseKey
     abstract public function toBytes(): string;
 
     /**
-     * Encodes this key as a DER-encoded SubjectPublicKeyInfo (RFC 5280 §4.1.2.7),
-     * the form consumed by {@see \openssl_pkey_get_public()} in {@see self::verify()}.
+     * Builds an ext-openssl public key handle for this key by constructing it directly from
+     * its parameters via {@see \openssl_pkey_new()}, the form consumed by {@see \openssl_verify()}
+     * in {@see self::verify()}. Returns false if OpenSSL rejects the key material.
      */
-    abstract protected function toDerSubjectPublicKeyInfo(): string;
+    abstract protected function toOpenSslPublicKey(): OpenSSLAsymmetricKey|false;
 
     /**
      * Verifies a signature over $message against this public key using ext-openssl.
@@ -111,7 +110,7 @@ abstract readonly class CoseKey
         // Discard any stale entries so a failure below reports only this call's errors.
         self::clearOpensslErrors();
 
-        $publicKey = openssl_pkey_get_public(self::toPem($this->toDerSubjectPublicKeyInfo()));
+        $publicKey = $this->toOpenSslPublicKey();
 
         if ($publicKey === false) {
             throw new SignatureVerificationException('Failed to load public key: ' . self::opensslErrors());
@@ -130,13 +129,6 @@ abstract readonly class CoseKey
      * or 0 for pure signature schemes (EdDSA), which take no separate digest.
      */
     abstract protected function opensslAlgorithm(): int;
-
-    private static function toPem(string $der): string
-    {
-        return "-----BEGIN PUBLIC KEY-----\n"
-            . chunk_split(base64_encode($der), 64, "\n")
-            . "-----END PUBLIC KEY-----\n";
-    }
 
     private static function opensslErrors(): string
     {

@@ -9,7 +9,6 @@ use ShipMonk\Passkeys\Cose\CoseKey;
 use ShipMonk\Passkeys\Cose\CoseOkpKey;
 use ShipMonk\Passkeys\Cose\CoseRsaKey;
 use function array_key_exists;
-use function base64_decode;
 use function implode;
 use function is_array;
 use function is_string;
@@ -17,7 +16,6 @@ use function openssl_error_string;
 use function openssl_pkey_get_details;
 use function openssl_pkey_new;
 use function openssl_sign;
-use function preg_replace;
 use function str_pad;
 use const OPENSSL_ALGO_SHA256;
 use const OPENSSL_ALGO_SHA384;
@@ -207,18 +205,6 @@ abstract class CryptoTestCase extends PasskeysTestCase
         }
 
         return $value;
-    }
-
-    protected static function pemToDer(string $pem): string
-    {
-        $base64 = preg_replace('~-----(?:BEGIN|END)[^-]+-----|\s+~', '', $pem) ?? '';
-        $der = base64_decode($base64, strict: true);
-
-        if ($der === false) {
-            self::fail('Failed to decode PEM');
-        }
-
-        return $der;
     }
 
 }
