@@ -112,7 +112,7 @@ final readonly class CoseRsaKey extends CoseKey
         ]);
     }
 
-    public function toDerSubjectPublicKeyInfo(): string
+    protected function toDerSubjectPublicKeyInfo(): string
     {
         // RSAPublicKey ::= SEQUENCE { modulus INTEGER, publicExponent INTEGER } (RFC 8017 App. A.1.1).
         $rsaPublicKey = DerEncoder::encodeSequence(

@@ -109,7 +109,7 @@ final readonly class CoseOkpKey extends CoseKey
         ]);
     }
 
-    public function toDerSubjectPublicKeyInfo(): string
+    protected function toDerSubjectPublicKeyInfo(): string
     {
         $curveOid = self::ALGORITHMS[$this->alg][2];
 

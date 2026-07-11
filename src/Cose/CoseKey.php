@@ -87,9 +87,9 @@ abstract readonly class CoseKey
 
     /**
      * Encodes this key as a DER-encoded SubjectPublicKeyInfo (RFC 5280 §4.1.2.7),
-     * the form consumed by {@see \openssl_pkey_get_public()}.
+     * the form consumed by {@see \openssl_pkey_get_public()} in {@see self::verify()}.
      */
-    abstract public function toDerSubjectPublicKeyInfo(): string;
+    abstract protected function toDerSubjectPublicKeyInfo(): string;
 
     /**
      * Verifies a signature over $message against this public key using ext-openssl.

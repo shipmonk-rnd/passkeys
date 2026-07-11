@@ -85,7 +85,7 @@ final class CoseKeyVerifyTest extends CryptoTestCase
                 parent::__construct($alg);
             }
 
-            public function toDerSubjectPublicKeyInfo(): string
+            protected function toDerSubjectPublicKeyInfo(): string
             {
                 return "\x00\x01\x02";
             }
