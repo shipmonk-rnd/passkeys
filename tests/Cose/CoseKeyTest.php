@@ -53,7 +53,6 @@ final class CoseKeyTest extends CryptoTestCase
         yield 'P-521 / ES512' => [CoseAlgorithmIdentifier::ES512, CoseEc2Key::class];
         yield 'RSA / RS256' => [CoseAlgorithmIdentifier::RS256, CoseRsaKey::class];
         yield 'Ed25519 / EdDSA' => [CoseAlgorithmIdentifier::EdDSA, CoseOkpKey::class];
-        yield 'Ed25519' => [CoseAlgorithmIdentifier::Ed25519, CoseOkpKey::class];
         yield 'Ed448' => [CoseAlgorithmIdentifier::Ed448, CoseOkpKey::class];
     }
 
@@ -215,8 +214,8 @@ final class CoseKeyTest extends CryptoTestCase
         ];
 
         yield 'OKP fully-specified algorithm / curve mismatch' => [
-            'OKP algorithm -19 does not allow curve 7',
-            [1 => CoseOkpKey::KTY, 3 => CoseAlgorithmIdentifier::Ed25519, -1 => CoseOkpKey::CRV_ED448, -2 => $x],
+            'OKP algorithm -53 does not allow curve 6',
+            [1 => CoseOkpKey::KTY, 3 => CoseAlgorithmIdentifier::Ed448, -1 => CoseOkpKey::CRV_ED25519, -2 => $x],
         ];
 
         yield 'OKP generic EdDSA with Ed448 curve (WebAuthn §5.8.5 requires Ed25519)' => [

@@ -339,7 +339,6 @@ Signatures are verified through `ext-openssl` with the COSE algorithm identifier
 | `-36`  | `CoseAlgorithmIdentifier::ES512` | ECDSA w/ SHA-512 (P-521) |
 | `-257` | `CoseAlgorithmIdentifier::RS256` | RSASSA-PKCS1-v1_5 w/ SHA-256 |
 | `-8`   | `CoseAlgorithmIdentifier::EdDSA` | EdDSA (restricted to Ed25519 per WebAuthn [§5.8.5](https://w3c.github.io/webauthn/#sctn-alg-identifier)) |
-| `-19`  | `CoseAlgorithmIdentifier::Ed25519` | EdDSA w/ Ed25519, fully specified (RFC 9864) |
 | `-53`  | `CoseAlgorithmIdentifier::Ed448` | EdDSA w/ Ed448, fully specified (RFC 9864) |
 
 ## Development
