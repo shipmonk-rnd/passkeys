@@ -73,7 +73,7 @@ abstract class CryptoTestCase extends PasskeysTestCase
 
         $crv = match ($alg) {
             // WebAuthn §5.8.5 pins the generic EdDSA identifier to Ed25519
-            CoseAlgorithmIdentifier::EdDSA, CoseAlgorithmIdentifier::Ed25519 => CoseOkpKey::CRV_ED25519,
+            CoseAlgorithmIdentifier::EdDSA => CoseOkpKey::CRV_ED25519,
             CoseAlgorithmIdentifier::Ed448 => CoseOkpKey::CRV_ED448,
             default => null,
         };
@@ -139,7 +139,7 @@ abstract class CryptoTestCase extends PasskeysTestCase
             CoseAlgorithmIdentifier::ES384 => OPENSSL_ALGO_SHA384,
             CoseAlgorithmIdentifier::ES512 => OPENSSL_ALGO_SHA512,
             // EdDSA is a pure signature scheme (no prehash)
-            CoseAlgorithmIdentifier::EdDSA, CoseAlgorithmIdentifier::Ed25519, CoseAlgorithmIdentifier::Ed448 => 0,
+            CoseAlgorithmIdentifier::EdDSA, CoseAlgorithmIdentifier::Ed448 => 0,
         };
     }
 

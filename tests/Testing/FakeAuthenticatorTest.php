@@ -96,7 +96,6 @@ final class FakeAuthenticatorTest extends PasskeysTestCase
         yield 'ES512' => [CoseAlgorithmIdentifier::ES512];
         yield 'RS256' => [CoseAlgorithmIdentifier::RS256];
         yield 'EdDSA' => [CoseAlgorithmIdentifier::EdDSA];
-        yield 'Ed25519' => [CoseAlgorithmIdentifier::Ed25519];
         yield 'Ed448' => [CoseAlgorithmIdentifier::Ed448];
     }
 

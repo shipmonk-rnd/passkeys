@@ -34,11 +34,6 @@ class CoseAlgorithmIdentifier
     final public const int EdDSA = -8;
 
     /**
-     * EdDSA w/ Ed25519, fully specified (RFC 9864); equivalent to {@see self::EdDSA} within WebAuthn
-     */
-    final public const int Ed25519 = -19;
-
-    /**
      * EdDSA w/ Ed448, fully specified (RFC 9864); the only identifier usable for Ed448 within WebAuthn
      */
     final public const int Ed448 = -53;

@@ -49,12 +49,11 @@ final readonly class CoseOkpKey extends CoseKey
     /**
      * Maps each supported algorithm to the curves it allows. WebAuthn §5.8.5 requires keys
      * with the generic EdDSA identifier to use Ed25519, so despite being polymorphic in
-     * plain COSE it pins a single curve here just like the fully-specified RFC 9864
-     * identifiers; Ed448 keys must use the fully-specified identifier.
+     * plain COSE it pins a single curve here; Ed448 keys must use the fully-specified
+     * RFC 9864 identifier.
      */
     private const array ALGORITHMS = [
         CoseAlgorithmIdentifier::EdDSA => [self::CRV_ED25519],
-        CoseAlgorithmIdentifier::Ed25519 => [self::CRV_ED25519],
         CoseAlgorithmIdentifier::Ed448 => [self::CRV_ED448],
     ];
 

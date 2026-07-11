@@ -323,7 +323,6 @@ final class FakeAuthenticator
         }
 
         if ($algorithm === CoseAlgorithmIdentifier::EdDSA
-            || $algorithm === CoseAlgorithmIdentifier::Ed25519
             || $algorithm === CoseAlgorithmIdentifier::Ed448
         ) {
             [$keyType, $detailsGroup, $crv] = $algorithm === CoseAlgorithmIdentifier::Ed448
@@ -372,7 +371,7 @@ final class FakeAuthenticator
             CoseAlgorithmIdentifier::ES384 => OPENSSL_ALGO_SHA384,
             CoseAlgorithmIdentifier::ES512 => OPENSSL_ALGO_SHA512,
             // EdDSA is a pure signature scheme (no prehash)
-            CoseAlgorithmIdentifier::EdDSA, CoseAlgorithmIdentifier::Ed25519, CoseAlgorithmIdentifier::Ed448 => 0,
+            CoseAlgorithmIdentifier::EdDSA, CoseAlgorithmIdentifier::Ed448 => 0,
         };
 
         if (!openssl_sign($message, $signature, $privateKey, $digest) || !is_string($signature)) {
