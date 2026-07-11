@@ -12,6 +12,7 @@ use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
 use ShipMonk\Passkeys\Cose\CoseKey;
 use ShipMonk\Passkeys\Credential\AuthenticatorData;
 use ShipMonk\Passkeys\Enum\AuthenticatorAttachment;
+use ShipMonk\Passkeys\Enum\PublicKeyCredentialType;
 use ShipMonk\Passkeys\Enum\ResidentKeyRequirement;
 use ShipMonk\Passkeys\Enum\UserVerificationRequirement;
 use ShipMonk\Passkeys\Options\PublicKeyCredentialParameters;
@@ -27,6 +28,7 @@ use function array_map;
 use function base64_encode;
 use function chr;
 use function hash;
+use function hash_hmac;
 use function json_encode;
 use function ord;
 use function pack;
@@ -62,6 +64,8 @@ final class PasskeyFlowTest extends CryptoTestCase
     private const string DAVE_HANDLE = 'dave-handle-00004';
     private const string NEW_CREDENTIAL_ID = "\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d";
     private const string AAGUID = "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10";
+
+    private const string HARDENING_SECRET = 'enumeration-hardening-secret-32b!';
 
     private const int FLAGS_UP_UV = AuthenticatorData::FLAG_USER_PRESENT | AuthenticatorData::FLAG_USER_VERIFIED;
 
@@ -186,6 +190,90 @@ final class PasskeyFlowTest extends CryptoTestCase
             $flow,
             $this->aliceAssertion($options->challenge),
         );
+    }
+
+    // --- Flow 2 hardening: username-enumeration mitigation (§14.6.2) ----------------------------
+
+    public function testHardeningFabricatesStableAllowCredentialsForUnknownUsername(): void
+    {
+        $flow = $this->hardenedFlowWithAlice();
+
+        $options = $flow->authenticationOptions('nobody@example.com');
+
+        // An unknown account now looks like one with passkeys, not an empty allow-list.
+        self::assertNotNull($options->allowCredentials);
+        self::assertCount(1, $options->allowCredentials);
+        self::assertSame(PublicKeyCredentialType::PUBLIC_KEY, $options->allowCredentials[0]->type);
+        self::assertSame(['internal', 'hybrid'], $options->allowCredentials[0]->transports);
+        self::assertSame(
+            hash_hmac('sha256', 'nobody@example.com', self::HARDENING_SECRET, true),
+            $options->allowCredentials[0]->id,
+        );
+
+        // The pending ceremony still carries no user handle, so nothing about the account is implied.
+        $pending = $this->pending->pendingAuthentications[base64_encode($options->challenge)] ?? null;
+        self::assertNotNull($pending);
+        self::assertNull($pending->userHandle);
+    }
+
+    public function testHardeningFabricationIsStablePerUsernameAndUnlikeRealIds(): void
+    {
+        $flow = $this->hardenedFlowWithAlice();
+
+        $first = $this->onlyAllowCredentialId($flow->authenticationOptions('nobody@example.com'));
+        $again = $this->onlyAllowCredentialId($flow->authenticationOptions('nobody@example.com'));
+        $other = $this->onlyAllowCredentialId($flow->authenticationOptions('someone-else@example.com'));
+
+        self::assertSame($first, $again); // stable across repeated probes
+        self::assertNotSame($first, $other); // varies per username
+        self::assertNotSame(self::ALICE_CREDENTIAL_ID, $first); // never collides with a real id
+    }
+
+    public function testHardeningFabricatesForKnownUserWithoutPasskeysButStaysPinned(): void
+    {
+        $flow = $this->hardenedFlowWithAlice();
+        $this->store->addUser('carol@example.com', 'carol-handle-0003');
+
+        $options = $flow->authenticationOptions('carol@example.com');
+
+        // Carol exists but has no passkeys: the response is now indistinguishable from a passkeyed account…
+        self::assertSame(
+            hash_hmac('sha256', 'carol@example.com', self::HARDENING_SECRET, true),
+            $this->onlyAllowCredentialId($options),
+        );
+
+        // …yet the decoy never weakens verification — the ceremony is still pinned to carol.
+        $this->assertAuthenticationFails(
+            VerificationException::USER_HANDLE_MISMATCH,
+            $flow,
+            $this->aliceAssertion($options->challenge),
+        );
+    }
+
+    public function testHardeningKeepsRealCredentialsForKnownUserWithPasskeys(): void
+    {
+        $flow = $this->hardenedFlowWithAlice();
+
+        $options = $flow->authenticationOptions(self::ALICE);
+
+        // A real account is served its real credentials, not a decoy.
+        self::assertSame(self::ALICE_CREDENTIAL_ID, $this->onlyAllowCredentialId($options));
+    }
+
+    public function testHardeningLeavesUsernamelessFlowWithoutAllowCredentials(): void
+    {
+        $flow = $this->hardenedFlowWithAlice();
+
+        // No username: still the discoverable-credential flow, no allow-list to fabricate.
+        self::assertNull($flow->authenticationOptions()->allowCredentials);
+    }
+
+    public function testHardeningRejectsTooShortSecret(): void
+    {
+        $flow = $this->hardenedFlowWithAlice('short-secret');
+
+        $this->expectException(InvalidArgumentException::class);
+        $flow->authenticationOptions('nobody@example.com');
     }
 
     // --- Combined flows: challenge-keyed pending ceremonies -------------------------------------
@@ -634,6 +722,52 @@ final class PasskeyFlowTest extends CryptoTestCase
             }
 
         };
+    }
+
+    /**
+     * A flow seeded with Alice (one passkey) whose {@see PasskeyFlow::getEnumerationHardeningSecret()}
+     * is overridden, so the §14.6.2 fabrication of `allowCredentials` is switched on.
+     */
+    private function hardenedFlowWithAlice(string $secret = self::HARDENING_SECRET): PasskeyFlow
+    {
+        $flow = new class (self::RP_ID, [self::ORIGIN], $this->store, $this->pending, $secret) extends PasskeyFlow {
+
+            /**
+             * @param list<string> $origins
+             */
+            public function __construct(
+                string $rpId,
+                array $origins,
+                PasskeyStore $store,
+                PendingCeremonyStore $pendingStore,
+                private readonly string $secret,
+            )
+            {
+                parent::__construct($rpId, 'Example RP', $origins, $store, $pendingStore);
+            }
+
+            protected function getEnumerationHardeningSecret(): string
+            {
+                return $this->secret;
+            }
+
+        };
+
+        $this->store->addUser(self::ALICE, self::ALICE_HANDLE);
+        $this->store->addCredential($this->record(self::ALICE_CREDENTIAL_ID, self::ALICE_HANDLE, $this->coseEntries));
+
+        return $flow;
+    }
+
+    /**
+     * The single fabricated (or real) credential id an authentication options response allow-lists.
+     */
+    private function onlyAllowCredentialId(PublicKeyCredentialRequestOptions $options): string
+    {
+        self::assertNotNull($options->allowCredentials);
+        self::assertCount(1, $options->allowCredentials);
+
+        return $options->allowCredentials[0]->id;
     }
 
     /**

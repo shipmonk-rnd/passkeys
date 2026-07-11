@@ -111,8 +111,11 @@ same page:
   user via its user handle;
 - a **two-step login form** (email first): pass the entered username. If the account is known, the
   ceremony is pinned to it — an assertion by any other user's credential is rejected. An unknown
-  username silently falls back to the usernameless options, so the response does not by itself
-  confirm whether an account exists.
+  username always leaves the ceremony unpinned; by default it also gets the usernameless empty
+  `allowCredentials`, so a non-existent account and one without passkeys look alike. A *known*
+  account with passkeys still stands out through its non-empty `allowCredentials`; override
+  `getEnumerationHardeningSecret()` to close that leak too, so every username returns the same
+  response shape (see [Policy knobs](#policy-knobs)).
 
 ```php
 // POST /login/options
@@ -159,6 +162,32 @@ The defaults are right for passkeys: user verification `required`, discoverable 
 To change any of them, subclass `PasskeyFlow` and override the corresponding protected method
 (`getUserVerificationRequirement()`, `getAllowedAlgorithms()`, `getResidentKeyRequirement()`,
 `getTimeout()`, `isCrossOriginAllowed()`, `getAllowedTopOrigins()`, `generateChallenge()`).
+
+#### Username-enumeration hardening
+
+In the two-step flow, an account with passkeys returns a non-empty `allowCredentials` while a
+non-existent one (or an account without passkeys) returns none — so a probing attacker can tell,
+from the shape of `/login/options`, which usernames have passkeys (WebAuthn
+[§14.6.2](https://www.w3.org/TR/webauthn-3/#sctn-username-enumeration)). Override
+`getEnumerationHardeningSecret()` to return a fixed, high-entropy secret (≥16 bytes, the same on
+every request, kept out of source control) and those responses instead carry a **stable, plausible
+fabricated descriptor** derived from the username — indistinguishable from a real one, so the
+distinction disappears:
+
+```php
+final class MyFlow extends PasskeyFlow
+{
+    protected function getEnumerationHardeningSecret(): ?string
+    {
+        return $this->appSecrets->passkeyEnumerationKey();  // fixed 32 random bytes from config
+    }
+}
+```
+
+The decoy only shapes the options response; verification is untouched, so a ceremony for a
+non-existent account still fails closed. It equalizes the response, not every side channel — the
+per-account response *timing* and the credential *count* can still differ slightly; override
+`fabricateAllowCredentials()` if you need to narrow those too.
 
 ### Keeping credential providers in sync (Signal API)
 
