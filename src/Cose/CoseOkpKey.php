@@ -39,12 +39,12 @@ final readonly class CoseOkpKey extends CoseKey
     /**
      * OKP key label: curve (crv).
      */
-    private const int LABEL_CRV = -1;
+    public const int LABEL_CRV = -1;
 
     /**
      * OKP key label: public key (x).
      */
-    private const int LABEL_X = -2;
+    public const int LABEL_X = -2;
 
     /**
      * Maps each supported algorithm to its mandated curve, public-key length in bytes,
@@ -119,7 +119,7 @@ final readonly class CoseOkpKey extends CoseKey
         ]);
     }
 
-    protected function opensslAlgorithm(): int
+    protected function getOpenSslAlgorithm(): int
     {
         // EdDSA is a pure signature scheme; OpenSSL takes no separate message digest.
         return 0;

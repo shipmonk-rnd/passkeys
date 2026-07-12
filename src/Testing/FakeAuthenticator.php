@@ -9,6 +9,7 @@ use ShipMonk\Passkeys\Base64\InvalidBase64Exception;
 use ShipMonk\Passkeys\Cbor\CborEncoder;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
 use ShipMonk\Passkeys\Cose\CoseEc2Key;
+use ShipMonk\Passkeys\Cose\CoseKey;
 use ShipMonk\Passkeys\Cose\CoseOkpKey;
 use ShipMonk\Passkeys\Cose\CoseRsaKey;
 use ShipMonk\Passkeys\Credential\AuthenticatorData;
@@ -78,7 +79,7 @@ use const STR_PAD_LEFT;
 final class FakeAuthenticator
 {
 
-    private const string AAGUID = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+    public const string AAGUID = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
     /**
      * @var list<FakePasskey>
@@ -309,49 +310,83 @@ final class FakeAuthenticator
      */
     private function generateKeyPair(): array
     {
-        $algorithm = $this->algorithm;
+        return match ($this->algorithm) {
+            CoseAlgorithmIdentifier::RS256 => $this->generateRsaKeyPair($this->algorithm),
+            CoseAlgorithmIdentifier::EdDSA, CoseAlgorithmIdentifier::Ed448 => $this->generateOkpKeyPair($this->algorithm),
+            CoseAlgorithmIdentifier::ES256, CoseAlgorithmIdentifier::ES384, CoseAlgorithmIdentifier::ES512 => $this->generateEc2KeyPair($this->algorithm),
+        };
+    }
 
-        if ($algorithm === CoseAlgorithmIdentifier::RS256) {
-            $key = self::newKey(['private_key_type' => OPENSSL_KEYTYPE_RSA, 'private_key_bits' => 2048]);
+    /**
+     * @param CoseAlgorithmIdentifier::RS256 $algorithm
+     * @return array{OpenSSLAsymmetricKey, string}
+     */
+    private function generateRsaKeyPair(int $algorithm): array
+    {
+        $key = self::newKey([
+            'private_key_type' => OPENSSL_KEYTYPE_RSA,
+            'private_key_bits' => 2048,
+        ]);
 
-            return [$key, self::coseMap([
-                1 => CoseRsaKey::KTY,
-                3 => $algorithm,
-                -1 => self::keyDetail($key, 'rsa', 'n'),
-                -2 => self::keyDetail($key, 'rsa', 'e'),
-            ])];
-        }
+        return [
+            $key,
+            self::coseMap([
+                CoseKey::LABEL_KTY => CoseRsaKey::KTY,
+                CoseKey::LABEL_ALG => $algorithm,
+                CoseRsaKey::LABEL_N => self::keyDetail($key, 'rsa', 'n'),
+                CoseRsaKey::LABEL_E => self::keyDetail($key, 'rsa', 'e'),
+            ]),
+        ];
+    }
 
-        if ($algorithm === CoseAlgorithmIdentifier::EdDSA
-            || $algorithm === CoseAlgorithmIdentifier::Ed448
-        ) {
-            [$keyType, $detailsGroup, $crv] = $algorithm === CoseAlgorithmIdentifier::Ed448
-                ? [OPENSSL_KEYTYPE_ED448, 'ed448', CoseOkpKey::CRV_ED448]
-                : [OPENSSL_KEYTYPE_ED25519, 'ed25519', CoseOkpKey::CRV_ED25519];
-            $key = self::newKey(['private_key_type' => $keyType]);
+    /**
+     * @param CoseAlgorithmIdentifier::EdDSA|CoseAlgorithmIdentifier::Ed448 $algorithm
+     * @return array{OpenSSLAsymmetricKey, string}
+     */
+    private function generateOkpKeyPair(int $algorithm): array
+    {
+        [$keyType, $detailsGroup, $crv] = match ($algorithm) {
+            CoseAlgorithmIdentifier::Ed448 => [OPENSSL_KEYTYPE_ED448, 'ed448', CoseOkpKey::CRV_ED448],
+            CoseAlgorithmIdentifier::EdDSA => [OPENSSL_KEYTYPE_ED25519, 'ed25519', CoseOkpKey::CRV_ED25519],
+        };
 
-            return [$key, self::coseMap([
-                1 => CoseOkpKey::KTY,
-                3 => $algorithm,
-                -1 => $crv,
-                -2 => self::keyDetail($key, $detailsGroup, 'pub_key'),
-            ])];
-        }
+        $key = self::newKey(['private_key_type' => $keyType]);
 
+        return [
+            $key,
+            self::coseMap([
+                CoseKey::LABEL_KTY => CoseOkpKey::KTY,
+                CoseKey::LABEL_ALG => $algorithm,
+                CoseOkpKey::LABEL_CRV => $crv,
+                CoseOkpKey::LABEL_X => self::keyDetail($key, $detailsGroup, 'pub_key'),
+            ]),
+        ];
+    }
+
+    /**
+     * @param CoseAlgorithmIdentifier::ES256|CoseAlgorithmIdentifier::ES384|CoseAlgorithmIdentifier::ES512 $algorithm
+     * @return array{OpenSSLAsymmetricKey, string}
+     */
+    private function generateEc2KeyPair(int $algorithm): array
+    {
         [$curveName, $crv, $coordinateLength] = match ($algorithm) {
             CoseAlgorithmIdentifier::ES256 => ['prime256v1', CoseEc2Key::CRV_P256, 32],
             CoseAlgorithmIdentifier::ES384 => ['secp384r1', CoseEc2Key::CRV_P384, 48],
             CoseAlgorithmIdentifier::ES512 => ['secp521r1', CoseEc2Key::CRV_P521, 66],
         };
+
         $key = self::newKey(['private_key_type' => OPENSSL_KEYTYPE_EC, 'curve_name' => $curveName]);
 
-        return [$key, self::coseMap([
-            1 => CoseEc2Key::KTY,
-            3 => $algorithm,
-            -1 => $crv,
-            -2 => str_pad(self::keyDetail($key, 'ec', 'x'), $coordinateLength, "\x00", STR_PAD_LEFT),
-            -3 => str_pad(self::keyDetail($key, 'ec', 'y'), $coordinateLength, "\x00", STR_PAD_LEFT),
-        ])];
+        return [
+            $key,
+            self::coseMap([
+                CoseKey::LABEL_KTY => CoseEc2Key::KTY,
+                CoseKey::LABEL_ALG => $algorithm,
+                CoseEc2Key::LABEL_CRV => $crv,
+                CoseEc2Key::LABEL_X => str_pad(self::keyDetail($key, 'ec', 'x'), $coordinateLength, "\x00", STR_PAD_LEFT),
+                CoseEc2Key::LABEL_Y => str_pad(self::keyDetail($key, 'ec', 'y'), $coordinateLength, "\x00", STR_PAD_LEFT),
+            ]),
+        ];
     }
 
     /**
@@ -370,7 +405,6 @@ final class FakeAuthenticator
             CoseAlgorithmIdentifier::ES256, CoseAlgorithmIdentifier::RS256 => OPENSSL_ALGO_SHA256,
             CoseAlgorithmIdentifier::ES384 => OPENSSL_ALGO_SHA384,
             CoseAlgorithmIdentifier::ES512 => OPENSSL_ALGO_SHA512,
-            // EdDSA is a pure signature scheme (no prehash)
             CoseAlgorithmIdentifier::EdDSA, CoseAlgorithmIdentifier::Ed448 => 0,
         };
 

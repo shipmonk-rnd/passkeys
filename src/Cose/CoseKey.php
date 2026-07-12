@@ -27,12 +27,12 @@ abstract readonly class CoseKey
     /**
      * Common COSE key label: key type (kty).
      */
-    protected const int LABEL_KTY = 1;
+    public const int LABEL_KTY = 1;
 
     /**
      * Common COSE key label: algorithm (alg).
      */
-    protected const int LABEL_ALG = 3;
+    public const int LABEL_ALG = 3;
 
     /**
      * @param TAlg $alg
@@ -84,13 +84,6 @@ abstract readonly class CoseKey
     abstract public function toBytes(): string;
 
     /**
-     * Builds an ext-openssl public key handle for this key by constructing it directly from
-     * its parameters via {@see \openssl_pkey_new()}, the form consumed by {@see \openssl_verify()}
-     * in {@see self::verify()}. Returns false if OpenSSL rejects the key material.
-     */
-    abstract protected function toOpenSslPublicKey(): OpenSSLAsymmetricKey|false;
-
-    /**
      * Verifies a signature over $message against this public key using ext-openssl.
      *
      * For ECDSA algorithms the signature is expected in the ASN.1 DER form
@@ -107,16 +100,15 @@ abstract readonly class CoseKey
         string $signature,
     ): bool
     {
-        // Discard any stale entries so a failure below reports only this call's errors.
-        self::clearOpensslErrors();
+        $this->clearOpenSslErrors(); // Discard any stale entries so a failure below reports only this call's errors.
 
         $publicKey = $this->toOpenSslPublicKey();
 
         if ($publicKey === false) {
-            throw new SignatureVerificationException('Failed to load public key: ' . self::opensslErrors());
+            throw new SignatureVerificationException('Failed to load public key: ' . $this->getOpenSslErrors());
         }
 
-        $result = openssl_verify($message, $signature, $publicKey, $this->opensslAlgorithm());
+        $result = openssl_verify($message, $signature, $publicKey, $this->getOpenSslAlgorithm());
 
         // 1 = verified; 0 = signature does not match; -1 = malformed signature or an
         // OpenSSL error. A caller cannot tell attacker-supplied garbage apart from a
@@ -125,12 +117,19 @@ abstract readonly class CoseKey
     }
 
     /**
+     * Builds an ext-openssl public key handle for this key by constructing it directly from
+     * its parameters via {@see \openssl_pkey_new()}, the form consumed by {@see \openssl_verify()}
+     * in {@see self::verify()}. Returns false if OpenSSL rejects the key material.
+     */
+    abstract protected function toOpenSslPublicKey(): OpenSSLAsymmetricKey|false;
+
+    /**
      * The OpenSSL message-digest algorithm to verify with — an OPENSSL_ALGO_* constant,
      * or 0 for pure signature schemes (EdDSA), which take no separate digest.
      */
-    abstract protected function opensslAlgorithm(): int;
+    abstract protected function getOpenSslAlgorithm(): int;
 
-    private static function opensslErrors(): string
+    private function getOpenSslErrors(): string
     {
         $errors = [];
 
@@ -141,9 +140,9 @@ abstract readonly class CoseKey
         return implode('; ', $errors);
     }
 
-    private static function clearOpensslErrors(): void
+    private function clearOpenSslErrors(): void
     {
-        self::opensslErrors();
+        self::getOpenSslErrors();
     }
 
 }

@@ -96,7 +96,7 @@ final class CoseKeyVerifyTest extends CryptoTestCase
                 return "\x00\x01\x02";
             }
 
-            protected function opensslAlgorithm(): int
+            protected function getOpenSslAlgorithm(): int
             {
                 return OPENSSL_ALGO_SHA256;
             }

@@ -46,17 +46,17 @@ final readonly class CoseEc2Key extends CoseKey
     /**
      * EC2 key label: curve (crv).
      */
-    private const int LABEL_CRV = -1;
+    public const int LABEL_CRV = -1;
 
     /**
      * EC2 key label: x-coordinate.
      */
-    private const int LABEL_X = -2;
+    public const int LABEL_X = -2;
 
     /**
      * EC2 key label: y-coordinate.
      */
-    private const int LABEL_Y = -3;
+    public const int LABEL_Y = -3;
 
     /**
      * Maps each supported algorithm to its mandated curve, coordinate length in bytes,
@@ -136,7 +136,7 @@ final readonly class CoseEc2Key extends CoseKey
         ]);
     }
 
-    protected function opensslAlgorithm(): int
+    protected function getOpenSslAlgorithm(): int
     {
         return self::ALGORITHMS[$this->alg][3];
     }

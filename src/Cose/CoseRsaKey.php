@@ -37,12 +37,12 @@ final readonly class CoseRsaKey extends CoseKey
     /**
      * RSA key label: modulus (n).
      */
-    private const int LABEL_N = -1;
+    public const int LABEL_N = -1;
 
     /**
      * RSA key label: public exponent (e).
      */
-    private const int LABEL_E = -2;
+    public const int LABEL_E = -2;
 
     /**
      * Algorithms that use an RSA key.
@@ -142,7 +142,7 @@ final readonly class CoseRsaKey extends CoseKey
         return openssl_pkey_get_public($publicKeyPem);
     }
 
-    protected function opensslAlgorithm(): int
+    protected function getOpenSslAlgorithm(): int
     {
         return OPENSSL_ALGO_SHA256; // RS256 is the only supported RSA algorithm
     }
