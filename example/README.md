@@ -28,7 +28,6 @@ needs.
 
 ```sh
 composer install                                                       # from the repo root
-php example/symfony/bin/console app:setup                              # schema + seed accounts
 php -S localhost:8000 -t example/symfony/public example/symfony/public/index.php
 ```
 

@@ -16,9 +16,10 @@ use function array_values;
  * {@see \ShipMonk\Passkeys\PasskeyFlow::generateUserHandle()} mints — in its own unique binary
  * column. One account has many {@see PasskeyCredential}s.
  *
- * There is no self-service signup in this demo: accounts are seeded by `app:setup` with a bcrypt
- * password hash. Passkeys are only ever added later, from an authenticated session — the pattern a
- * real password-first relying party should follow.
+ * There is no self-service signup in this demo: accounts are seeded on first boot (see
+ * {@see \ShipMonk\PasskeysSymfonyDemo\Kernel::boot()}) with a bcrypt password hash. Passkeys are
+ * only ever added later, from an authenticated session — the pattern a real password-first relying
+ * party should follow.
  */
 #[ORM\Entity]
 class User

@@ -3,9 +3,12 @@
 namespace ShipMonk\PasskeysSymfonyDemo;
 
 use Doctrine\Bundle\DoctrineBundle\DoctrineBundle;
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Tools\SchemaTool;
 use ShipMonk\Passkeys\PasskeyFlow;
 use ShipMonk\Passkeys\PasskeyStore;
 use ShipMonk\Passkeys\PendingCeremonyStore;
+use ShipMonk\PasskeysSymfonyDemo\Entity\User;
 use ShipMonk\PasskeysSymfonyDemo\Passkey\DoctrinePasskeyStore;
 use ShipMonk\PasskeysSymfonyDemo\Passkey\SessionPendingCeremonyStore;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
@@ -15,20 +18,24 @@ use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigura
 use Symfony\Component\HttpKernel\Kernel as BaseKernel;
 use Symfony\Component\Routing\Loader\Configurator\RoutingConfigurator;
 use function dirname;
+use function is_file;
+use function password_hash;
+use function random_bytes;
+use const PASSWORD_DEFAULT;
 
-/**
- * The whole application, configured inline with {@see MicroKernelTrait}: it registers the three
- * bundles it needs, wires the container, and imports the attribute routes on the controllers. This
- * is the file to read to see how {@see PasskeyFlow} is plugged into Symfony.
- *
- * Because the example runs off the *root* `vendor/` (the packages are `require-dev` of the library),
- * {@see self::getProjectDir()} is pinned to this directory — otherwise Symfony's default would walk
- * up to the repository's own `composer.json` and scatter `var/` and the SQLite file at the root.
- */
 final class Kernel extends BaseKernel
 {
 
     use MicroKernelTrait;
+
+    /**
+     * The demo's fixed accounts as email => plaintext password, seeded on first boot. A real service
+     * gets its users from normal user management and would never hard-code a password.
+     */
+    private const array DEMO_ACCOUNTS = [
+        'alice@example.com' => 'alice',
+        'bob@example.com' => 'bob',
+    ];
 
     public function registerBundles(): iterable
     {
@@ -42,22 +49,38 @@ final class Kernel extends BaseKernel
         return dirname(__DIR__);
     }
 
+    public function boot(): void
+    {
+        parent::boot();
+
+        if (!is_file($this->getProjectDir() . '/var/passkeys.sqlite')) {
+            $this->initializeDatabase();
+        }
+    }
+
+    private function initializeDatabase(): void
+    {
+        $entityManager = $this->container->get('doctrine.orm.default_entity_manager');
+        assert($entityManager instanceof EntityManagerInterface);
+
+        new SchemaTool($entityManager)->createSchema($entityManager->getMetadataFactory()->getAllMetadata());
+
+        foreach (self::DEMO_ACCOUNTS as $email => $password) {
+            $entityManager->persist(new User(
+                email: $email,
+                passwordHash: password_hash($password, PASSWORD_DEFAULT),
+                passkeyUserHandle: random_bytes(64), // 64 opaque random bytes — exactly what PasskeyFlow::generateUserHandle() mints.
+            ));
+        }
+
+        $entityManager->flush();
+    }
+
     private function configureContainer(ContainerConfigurator $container): void
     {
         $container->extension('framework', [
-            // A demo secret; a real app keeps this out of source (env var / secrets vault).
             'secret' => 'passkeys-symfony-demo-not-a-real-secret',
-            'http_method_override' => false,
-            // Native file-based sessions; the sign-in state and pending ceremonies live here.
-            'session' => [
-                'handler_id' => null,
-                'cookie_secure' => 'auto',
-                'cookie_samesite' => 'lax',
-            ],
-        ]);
-
-        $container->extension('twig', [
-            'default_path' => '%kernel.project_dir%/templates',
+            'session' => ['enabled' => true],
         ]);
 
         $container->extension('doctrine', [
@@ -65,13 +88,11 @@ final class Kernel extends BaseKernel
                 'url' => 'sqlite:///%kernel.project_dir%/var/passkeys.sqlite',
             ],
             'orm' => [
-                'controller_resolver' => ['auto_mapping' => false],
                 'mappings' => [
                     'Demo' => [
                         'type' => 'attribute',
                         'dir' => '%kernel.project_dir%/src/Entity',
                         'prefix' => 'ShipMonk\\PasskeysSymfonyDemo\\Entity',
-                        'is_bundle' => false,
                     ],
                 ],
             ],
@@ -82,14 +103,8 @@ final class Kernel extends BaseKernel
             ->autowire()
             ->autoconfigure();
 
-        // Controllers and the two store implementations are ordinary autowired services; the
-        // entities (managed by Doctrine) are not.
-        $services->load('ShipMonk\\PasskeysSymfonyDemo\\', __DIR__ . '/')
-            ->exclude(__DIR__ . '/{Entity,Kernel.php}');
+        $services->load('ShipMonk\\PasskeysSymfonyDemo\\', __DIR__);
 
-        // The high-level flow with this relying party's identity. rpId / origin assume localhost:8000
-        // (WebAuthn treats localhost as a secure context); change them together if you serve it
-        // elsewhere. The two stores are autowired from the aliases below; RelyingParty uses its default.
         $services->set(PasskeyFlow::class)
             ->arg('$rpId', 'localhost')
             ->arg('$rpName', 'ShipMonk\Passkeys Symfony Demo')

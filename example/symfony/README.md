@@ -13,7 +13,6 @@ the repository's root `vendor/` — no separate `composer install` here. From th
 
 ```sh
 composer install                                          # once, installs the dev dependencies
-php example/symfony/bin/console app:setup                 # create the schema + seed the accounts
 php -S localhost:8000 -t example/symfony/public example/symfony/public/index.php
 ```
 
@@ -27,8 +26,9 @@ Then open <http://localhost:8000>:
    account. Or just focus the email field and pick the passkey from **autofill** (conditional
    mediation), which the page arms in the background.
 
-`app:setup` is idempotent — rerun it any time. To reset the demo, delete `var/passkeys.sqlite` (or
-the whole `var/`, which also holds Symfony's cache) and run it again.
+The database is created and the demo accounts seeded automatically on first run (see
+`Kernel::boot()`). To reset the demo, delete `var/passkeys.sqlite` (or the whole `var/`, which also
+holds Symfony's cache); it is recreated on the next request.
 
 > RP id / origin are hard-coded to `localhost` / `http://localhost:8000` in `src/Kernel.php`
 > (WebAuthn treats `localhost` as a secure context, so no HTTPS is needed locally). Change the
@@ -42,8 +42,9 @@ the whole `var/`, which also holds Symfony's cache) and run it again.
 - **`src/Kernel.php`** — the wiring, and the file to read first. `MicroKernelTrait` configures the
   container inline: it registers `PasskeyFlow` as a service with this RP's identity, aliases the
   library's `PasskeyStore` / `PendingCeremonyStore` interfaces to the implementations below,
-  enables the session, and points Doctrine at a SQLite database with the two custom column types.
-  `getProjectDir()` is pinned to this directory because the example runs off the *root* `vendor/`.
+  enables the session, and points Doctrine at a SQLite database. `getProjectDir()` is pinned to this
+  directory because the example runs off the *root* `vendor/`, and `boot()` creates the schema and
+  seeds the demo accounts on first run.
 - **`src/Controller/`** — the endpoints, one thin controller per concern.
   `PasswordLoginController` verifies the seeded password and starts a session (`/login/password`);
   `PasskeyManageController` lists the account's passkeys, adds one to the *signed-in* account (pinned
@@ -64,8 +65,6 @@ the whole `var/`, which also holds Symfony's cache) and run it again.
 - **`src/Passkey/SessionPendingCeremonyStore.php`** — the `PendingCeremonyStore` on the Symfony
   session (via `RequestStack`): unfinished ceremonies keyed by challenge, consumed on use so each
   challenge is single-use, and capped per session.
-- **`src/Command/SetupCommand.php`** — `app:setup`: creates the schema and seeds the two demo
-  accounts with a bcrypt hash and a freshly minted 64-byte WebAuthn user handle.
 
 ## Not production code
 
