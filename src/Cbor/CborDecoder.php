@@ -29,10 +29,25 @@ final class CborDecoder
 {
 
     /**
+     * The maximum nesting depth accepted while decoding. WebAuthn CBOR structures are shallow (an
+     * attestation object nests only a couple of levels), so this generous ceiling never rejects
+     * legitimate input; it exists solely to stop a maliciously deep value from exhausting the
+     * stack — unbounded recursion would crash the process with a fatal error rather than throw.
+     */
+    private const int MAX_DEPTH = 16;
+
+    /**
      * @throws InvalidCborException
      */
-    public static function decode(BytesReader $bytes): mixed
+    public static function decode(
+        BytesReader $bytes,
+        int $depth = 0,
+    ): mixed
     {
+        if ($depth > self::MAX_DEPTH) {
+            throw new InvalidCborException('Maximum CBOR nesting depth of ' . self::MAX_DEPTH . ' exceeded');
+        }
+
         try {
             $byte = $bytes->u8();
 
@@ -76,20 +91,20 @@ final class CborDecoder
                 // array
                 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87,
                 0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f,
-                0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97 => self::decodeArray($bytes, $byte & 0x1f),
-                0x98 => self::decodeArray($bytes, $bytes->u8()),
-                0x99 => self::decodeArray($bytes, $bytes->u16()),
-                0x9a => self::decodeArray($bytes, $bytes->u32()),
-                0x9b => self::decodeArray($bytes, $bytes->u64()),
+                0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97 => self::decodeArray($bytes, $byte & 0x1f, $depth),
+                0x98 => self::decodeArray($bytes, $bytes->u8(), $depth),
+                0x99 => self::decodeArray($bytes, $bytes->u16(), $depth),
+                0x9a => self::decodeArray($bytes, $bytes->u32(), $depth),
+                0x9b => self::decodeArray($bytes, $bytes->u64(), $depth),
 
                 // map
                 0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7,
                 0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf,
-                0xb0, 0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7 => self::decodeMap($bytes, $byte & 0x1f),
-                0xb8 => self::decodeMap($bytes, $bytes->u8()),
-                0xb9 => self::decodeMap($bytes, $bytes->u16()),
-                0xba => self::decodeMap($bytes, $bytes->u32()),
-                0xbb => self::decodeMap($bytes, $bytes->u64()),
+                0xb0, 0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7 => self::decodeMap($bytes, $byte & 0x1f, $depth),
+                0xb8 => self::decodeMap($bytes, $bytes->u8(), $depth),
+                0xb9 => self::decodeMap($bytes, $bytes->u16(), $depth),
+                0xba => self::decodeMap($bytes, $bytes->u32(), $depth),
+                0xbb => self::decodeMap($bytes, $bytes->u64(), $depth),
 
                 // literal
                 0xf4 => false,
@@ -119,12 +134,13 @@ final class CborDecoder
     private static function decodeArray(
         BytesReader $bytes,
         int $length,
+        int $depth,
     ): array
     {
         $array = [];
 
         while ($length-- > 0) {
-            $array[] = self::decode($bytes);
+            $array[] = self::decode($bytes, $depth + 1);
         }
 
         return $array;
@@ -138,13 +154,14 @@ final class CborDecoder
     private static function decodeMap(
         BytesReader $bytes,
         int $length,
+        int $depth,
     ): array
     {
         $map = [];
 
         while ($length-- > 0) {
-            $key = self::decode($bytes);
-            $value = self::decode($bytes);
+            $key = self::decode($bytes, $depth + 1);
+            $value = self::decode($bytes, $depth + 1);
 
             if (!is_string($key) && !is_int($key)) {
                 throw new InvalidCborException('Invalid CBOR map key type');

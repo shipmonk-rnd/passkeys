@@ -8,6 +8,9 @@ use ShipMonk\Passkeys\Binary\BytesReader;
 use ShipMonk\Passkeys\Cbor\CborDecoder;
 use ShipMonk\Passkeys\Cbor\InvalidCborException;
 use ShipMonk\PasskeysTests\PasskeysTestCase;
+use function json_decode;
+use function str_repeat;
+use const JSON_THROW_ON_ERROR;
 
 #[CoversClass(CborDecoder::class)]
 final class CborDecoderTest extends PasskeysTestCase
@@ -99,6 +102,12 @@ final class CborDecoderTest extends PasskeysTestCase
         yield ['f4', false];
         yield ['f5', true];
         yield ['f6', null];
+
+        // nesting exactly at the maximum accepted depth: 16 single-element arrays wrapping a 0
+        yield 'nesting at the maximum depth' => [
+            str_repeat('81 ', 16) . '00',
+            json_decode(str_repeat('[', 16) . '0' . str_repeat(']', 16), flags: JSON_THROW_ON_ERROR),
+        ];
     }
 
     #[DataProvider('provideDecodeInvalid')]
@@ -166,6 +175,9 @@ final class CborDecoderTest extends PasskeysTestCase
         yield ['bf 61 61 01 61 62 9f 02 03 ff ff', 'Indefinite-length values are not supported'];
         yield ['82 61 61 bf 61 62 61 63 ff', 'Indefinite-length values are not supported'];
         yield ['bf 63 46 75 6e f5 63 41 6d 74 21 ff', 'Indefinite-length values are not supported'];
+
+        // one level past the maximum accepted depth: unbounded recursion would otherwise crash the process
+        yield 'nesting past the maximum depth' => [str_repeat('81 ', 17) . '00', 'Maximum CBOR nesting depth of 16 exceeded'];
     }
 
 }
