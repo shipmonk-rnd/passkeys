@@ -102,9 +102,10 @@ final class PasskeyManageController extends AbstractController
             return $this->mustBeSignedIn();
         }
 
+        // base64_decode('', strict: true) returns '' (not false), so guard against an empty id too.
         $credentialId = base64_decode($request->getPayload()->getString('id'), strict: true);
 
-        if ($credentialId === false) {
+        if ($credentialId === false || $credentialId === '') {
             return $this->json(['ok' => false, 'message' => 'A credential id is required.'], Response::HTTP_BAD_REQUEST);
         }
 

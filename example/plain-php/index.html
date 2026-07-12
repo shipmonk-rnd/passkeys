@@ -71,7 +71,7 @@
 	<script>
 		const logEl = document.getElementById('log');
 		const log = (msg, cls = '') => { logEl.textContent = msg; logEl.className = cls; };
-		const supported = window.PublicKeyCredential && PublicKeyCredential.parseCreationOptionsFromJSON;
+		const supported = window.PublicKeyCredential && PublicKeyCredential.parseCreationOptionsFromJSON && PublicKeyCredential.parseRequestOptionsFromJSON;
 		let credentials = [];
 
 		async function post(url, obj) {
