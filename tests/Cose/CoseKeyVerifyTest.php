@@ -10,7 +10,7 @@ use ShipMonk\Passkeys\Cose\CoseEc2Key;
 use ShipMonk\Passkeys\Cose\CoseKey;
 use ShipMonk\Passkeys\Cose\CoseOkpKey;
 use ShipMonk\Passkeys\Cose\CoseRsaKey;
-use ShipMonk\Passkeys\Cose\SignatureVerificationException;
+use ShipMonk\Passkeys\Cose\CoseKeyLoadException;
 use ShipMonk\PasskeysTests\CryptoTestCase;
 use function chr;
 use function ord;
@@ -21,7 +21,7 @@ use const OPENSSL_ALGO_SHA256;
 #[CoversClass(CoseEc2Key::class)]
 #[CoversClass(CoseOkpKey::class)]
 #[CoversClass(CoseRsaKey::class)]
-#[CoversClass(SignatureVerificationException::class)]
+#[CoversClass(CoseKeyLoadException::class)]
 final class CoseKeyVerifyTest extends CryptoTestCase
 {
 
@@ -104,7 +104,7 @@ final class CoseKeyVerifyTest extends CryptoTestCase
         };
 
         self::assertException(
-            SignatureVerificationException::class,
+            CoseKeyLoadException::class,
             'Failed to load public key%A',
             static fn () => $key->verify('x', 'y'),
         );

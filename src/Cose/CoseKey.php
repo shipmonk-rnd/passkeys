@@ -93,7 +93,7 @@ abstract readonly class CoseKey
      * {@see \openssl_verify()} consumes directly (EdDSA requires OpenSSL 3.0 / PHP 8.4).
      *
      * @see https://www.rfc-editor.org/rfc/rfc9053.html signature algorithms
-     * @throws SignatureVerificationException if OpenSSL rejects the key material
+     * @throws CoseKeyLoadException if OpenSSL rejects the key material
      */
     final public function verify(
         string $message,
@@ -105,7 +105,7 @@ abstract readonly class CoseKey
         $publicKey = $this->toOpenSslPublicKey();
 
         if ($publicKey === false) {
-            throw new SignatureVerificationException('Failed to load public key: ' . $this->getOpenSslErrors());
+            throw new CoseKeyLoadException('Failed to load public key: ' . $this->getOpenSslErrors());
         }
 
         $result = openssl_verify($message, $signature, $publicKey, $this->getOpenSslAlgorithm());

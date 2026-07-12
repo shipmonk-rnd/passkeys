@@ -592,7 +592,7 @@ final class RelyingPartyTest extends CryptoTestCase
     public function testAuthenticationRejectsUnusableStoredKey(): void
     {
         // An EC2 P-256 key (kty 2, crv 1) with an off-curve, all-zero point parses but cannot be
-        // loaded by OpenSSL, so verification raises a SignatureVerificationException that the façade
+        // loaded by OpenSSL, so verification raises a CoseKeyLoadException that the façade
         // repacks into a VerificationException.
         $record = new CredentialRecord(
             credentialId: self::CREDENTIAL_ID,

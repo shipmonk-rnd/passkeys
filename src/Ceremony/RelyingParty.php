@@ -4,7 +4,7 @@ namespace ShipMonk\Passkeys\Ceremony;
 
 use ShipMonk\Passkeys\Cbor\CborMapException;
 use ShipMonk\Passkeys\Cose\CoseKey;
-use ShipMonk\Passkeys\Cose\SignatureVerificationException;
+use ShipMonk\Passkeys\Cose\CoseKeyLoadException;
 use ShipMonk\Passkeys\Credential\AttestationObject;
 use ShipMonk\Passkeys\Credential\AuthenticatorAssertionResponse;
 use ShipMonk\Passkeys\Credential\AuthenticatorAttestationResponse;
@@ -80,7 +80,7 @@ final class RelyingParty
                 $e,
             );
 
-        } catch (SignatureVerificationException $e) {
+        } catch (CoseKeyLoadException $e) {
             // The attested key already passed COSE parsing and the algorithm allow-list, so
             // if OpenSSL still cannot load it, the key material itself is at fault.
             throw new VerificationException(
@@ -95,7 +95,7 @@ final class RelyingParty
      * @param PublicKeyCredential<AuthenticatorAttestationResponse> $credential
      *
      * @throws MalformedDataException
-     * @throws SignatureVerificationException
+     * @throws CoseKeyLoadException
      * @throws VerificationException
      */
     private function doVerifyRegistration(
@@ -206,7 +206,7 @@ final class RelyingParty
      *
      * @return RegistrationResult::ATTESTATION_*
      *
-     * @throws SignatureVerificationException if the attested credential key cannot be loaded
+     * @throws CoseKeyLoadException if the attested credential key cannot be loaded
      * @throws VerificationException
      */
     private function verifyAttestationStatement(
@@ -283,7 +283,7 @@ final class RelyingParty
                 $e,
             );
 
-        } catch (SignatureVerificationException $e) {
+        } catch (CoseKeyLoadException $e) {
             // A stored key the verifier cannot use is a stored-data fault; surfaced as a distinct
             // reason so it stays distinguishable from a genuine signature mismatch.
             throw new VerificationException(
@@ -298,7 +298,7 @@ final class RelyingParty
      * @param PublicKeyCredential<AuthenticatorAssertionResponse> $credential
      *
      * @throws MalformedDataException
-     * @throws SignatureVerificationException
+     * @throws CoseKeyLoadException
      * @throws VerificationException
      */
     private function doVerifyAuthentication(

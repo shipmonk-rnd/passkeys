@@ -7,7 +7,7 @@ use RuntimeException;
 /**
  * @api
  */
-final class SignatureVerificationException extends RuntimeException
+final class CoseKeyLoadException extends RuntimeException
 {
 
 }
