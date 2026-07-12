@@ -5,14 +5,14 @@ namespace ShipMonk\Passkeys\Enum;
 /**
  * @api
  */
-class AuthenticatorTransport
+final class AuthenticatorTransport
 {
 
-    final public const string USB = 'usb';
-    final public const string NFC = 'nfc';
-    final public const string BLE = 'ble';
-    final public const string SMART_CARD = 'smart-card';
-    final public const string HYBRID = 'hybrid';
-    final public const string INTERNAL = 'internal';
+    public const string USB = 'usb';
+    public const string NFC = 'nfc';
+    public const string BLE = 'ble';
+    public const string SMART_CARD = 'smart-card';
+    public const string HYBRID = 'hybrid';
+    public const string INTERNAL = 'internal';
 
 }
