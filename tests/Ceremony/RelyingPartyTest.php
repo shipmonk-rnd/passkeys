@@ -384,6 +384,24 @@ final class RelyingPartyTest extends CryptoTestCase
         );
     }
 
+    public function testRegistrationRejectsPackedSelfAttestationWithWellFormedButWrongSignature(): void
+    {
+        // The sibling test above flips the leading DER byte, corrupting the ASN.1 structure so that
+        // openssl_verify returns -1 (the malformed-signature path). This instead signs a *different*
+        // message with the same key: the signature is a syntactically valid ECDSA DER value that
+        // openssl_verify decodes and rejects with 0 — the genuine "valid shape, wrong signature" path.
+        $this->assertRegistrationFails(
+            VerificationException::INVALID_ATTESTATION_STATEMENT,
+            self::registrationCredential(
+                $this->coseEntries,
+                fmt: 'packed',
+                attestationKey: $this->privateKey,
+                attestationAlg: CoseAlgorithmIdentifier::ES256,
+                signWrongAttestationMessage: true,
+            ),
+        );
+    }
+
     public function testRegistrationRejectsOversizedCredentialId(): void
     {
         $this->assertRegistrationFails(
@@ -684,6 +702,38 @@ final class RelyingPartyTest extends CryptoTestCase
         self::assertSame(self::USER_HANDLE, $result->userHandle);
     }
 
+    public function testAuthenticationRejectsTopOriginWhenCrossOriginDisallowed(): void
+    {
+        $store = self::storeWith($this->registeredRecord());
+
+        $this->assertAuthenticationFails(
+            VerificationException::CROSS_ORIGIN_NOT_ALLOWED,
+            self::authenticationCredential(
+                $this->privateKey,
+                CoseAlgorithmIdentifier::ES256,
+                topOrigin: 'https://embedder.example',
+            ),
+            $store,
+        );
+    }
+
+    public function testAuthenticationRejectsUntrustedTopOrigin(): void
+    {
+        $store = self::storeWith($this->registeredRecord());
+
+        $this->assertVerificationFailure(VerificationException::UNTRUSTED_TOP_ORIGIN, fn () =>
+            (new RelyingParty())->verifyAuthentication(
+                self::authenticationCredential(
+                    $this->privateKey,
+                    CoseAlgorithmIdentifier::ES256,
+                    crossOrigin: true,
+                    topOrigin: 'https://embedder.example',
+                ),
+                self::authenticationExpectations(allowCrossOrigin: true, allowedTopOrigins: ['https://trusted.example']),
+                $store,
+            ));
+    }
+
     // --- Malformed responses fail closed as VerificationException -------------------------------
 
     public function testRegistrationRejectsMalformedAttestationObject(): void
@@ -857,8 +907,10 @@ final class RelyingPartyTest extends CryptoTestCase
     /**
      * `$attestationKey`/`$attestationAlg` build a `packed` self-attestation statement signed live
      * over `authData ‖ SHA-256(clientDataJSON)`; `$attStmtAlgOverride` declares a different `alg`
-     * in the statement than was used to sign, and `$attStmtOverride` replaces the statement CBOR
-     * wholesale (for the x5c / missing-field negatives).
+     * in the statement than was used to sign, `$tamperAttestationSignature` flips the leading DER
+     * byte (malformed signature), `$signWrongAttestationMessage` signs a different message so the
+     * signature is well-formed but does not verify, and `$attStmtOverride` replaces the statement
+     * CBOR wholesale (for the x5c / missing-field negatives).
      *
      * @param array<int, int|string>          $coseEntries
      * @param CoseAlgorithmIdentifier::*|null $attestationAlg
@@ -882,6 +934,7 @@ final class RelyingPartyTest extends CryptoTestCase
         ?int $attestationAlg = null,
         ?int $attStmtAlgOverride = null,
         bool $tamperAttestationSignature = false,
+        bool $signWrongAttestationMessage = false,
         ?string $attStmtOverride = null,
     ): PublicKeyCredential
     {
@@ -897,11 +950,12 @@ final class RelyingPartyTest extends CryptoTestCase
         $attStmt = $attStmtOverride ?? CborTestEncoder::map([]);
 
         if ($attestationKey !== null && $attestationAlg !== null) {
-            $signature = self::sign(
-                $attestationKey,
-                $authData . hash('sha256', $clientDataJson, binary: true),
-                $attestationAlg,
-            );
+            $message = $authData . hash('sha256', $clientDataJson, binary: true);
+
+            // Sign a *different* message with the same key: the produced signature stays syntactically
+            // valid (a well-formed ECDSA DER structure, so openssl_verify returns 0 — a genuine
+            // mismatch — rather than -1), but does not verify against authData ‖ SHA-256(clientDataJSON).
+            $signature = self::sign($attestationKey, $signWrongAttestationMessage ? $message . "\x00" : $message, $attestationAlg);
 
             if ($tamperAttestationSignature) {
                 $signature[0] = chr(ord($signature[0]) ^ 0x01);

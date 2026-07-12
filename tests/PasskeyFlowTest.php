@@ -250,6 +250,36 @@ final class PasskeyFlowTest extends CryptoTestCase
         );
     }
 
+    public function testHardeningFailsClosedForNonExistentAccount(): void
+    {
+        $flow = $this->hardenedFlowWithAlice();
+
+        // A username with no account yields an unpinned ceremony (no user handle) plus a fabricated
+        // decoy descriptor — the §14.6.2 mitigation shaping only the options response.
+        $options = $flow->authenticationOptions('ghost@example.com');
+        $pending = $this->pending->pendingAuthentications[base64_encode($options->challenge)] ?? null;
+        self::assertNotNull($pending);
+        self::assertNull($pending->userHandle);
+
+        // Completing that ceremony proves the decoy only shapes the options and never lets a login
+        // through: the ceremony being unpinned, the allow-list check is skipped and the credential
+        // lookup runs first — so the fabricated descriptor id (never registered for anyone) fails
+        // closed with UNKNOWN_CREDENTIAL before any signature/authenticator-data content is inspected.
+        $this->assertAuthenticationFails(
+            VerificationException::UNKNOWN_CREDENTIAL,
+            $flow,
+            self::assertionBody(
+                $this->privateKey,
+                $options->challenge,
+                $this->onlyAllowCredentialId($options),
+                'ghost-handle-000001',
+            ),
+        );
+
+        // Nothing was persisted for the ghost account — the flow failed closed.
+        self::assertSame([], $this->store->updatedCredentials);
+    }
+
     public function testHardeningKeepsRealCredentialsForKnownUserWithPasskeys(): void
     {
         $flow = $this->hardenedFlowWithAlice();
