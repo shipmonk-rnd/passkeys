@@ -7,36 +7,34 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use ShipMonk\Passkeys\Ceremony\AuthenticationResult;
 use ShipMonk\Passkeys\Ceremony\CredentialRecord;
+use ShipMonk\Passkeys\Ceremony\RelyingParty;
 use ShipMonk\Passkeys\Cose\CoseKey;
 use ShipMonk\Passkeys\RegisteredPasskey;
-use ShipMonk\PasskeysSymfonyDemo\Doctrine\BinaryStringType;
-use ShipMonk\PasskeysSymfonyDemo\Doctrine\CoseKeyType;
 
 /**
  * A registered passkey — the {@link https://w3c.github.io/webauthn/#credential-record credential
  * record} of WebAuthn §7.1 step 27 as a Doctrine entity. It converts to and from the library's
- * {@see CredentialRecord}, which is all a {@see \ShipMonk\Passkeys\PasskeyFlow} sees; the binary
- * columns (credential id, public key) are mapped through the custom {@see BinaryStringType} /
- * {@see CoseKeyType} so the properties stay plain values.
+ * {@see CredentialRecord}, which is all a {@see \ShipMonk\Passkeys\PasskeyFlow} sees. The credential
+ * id and the public key are plain Doctrine `binary` columns (raw bytes); the public key round-trips
+ * through {@see CoseKey::toBytes()} / {@see CoseKey::fromBytes()} right here in the entity.
  *
  * The `authenticator_attachment` and `created_at` columns are the relying party's own additions
  * (used to label the passkey on the manage page), not part of the credential record.
  */
 #[ORM\Entity]
-#[ORM\Table(name: 'credentials')]
-class Credential
+class PasskeyCredential
 {
 
     #[ORM\Id]
-    #[ORM\Column(type: BinaryStringType::NAME)]
+    #[ORM\Column(type: Types::BINARY, length: RelyingParty::MAX_CREDENTIAL_ID_LENGTH)]
     private string $credentialId;
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'credentials')]
     #[ORM\JoinColumn(nullable: false)]
     private User $user;
 
-    #[ORM\Column(type: CoseKeyType::NAME)]
-    private CoseKey $publicKey;
+    #[ORM\Column(type: Types::BINARY)]
+    private string $publicKey;
 
     #[ORM\Column]
     private int $signCount;
@@ -71,7 +69,7 @@ class Credential
 
         $this->credentialId = $record->credentialId;
         $this->user = $user;
-        $this->publicKey = $record->publicKey;
+        $this->publicKey = $record->publicKey->toBytes();
         $this->signCount = $record->signCount;
         $this->uvInitialized = $record->uvInitialized;
         $this->backupEligible = $record->backupEligible;
@@ -88,7 +86,7 @@ class Credential
     {
         return new CredentialRecord(
             credentialId: $this->credentialId,
-            publicKey: $this->publicKey,
+            publicKey: CoseKey::fromBytes($this->publicKey),
             signCount: $this->signCount,
             userHandle: $this->user->getUserHandle(),
             uvInitialized: $this->uvInitialized,

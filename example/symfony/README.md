@@ -44,22 +44,23 @@ the whole `var/`, which also holds Symfony's cache) and run it again.
   library's `PasskeyStore` / `PendingCeremonyStore` interfaces to the implementations below,
   enables the session, and points Doctrine at a SQLite database with the two custom column types.
   `getProjectDir()` is pinned to this directory because the example runs off the *root* `vendor/`.
-- **`src/Controller/`** — the endpoints, one thin controller per concern, mirroring the plain-php
-  routes exactly. `PasswordLoginController` verifies the seeded password and starts a session;
-  `PasskeyRegistrationController` adds a passkey to the *signed-in* account (pinned to it with
-  `expectedUserHandle`) and removes one (returning a `signalAllAcceptedCredentials` payload so the
-  browser prunes it); `PasskeyLoginController` runs usernameless passkey sign-in; `HomeController`
-  serves the page and the `/me` + `/logout` session endpoints. Failed passkey checks surface the
-  `VerificationException`'s `->reason`.
+- **`src/Controller/`** — the endpoints, one thin controller per concern.
+  `PasswordLoginController` verifies the seeded password and starts a session (`/login/password`);
+  `PasskeyManageController` lists the account's passkeys, adds one to the *signed-in* account (pinned
+  to it with `expectedUserHandle`), and removes one (returning a `signalAllAcceptedCredentials`
+  payload so the browser prunes it); `PasskeyLoginController` runs usernameless passkey sign-in (`/login/passkey`);
+  `HomeController` serves the page and the `/me` + `/logout` session endpoints. Failed passkey checks
+  surface the `VerificationException`'s `->reason`.
 - **`src/Passkey/DoctrinePasskeyStore.php`** — the library's `PasskeyStore` over an
-  `EntityManagerInterface`: `find` / `persist` / `remove` against the `User` and `Credential`
+  `EntityManagerInterface`: `find` / `persist` / `remove` against the `User` and `PasskeyCredential`
   entities, converting to and from the library's `CredentialRecord` / `RegisteredPasskey` DTOs. It
   also carries the account lookups the controllers need (`findUserByEmail`, `deleteCredential`, …).
-- **`src/Entity/`** + **`src/Doctrine/`** — the interesting part of an ORM-backed store: the
-  **binary** WebAuthn fields. Doctrine's built-in `binary` / `blob` types return *stream resources*,
-  so two small custom DBAL types keep the properties as plain values — `BinaryStringType` for the
-  user handle (64 bytes) and credential id, and `CoseKeyType` mapping the public key to a real
-  `CoseKey` via `CoseKey::toBytes()` / `fromBytes()`. Both store base64 in a TEXT column.
+- **`src/Entity/`** — the interesting part of an ORM-backed store: the **binary** WebAuthn fields.
+  The user handle, credential id, and COSE public key are all stored with Doctrine's built-in
+  `binary` type (a `BLOB` on SQLite, returned as a plain string); `PasskeyCredential` converts the
+  public key to and from the library's `CoseKey` explicitly via `CoseKey::toBytes()` /
+  `CoseKey::fromBytes()`. (Doctrine's `blob` type, by contrast, hands back a stream resource —
+  awkward for a primary key and for passing raw bytes to the library, hence `binary`.)
 - **`src/Passkey/SessionPendingCeremonyStore.php`** — the `PendingCeremonyStore` on the Symfony
   session (via `RequestStack`): unfinished ceremonies keyed by challenge, consumed on use so each
   challenge is single-use, and capped per session.

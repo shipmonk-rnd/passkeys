@@ -6,8 +6,6 @@ use Doctrine\Bundle\DoctrineBundle\DoctrineBundle;
 use ShipMonk\Passkeys\PasskeyFlow;
 use ShipMonk\Passkeys\PasskeyStore;
 use ShipMonk\Passkeys\PendingCeremonyStore;
-use ShipMonk\PasskeysSymfonyDemo\Doctrine\BinaryStringType;
-use ShipMonk\PasskeysSymfonyDemo\Doctrine\CoseKeyType;
 use ShipMonk\PasskeysSymfonyDemo\Passkey\DoctrinePasskeyStore;
 use ShipMonk\PasskeysSymfonyDemo\Passkey\SessionPendingCeremonyStore;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
@@ -65,11 +63,6 @@ final class Kernel extends BaseKernel
         $container->extension('doctrine', [
             'dbal' => [
                 'url' => 'sqlite:///%kernel.project_dir%/var/passkeys.sqlite',
-                // The custom types that keep the binary WebAuthn columns as plain PHP values.
-                'types' => [
-                    BinaryStringType::NAME => BinaryStringType::class,
-                    CoseKeyType::NAME => CoseKeyType::class,
-                ],
             ],
             'orm' => [
                 'controller_resolver' => ['auto_mapping' => false],
@@ -89,11 +82,10 @@ final class Kernel extends BaseKernel
             ->autowire()
             ->autoconfigure();
 
-        // Controllers and the two store implementations are ordinary autowired services. Entities
-        // (managed by Doctrine) and the DBAL types (instantiated by Doctrine, not the container) are
-        // not services.
+        // Controllers and the two store implementations are ordinary autowired services; the
+        // entities (managed by Doctrine) are not.
         $services->load('ShipMonk\\PasskeysSymfonyDemo\\', __DIR__ . '/')
-            ->exclude(__DIR__ . '/{Entity,Doctrine,Kernel.php}');
+            ->exclude(__DIR__ . '/{Entity,Kernel.php}');
 
         // The high-level flow with this relying party's identity. rpId / origin assume localhost:8000
         // (WebAuthn treats localhost as a secure context); change them together if you serve it

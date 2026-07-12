@@ -2,16 +2,20 @@
 
 namespace ShipMonk\PasskeysSymfonyDemo\Controller;
 
+use DateTimeInterface;
 use ShipMonk\Passkeys\Ceremony\VerificationException;
 use ShipMonk\Passkeys\PasskeyFlow;
 use ShipMonk\PasskeysSymfonyDemo\Account\UserSession;
+use ShipMonk\PasskeysSymfonyDemo\Entity\PasskeyCredential;
 use ShipMonk\PasskeysSymfonyDemo\Passkey\DoctrinePasskeyStore;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use function array_map;
 use function base64_decode;
+use function base64_encode;
 
 /**
  * Passkey management for the already-signed-in account: add a passkey, and remove one. There is no
@@ -19,7 +23,7 @@ use function base64_decode;
  * proved who it is (password login), which is the trust model a real password-first service should
  * follow.
  */
-final class PasskeyRegistrationController extends AbstractController
+final class PasskeyManageController extends AbstractController
 {
 
     public function __construct(
@@ -30,10 +34,31 @@ final class PasskeyRegistrationController extends AbstractController
     {
     }
 
+    #[Route('/passkeys/list', methods: ['GET'])]
+    public function list(): JsonResponse
+    {
+        $user = $this->userSession->getUser();
+
+        if ($user === null) {
+            return $this->mustBeSignedIn();
+        }
+
+        $passkeys = array_map(
+            static fn (PasskeyCredential $credential): array => [
+                'id' => base64_encode($credential->getCredentialId()),
+                'attachment' => $credential->getAuthenticatorAttachment(),
+                'createdAt' => $credential->getCreatedAt()->format(DateTimeInterface::ATOM),
+            ],
+            $user->getCredentials(),
+        );
+
+        return $this->json(['credentials' => $passkeys]);
+    }
+
     // Enrol an additional passkey for the signed-in account (navigator.credentials.create). The flow
     // issues the challenge, excludes already-enrolled authenticators, and asks for a discoverable
     // credential with user verification — the passkey defaults.
-    #[Route('/register/options', methods: ['POST'])]
+    #[Route('/passkeys/register-options', methods: ['POST'])]
     public function options(): JsonResponse
     {
         $user = $this->userSession->getUser();
@@ -42,12 +67,10 @@ final class PasskeyRegistrationController extends AbstractController
             return $this->mustBeSignedIn();
         }
 
-        $options = $this->flow->registrationOptions($user->getUserHandle(), $user->getEmail());
-
-        return JsonResponse::fromJsonString($options->toJson());
+        return $this->json($this->flow->registrationOptions($user->getUserHandle(), $user->getEmail()));
     }
 
-    #[Route('/register/verify', methods: ['POST'])]
+    #[Route('/passkeys/register', methods: ['POST'])]
     public function verify(Request $request): JsonResponse
     {
         $user = $this->userSession->getUser();

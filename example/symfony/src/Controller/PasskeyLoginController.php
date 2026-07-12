@@ -2,6 +2,7 @@
 
 namespace ShipMonk\PasskeysSymfonyDemo\Controller;
 
+use LogicException;
 use ShipMonk\Passkeys\Ceremony\VerificationException;
 use ShipMonk\Passkeys\PasskeyFlow;
 use ShipMonk\PasskeysSymfonyDemo\Account\UserSession;
@@ -29,24 +30,21 @@ final class PasskeyLoginController extends AbstractController
     {
     }
 
-    #[Route('/login/options', methods: ['POST'])]
+    #[Route('/login/passkey-options', methods: ['POST'])]
     public function options(): JsonResponse
     {
-        return JsonResponse::fromJsonString($this->flow->authenticationOptions()->toJson());
+        return $this->json($this->flow->authenticationOptions());
     }
 
-    #[Route('/login/verify', methods: ['POST'])]
+    #[Route('/login/passkey', methods: ['POST'])]
     public function verify(Request $request): JsonResponse
     {
         try {
             $result = $this->flow->authenticate($request->getContent());
-            $user = $this->store->findUserByHandle($result->userHandle);
+            $user = $this->store->findUserByHandle($result->userHandle) ?? throw new LogicException('User not found');
+            $this->userSession->signIn($user);
 
-            if ($user !== null) {
-                $this->userSession->signIn($user);
-            }
-
-            return $this->json(['ok' => true, 'email' => $user?->getEmail() ?? 'unknown']);
+            return $this->json(['ok' => true, 'email' => $user->getEmail()]);
 
         } catch (VerificationException $e) {
             return $this->json(['ok' => false, 'reason' => $e->reason, 'message' => $e->getMessage()], Response::HTTP_BAD_REQUEST);

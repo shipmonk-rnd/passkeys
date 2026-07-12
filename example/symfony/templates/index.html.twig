@@ -103,7 +103,7 @@
 				out.classList.add('hidden');
 				inn.classList.remove('hidden');
 				document.getElementById('whoami').textContent = me.email;
-				credentials = me.credentials;
+				credentials = (await (await fetch('/passkeys/list')).json()).credentials;
 
 				const list = document.getElementById('passkeys');
 				list.innerHTML = credentials
@@ -120,7 +120,7 @@
 		// Add a passkey to the already-signed-in account.
 		async function addPasskey() {
 			log('Requesting registration options…');
-			const opt = await post('/register/options', {});
+			const opt = await post('/passkeys/register-options', {});
 			if (!opt.ok) return log(opt.data.message || 'Could not start registration', 'err');
 
 			log('Waiting for your authenticator…');
@@ -128,7 +128,7 @@
 				publicKey: PublicKeyCredential.parseCreationOptionsFromJSON(opt.data),
 			});
 
-			const res = await post('/register/verify', credential.toJSON());
+			const res = await post('/passkeys/register', credential.toJSON());
 			log(res.ok ? 'Passkey added.' : JSON.stringify(res.data, null, 2), res.ok ? 'ok' : 'err');
 			await refresh();
 		}
@@ -167,7 +167,7 @@
 		// discoverable passkey identifies the account on its own).
 		async function loginWithPasskey() {
 			log('Requesting login options…');
-			const opt = await post('/login/options', {});
+			const opt = await post('/login/passkey-options', {});
 			if (!opt.ok) return log(opt.data.message || 'Could not start login', 'err');
 
 			log('Waiting for your authenticator…');
@@ -175,7 +175,7 @@
 				publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(opt.data),
 			});
 
-			const res = await post('/login/verify', credential.toJSON());
+			const res = await post('/login/passkey', credential.toJSON());
 			log(res.ok ? `Signed in as ${res.data.email}.` : JSON.stringify(res.data, null, 2), res.ok ? 'ok' : 'err');
 			await refresh();
 		}
@@ -191,7 +191,7 @@
 
 			conditional = new AbortController();
 			try {
-				const opt = await post('/login/options', {});
+				const opt = await post('/login/passkey-options', {});
 				if (!opt.ok) return;
 
 				const credential = await navigator.credentials.get({
@@ -200,7 +200,7 @@
 					publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(opt.data),
 				});
 
-				const res = await post('/login/verify', credential.toJSON());
+				const res = await post('/login/passkey', credential.toJSON());
 				log(res.ok ? `Signed in as ${res.data.email}.` : JSON.stringify(res.data, null, 2), res.ok ? 'ok' : 'err');
 				await refresh();
 			} catch (e) {

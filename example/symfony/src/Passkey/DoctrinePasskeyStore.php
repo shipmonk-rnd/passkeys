@@ -9,20 +9,22 @@ use ShipMonk\Passkeys\Ceremony\CredentialRecord;
 use ShipMonk\Passkeys\Options\PublicKeyCredentialUserEntity;
 use ShipMonk\Passkeys\PasskeyStore;
 use ShipMonk\Passkeys\RegisteredPasskey;
-use ShipMonk\PasskeysSymfonyDemo\Entity\Credential;
+use ShipMonk\PasskeysSymfonyDemo\Entity\PasskeyCredential;
 use ShipMonk\PasskeysSymfonyDemo\Entity\User;
 use function array_map;
 
 /**
  * The library's {@see PasskeyStore} backed by Doctrine ORM — the durable storage a
  * {@see \ShipMonk\Passkeys\PasskeyFlow} runs against. It translates between the library's
- * {@see CredentialRecord} / {@see RegisteredPasskey} DTOs and the {@see User} / {@see Credential}
+ * {@see CredentialRecord} / {@see RegisteredPasskey} DTOs and the {@see User} / {@see PasskeyCredential}
  * entities, and adds the account lookups the demo's own endpoints need (password login, the
  * manage-passkeys page).
  *
- * The binary columns are handled by the entities' custom Doctrine types, so nothing here base64s
- * anything: it is plain `find` / `persist` / `remove`, the same calls a production relying party
- * would make against its own entities.
+ * The binary WebAuthn fields are mapped by the entities themselves (Doctrine's built-in `binary`
+ * type; {@see \ShipMonk\PasskeysSymfonyDemo\Entity\PasskeyCredential} converts the public key
+ * to/from a {@see \ShipMonk\Passkeys\Cose\CoseKey}), so nothing here encodes anything: it is plain
+ * `find` / `persist` / `remove`, the same calls a production relying party would make against its
+ * own entities.
  */
 final class DoctrinePasskeyStore implements PasskeyStore
 {
@@ -37,7 +39,7 @@ final class DoctrinePasskeyStore implements PasskeyStore
 
     public function findCredentialByCredentialId(string $credentialId): ?CredentialRecord
     {
-        return $this->entityManager->find(Credential::class, $credentialId)?->toCredentialRecord();
+        return $this->entityManager->find(PasskeyCredential::class, $credentialId)?->toCredentialRecord();
     }
 
     public function findUserHandleByUsername(string $username): ?string
@@ -59,7 +61,7 @@ final class DoctrinePasskeyStore implements PasskeyStore
         }
 
         return array_map(
-            static fn (Credential $credential) => $credential->toCredentialRecord(),
+            static fn (PasskeyCredential $credential) => $credential->toCredentialRecord(),
             $user->getCredentials(),
         );
     }
@@ -84,14 +86,14 @@ final class DoctrinePasskeyStore implements PasskeyStore
             throw new LogicException('No account exists for the registered passkey');
         }
 
-        $this->entityManager->persist(new Credential($user, $passkey));
+        $this->entityManager->persist(new PasskeyCredential($user, $passkey));
         $this->entityManager->flush();
     }
 
     public function updateCredential(AuthenticationResult $result): void
     {
         // A real relying party could additionally alert on $result->possibleClone.
-        $credential = $this->entityManager->find(Credential::class, $result->credentialId);
+        $credential = $this->entityManager->find(PasskeyCredential::class, $result->credentialId);
 
         if ($credential === null) {
             return;
@@ -115,7 +117,7 @@ final class DoctrinePasskeyStore implements PasskeyStore
 
     public function findUserByHandle(string $userHandle): ?User
     {
-        return $this->entityManager->getRepository(User::class)->findOneBy(['userHandle' => $userHandle]);
+        return $this->entityManager->getRepository(User::class)->findOneBy(['passkeyUserHandle' => $userHandle]);
     }
 
     /**
@@ -130,7 +132,7 @@ final class DoctrinePasskeyStore implements PasskeyStore
         string $credentialId,
     ): void
     {
-        $credential = $this->entityManager->find(Credential::class, $credentialId);
+        $credential = $this->entityManager->find(PasskeyCredential::class, $credentialId);
 
         if ($credential === null || $credential->getUser()->getId() !== $user->getId()) {
             return;

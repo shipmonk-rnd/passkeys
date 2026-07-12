@@ -67,7 +67,7 @@ final class SetupCommand extends Command
             $this->entityManager->persist(new User(
                 email: $email,
                 passwordHash: password_hash($password, PASSWORD_DEFAULT),
-                userHandle: $this->flow->generateUserHandle(),
+                passkeyUserHandle: $this->flow->generateUserHandle(),
             ));
             $io->writeln("Seeded <comment>{$email}</comment> / <comment>{$password}</comment>.");
         }
