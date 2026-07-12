@@ -32,8 +32,8 @@ namespace ShipMonk\PasskeysDemo;
 
 use ShipMonk\Passkeys\Ceremony\VerificationException;
 use ShipMonk\Passkeys\Json\JsonObject;
+use ShipMonk\Passkeys\Json\JsonObjectException;
 use ShipMonk\Passkeys\PasskeyFlow;
-use Throwable;
 use function file_get_contents;
 use function header;
 use function http_response_code;
@@ -157,7 +157,7 @@ match ($path) {
             $email = $body->getString('email');
             $password = $body->getString('password');
 
-        } catch (Throwable $e) {
+        } catch (JsonObjectException $e) {
             respond(400, ['ok' => false, 'message' => 'Email and password are required.']);
             return;
         }
@@ -227,7 +227,7 @@ match ($path) {
         try {
             $credentialId = body()->getString('id');
 
-        } catch (Throwable $e) {
+        } catch (JsonObjectException $e) {
             respond(400, ['ok' => false, 'message' => 'A credential id is required.']);
             return;
         }

@@ -79,9 +79,9 @@ final class PasskeyStore implements PasskeyStoreInterface
         $this->db->exec('
 			CREATE TABLE IF NOT EXISTS users (
 				id                  INTEGER PRIMARY KEY,
-				passkey_user_handle BLOB NOT NULL UNIQUE,
 				email               TEXT NOT NULL UNIQUE,
-				password_hash       TEXT NOT NULL
+				password_hash       TEXT NOT NULL,
+				passkey_user_handle BLOB NOT NULL UNIQUE
 			);
 
 			CREATE TABLE IF NOT EXISTS credentials (
@@ -177,7 +177,6 @@ final class PasskeyStore implements PasskeyStoreInterface
             return null;
         }
 
-        // The demo has no separate display name, so the email doubles as both — as at registration.
         return new PublicKeyCredentialUserEntity(id: $user['passkey_user_handle'], name: $user['email'], displayName: $user['email']);
     }
 
