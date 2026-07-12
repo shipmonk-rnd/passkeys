@@ -25,7 +25,7 @@ final class SessionPendingCeremonyStore implements PendingCeremonyStore
 
     public function rememberPendingAuthentication(PendingAuthentication $pending): void
     {
-        $_SESSION['pending_authentications'][$pending->challenge] = $pending->userHandle;
+        $_SESSION['pending_authentications'][$pending->challenge] = $pending;
 
         while (count($_SESSION['pending_authentications']) > self::MAX_PENDING) {
             array_shift($_SESSION['pending_authentications']);
@@ -38,15 +38,15 @@ final class SessionPendingCeremonyStore implements PendingCeremonyStore
             return null;
         }
 
-        $userHandle = $_SESSION['pending_authentications'][$challenge];
+        $pending = $_SESSION['pending_authentications'][$challenge];
         unset($_SESSION['pending_authentications'][$challenge]);
 
-        return new PendingAuthentication($challenge, $userHandle);
+        return $pending;
     }
 
     public function rememberPendingRegistration(PendingRegistration $pending): void
     {
-        $_SESSION['pending_registrations'][$pending->challenge] = $pending->userHandle;
+        $_SESSION['pending_registrations'][$pending->challenge] = $pending;
 
         while (count($_SESSION['pending_registrations']) > self::MAX_PENDING) {
             array_shift($_SESSION['pending_registrations']);
@@ -59,10 +59,10 @@ final class SessionPendingCeremonyStore implements PendingCeremonyStore
             return null;
         }
 
-        $userHandle = $_SESSION['pending_registrations'][$challenge];
+        $pending = $_SESSION['pending_registrations'][$challenge];
         unset($_SESSION['pending_registrations'][$challenge]);
 
-        return new PendingRegistration($challenge, $userHandle);
+        return $pending;
     }
 
 }
