@@ -1,4 +1,5 @@
 /cache
 /composer.lock
-/example/passkeys.sqlite
+/example/plain-php/passkeys.sqlite
+/example/symfony/var
 /vendor

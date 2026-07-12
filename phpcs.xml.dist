@@ -10,12 +10,17 @@
     <file>src/</file>
     <file>tests/</file>
 
+    <!-- The Symfony example is a self-contained framework app: it follows Doctrine/Symfony idioms
+         (e.g. `use ...Mapping as ORM` attributes) that clash with this standard, and its var/ holds
+         generated container/cache files. It is not linted here. -->
+    <exclude-pattern>example/symfony/*</exclude-pattern>
+
     <rule ref="ShipMonkCodingStandard">
         <!-- line-comment section dividers above functions are used throughout -->
         <exclude name="Squiz.Commenting.FunctionComment.WrongStyle"/>
         <!-- COSE algorithm constants follow spec names (EdDSA, Ed25519, Ed448) -->
         <exclude name="Generic.NamingConventions.UpperCaseConstantName"/>
-        <!-- example/server.php is deliberately a flat single-file script -->
+        <!-- example/plain-php/server.php is deliberately a flat single-file script -->
         <exclude name="Squiz.Functions.GlobalFunction"/>
     </rule>
 

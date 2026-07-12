@@ -10,7 +10,7 @@
  *
  * Run it with PHP's built-in server from the project root:
  *
- *     php -S localhost:8000 example/server.php
+ *     php -S localhost:8000 example/plain-php/server.php
  *
  * then open http://localhost:8000 and sign in with one of the seeded accounts (the demo passwords
  * are printed on the page). The RP id / origin below assume exactly that host and port; change
@@ -46,7 +46,7 @@ use function session_start;
 use const JSON_THROW_ON_ERROR;
 use const PHP_URL_PATH;
 
-require __DIR__ . '/../vendor/autoload.php';
+require __DIR__ . '/../../vendor/autoload.php';
 require __DIR__ . '/PasskeyStore.php';
 require __DIR__ . '/SessionPendingCeremonyStore.php';
 

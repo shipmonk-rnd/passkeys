@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>ShipMonk\Passkeys passkey demo</title>
+	<title>ShipMonk\Passkeys — Symfony demo</title>
 	<style>
 		body { font: 16px/1.5 system-ui, sans-serif; max-width: 42rem; margin: 3rem auto; padding: 0 1rem; color: #1a1a1a; }
 		h1 { font-size: 1.4rem; }
@@ -29,11 +29,12 @@
 	</style>
 </head>
 <body>
-	<h1>🔑 ShipMonk\Passkeys passkey demo</h1>
-	<p class="lead">A password-first service where passkeys are an <em>added</em> convenience. Sign in
-		with your password, then add and manage passkeys for your account. Once you have one, sign in
-		with it via the button or via autofill on the email field (conditional mediation). Ceremonies
-		are verified server-side by <code>ShipMonk\Passkeys\PasskeyFlow</code>.</p>
+	<h1>🔑 ShipMonk\Passkeys — Symfony demo</h1>
+	<p class="lead">The same password-first relying party as the plain-PHP example, rebuilt on Symfony
+		(<code>MicroKernelTrait</code>) with a Doctrine-backed <code>PasskeyStore</code>. Sign in with
+		your password, then add and manage passkeys for your account. Once you have one, sign in with it
+		via the button or via autofill on the email field (conditional mediation). Ceremonies are
+		verified server-side by <code>ShipMonk\Passkeys\PasskeyFlow</code>.</p>
 
 	<section id="signed-out" class="hidden">
 		<form id="password-form">
@@ -71,7 +72,7 @@
 	<script>
 		const logEl = document.getElementById('log');
 		const log = (msg, cls = '') => { logEl.textContent = msg; logEl.className = cls; };
-		const supported = window.PublicKeyCredential && PublicKeyCredential.parseCreationOptionsFromJSON;
+		const supported = window.PublicKeyCredential && PublicKeyCredential.parseCreationOptionsFromJSON && PublicKeyCredential.parseRequestOptionsFromJSON;
 		let credentials = [];
 
 		async function post(url, obj) {
@@ -102,7 +103,7 @@
 				out.classList.add('hidden');
 				inn.classList.remove('hidden');
 				document.getElementById('whoami').textContent = me.email;
-				credentials = me.credentials;
+				credentials = (await (await fetch('/passkeys/list')).json()).credentials;
 
 				const list = document.getElementById('passkeys');
 				list.innerHTML = credentials
@@ -119,7 +120,7 @@
 		// Add a passkey to the already-signed-in account.
 		async function addPasskey() {
 			log('Requesting registration options…');
-			const opt = await post('/register/options', {});
+			const opt = await post('/passkeys/register-options', {});
 			if (!opt.ok) return log(opt.data.message || 'Could not start registration', 'err');
 
 			log('Waiting for your authenticator…');
@@ -127,7 +128,7 @@
 				publicKey: PublicKeyCredential.parseCreationOptionsFromJSON(opt.data),
 			});
 
-			const res = await post('/register/verify', credential.toJSON());
+			const res = await post('/passkeys/register', credential.toJSON());
 			log(res.ok ? 'Passkey added.' : JSON.stringify(res.data, null, 2), res.ok ? 'ok' : 'err');
 			await refresh();
 		}
@@ -166,7 +167,7 @@
 		// discoverable passkey identifies the account on its own).
 		async function loginWithPasskey() {
 			log('Requesting login options…');
-			const opt = await post('/login/options', {});
+			const opt = await post('/login/passkey-options', {});
 			if (!opt.ok) return log(opt.data.message || 'Could not start login', 'err');
 
 			log('Waiting for your authenticator…');
@@ -174,7 +175,7 @@
 				publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(opt.data),
 			});
 
-			const res = await post('/login/verify', credential.toJSON());
+			const res = await post('/login/passkey', credential.toJSON());
 			log(res.ok ? `Signed in as ${res.data.email}.` : JSON.stringify(res.data, null, 2), res.ok ? 'ok' : 'err');
 			await refresh();
 		}
@@ -190,7 +191,7 @@
 
 			conditional = new AbortController();
 			try {
-				const opt = await post('/login/options', {});
+				const opt = await post('/login/passkey-options', {});
 				if (!opt.ok) return;
 
 				const credential = await navigator.credentials.get({
@@ -199,7 +200,7 @@
 					publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(opt.data),
 				});
 
-				const res = await post('/login/verify', credential.toJSON());
+				const res = await post('/login/passkey', credential.toJSON());
 				log(res.ok ? `Signed in as ${res.data.email}.` : JSON.stringify(res.data, null, 2), res.ok ? 'ok' : 'err');
 				await refresh();
 			} catch (e) {
