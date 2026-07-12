@@ -119,9 +119,6 @@ final class BytesReader
      */
     public function bytes(int $length): string
     {
-        // Subtract on the bounded side ($this->offset <= $this->length invariant) so the check stays
-        // in exact integer arithmetic. Adding instead ($this->offset + $length) would silently promote
-        // to an imprecise float once $length (attacker-controlled, up to ~PHP_INT_MAX) overflows the int range.
         if ($length > $this->length - $this->offset) {
             throw new BytesReaderException('Unexpected end of data');
         }
