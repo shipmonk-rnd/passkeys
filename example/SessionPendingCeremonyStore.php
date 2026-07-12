@@ -13,9 +13,7 @@ use function count;
  * The demo's {@see PendingCeremonyStore}: pending ceremonies live in the PHP session — the right
  * scope, since a ceremony belongs to one browser session — keyed by the raw challenge bytes (PHP
  * arrays and session serialization are binary-safe) and capped so a page that keeps requesting
- * options cannot grow the session unboundedly. Each ceremony is stored as its whole
- * {@see PendingAuthentication} / {@see PendingRegistration} object, so no field — such as a
- * registration's `conditionalMediation` flag — is lost on the round-trip.
+ * options cannot grow the session unboundedly.
  */
 final class SessionPendingCeremonyStore implements PendingCeremonyStore
 {
