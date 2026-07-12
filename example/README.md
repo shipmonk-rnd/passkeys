@@ -21,8 +21,9 @@ Then open <http://localhost:8000>:
    your account. Try a different email to create a second, separate account.
 
 > RP id / origin are hard-coded to `localhost` / `http://localhost:8000` in `server.php` (WebAuthn
-> treats `localhost` as a secure context, so no HTTPS is needed locally). Change `RP_ID` and
-> `ORIGIN` together if you serve it elsewhere. Needs a recent browser for the
+> treats `localhost` as a secure context, so no HTTPS is needed locally). Change the `rpId` and
+> `origins` arguments passed to `PasskeyFlow` in `server.php` together if you serve it elsewhere.
+> Needs a recent browser for the
 > `PublicKeyCredential.parseCreationOptionsFromJSON()` / `.toJSON()` helpers the page uses.
 
 ## What to look at
