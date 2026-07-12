@@ -119,7 +119,7 @@ final class BytesReader
      */
     public function bytes(int $length): string
     {
-        if ($this->offset + $length > $this->length) {
+        if ($length > $this->length - $this->offset) {
             throw new BytesReaderException('Unexpected end of data');
         }
 
