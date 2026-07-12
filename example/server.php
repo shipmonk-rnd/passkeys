@@ -18,7 +18,8 @@
  * resolving/creating accounts and the session.
  *
  * Accounts and credentials persist in a SQLite file next to this script (see PasskeyStore); only
- * the sign-in state and pending ceremonies live in $_SESSION.
+ * the sign-in state and pending ceremonies live in $_SESSION. The session cookie is hardened
+ * (HttpOnly, SameSite=Lax) and the session id is rotated on login to defeat session fixation.
  *
  * Deliberately NOT production code — importantly, the very first registration for an email is
  * allowed without proving ownership, so anyone can squat any email (first come, first served). A
@@ -42,6 +43,8 @@ use function http_response_code;
 use function is_string;
 use function json_encode;
 use function parse_url;
+use function session_regenerate_id;
+use function session_set_cookie_params;
 use function session_start;
 use const FILTER_VALIDATE_EMAIL;
 use const JSON_THROW_ON_ERROR;
@@ -51,6 +54,13 @@ require __DIR__ . '/../vendor/autoload.php';
 require __DIR__ . '/PasskeyStore.php';
 require __DIR__ . '/SessionPendingCeremonyStore.php';
 
+// Harden the session cookie before the session starts. secure => true is deliberately omitted:
+// this demo runs over plain HTTP on localhost, where a Secure cookie would not be sent and would
+// break sign-in. A production deployment served over HTTPS should also set secure => true.
+session_set_cookie_params([
+    'httponly' => true,
+    'samesite' => 'Lax',
+]);
 session_start();
 $store = new PasskeyStore(__DIR__ . '/passkeys.sqlite');
 
@@ -86,6 +96,9 @@ function body(): JsonObject
 // account (PasskeyStore::findUserByHandle) and the session keys off the integer user id.
 function signIn(int $userId): void
 {
+    // Rotate the session id on this privilege elevation (login) to defeat session fixation: any id
+    // an attacker may have planted before authentication is discarded. Covers both verify endpoints.
+    session_regenerate_id(true);
     $_SESSION['auth_user_id'] = $userId;
 }
 
@@ -180,14 +193,33 @@ match ($path) {
             respond(200, $options->toJson());
 
         } catch (Throwable $e) {
-            respond(400, ['ok' => false, 'message' => $e->getMessage()]);
+            // Never surface the raw exception message to the client — it can leak internal detail.
+            respond(400, ['ok' => false, 'message' => 'Could not start the ceremony.']);
         }
     })(),
 
     '/register/verify' => (static function () use ($store, $flow): void {
         try {
+            // When a user is signed in this is the "add a passkey" path, so pin the ceremony to that
+            // account's handle: the flow then rejects a ceremony minted for a different account
+            // before it verifies or persists anything, and cannot cross-attach a credential. On the
+            // signed-out passkey-first signup path the account is not yet known, so nothing is pinned.
+            $currentId = currentUserId();
+            $expectedUserHandle = null;
+
+            if ($currentId !== null) {
+                $currentUser = $store->findUserById($currentId);
+
+                if ($currentUser === null) {
+                    respond(400, ['ok' => false, 'message' => 'Signed-in user no longer exists']);
+                    return;
+                }
+
+                $expectedUserHandle = $currentUser['passkey_user_handle'];
+            }
+
             // The flow verifies the ceremony and persists the credential (PasskeyStore::saveCredential).
-            $registered = $flow->register((string) file_get_contents('php://input'));
+            $registered = $flow->register((string) file_get_contents('php://input'), $expectedUserHandle);
             $user = $store->findUserByHandle($registered->userHandle);
 
             if ($user !== null) {
@@ -214,7 +246,8 @@ match ($path) {
             respond(200, $options->toJson());
 
         } catch (Throwable $e) {
-            respond(400, ['ok' => false, 'message' => $e->getMessage()]);
+            // Never surface the raw exception message to the client — it can leak internal detail.
+            respond(400, ['ok' => false, 'message' => 'Request failed.']);
         }
     })(),
 
