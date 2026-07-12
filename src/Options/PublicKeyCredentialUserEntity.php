@@ -5,6 +5,7 @@ namespace ShipMonk\Passkeys\Options;
 use InvalidArgumentException;
 use JsonSerializable;
 use ShipMonk\Passkeys\Base64\Base64;
+use stdClass;
 use function strlen;
 
 /**
@@ -38,15 +39,15 @@ final readonly class PublicKeyCredentialUserEntity extends PublicKeyCredentialEn
     }
 
     /**
-     * @return array{
+     * @return stdClass&object{
      *     id: string,
      *     name: string,
      *     displayName: string,
      * }
      */
-    public function jsonSerialize(): array
+    public function jsonSerialize(): stdClass
     {
-        return [
+        return (object) [
             'id' => Base64::urlEncode($this->id),
             'name' => $this->name,
             'displayName' => $this->displayName,

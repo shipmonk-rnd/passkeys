@@ -47,7 +47,7 @@ final readonly class PublicKeyCredentialRequestOptions implements JsonSerializab
     }
 
     /**
-     * @return array{
+     * @return stdClass&object{
      *     challenge: string,
      *     timeout?: int,
      *     rpId?: string,
@@ -57,7 +57,7 @@ final readonly class PublicKeyCredentialRequestOptions implements JsonSerializab
      *     extensions?: stdClass,
      * }
      */
-    public function jsonSerialize(): array
+    public function jsonSerialize(): stdClass
     {
         $data = [
             'challenge' => Base64::urlEncode($this->challenge),
@@ -87,7 +87,7 @@ final readonly class PublicKeyCredentialRequestOptions implements JsonSerializab
             $data['extensions'] = (object) $this->extensions; // cast so an empty map serializes as {} (a JSON object), never []
         }
 
-        return $data;
+        return (object) $data;
     }
 
     public function toJson(): string

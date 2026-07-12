@@ -21,6 +21,7 @@ use ShipMonk\Passkeys\Options\PublicKeyCredentialRpEntity;
 use ShipMonk\Passkeys\Options\PublicKeyCredentialUserEntity;
 use ShipMonk\PasskeysTests\PasskeysTestCase;
 use function json_decode;
+use function json_encode;
 use function str_repeat;
 use function strlen;
 use const JSON_THROW_ON_ERROR;
@@ -225,9 +226,24 @@ final class PublicKeyCredentialCreationOptionsTest extends PasskeysTestCase
         );
 
         self::assertSame(
-            ['type' => PublicKeyCredentialType::PUBLIC_KEY, 'id' => Base64::urlEncode('cred-1')],
-            $descriptor->jsonSerialize(),
+            ['type' => 'public-key', 'id' => Base64::urlEncode('cred-1')],
+            json_decode(json_encode($descriptor, JSON_THROW_ON_ERROR), true, flags: JSON_THROW_ON_ERROR),
         );
+    }
+
+    public function testEmptyAuthenticatorSelectionSerializesAsJsonObject(): void
+    {
+        $options = new PublicKeyCredentialCreationOptions(
+            rp: new PublicKeyCredentialRpEntity(name: 'Example RP', id: 'example.com'),
+            user: new PublicKeyCredentialUserEntity('user-id', 'alice', 'Alice Smith'),
+            challenge: 'challenge-bytes',
+            pubKeyCredParams: [
+                new PublicKeyCredentialParameters(PublicKeyCredentialType::PUBLIC_KEY, CoseAlgorithmIdentifier::ES256),
+            ],
+            authenticatorSelection: new AuthenticatorSelectionCriteria(),
+        );
+
+        self::assertStringContainsString('"authenticatorSelection":{}', $options->toJson());
     }
 
 }

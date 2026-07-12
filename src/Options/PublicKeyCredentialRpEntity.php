@@ -3,6 +3,7 @@
 namespace ShipMonk\Passkeys\Options;
 
 use JsonSerializable;
+use stdClass;
 
 /**
  * @see https://w3c.github.io/webauthn/#dictdef-publickeycredentialrpentity
@@ -24,12 +25,12 @@ final readonly class PublicKeyCredentialRpEntity extends PublicKeyCredentialEnti
     }
 
     /**
-     * @return array{
+     * @return stdClass&object{
      *     name: string,
      *     id?: string,
      * }
      */
-    public function jsonSerialize(): array
+    public function jsonSerialize(): stdClass
     {
         $data = ['name' => $this->name];
 
@@ -37,7 +38,7 @@ final readonly class PublicKeyCredentialRpEntity extends PublicKeyCredentialEnti
             $data['id'] = $this->id;
         }
 
-        return $data;
+        return (object) $data;
     }
 
 }
