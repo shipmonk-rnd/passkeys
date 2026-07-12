@@ -4,6 +4,7 @@ namespace ShipMonk\Passkeys\Signal;
 
 use JsonSerializable;
 use ShipMonk\Passkeys\Base64\Base64;
+use stdClass;
 use function json_encode;
 use const JSON_THROW_ON_ERROR;
 
@@ -36,16 +37,16 @@ final readonly class CurrentUserDetailsSignal implements JsonSerializable
     }
 
     /**
-     * @return array{
+     * @return stdClass&object{
      *     rpId: string,
      *     userId: string,
      *     name: string,
      *     displayName: string,
      * }
      */
-    public function jsonSerialize(): array
+    public function jsonSerialize(): stdClass
     {
-        return [
+        return (object) [
             'rpId' => $this->rpId,
             'userId' => Base64::urlEncode($this->userId),
             'name' => $this->name,

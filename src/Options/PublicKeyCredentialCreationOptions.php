@@ -49,7 +49,7 @@ final readonly class PublicKeyCredentialCreationOptions implements JsonSerializa
     }
 
     /**
-     * @return array{
+     * @return stdClass&object{
      *     rp: PublicKeyCredentialRpEntity,
      *     user: PublicKeyCredentialUserEntity,
      *     challenge: string,
@@ -61,7 +61,7 @@ final readonly class PublicKeyCredentialCreationOptions implements JsonSerializa
      *     extensions?: stdClass,
      *  }
      */
-    public function jsonSerialize(): array
+    public function jsonSerialize(): stdClass
     {
         $data = [
             'rp' => $this->rp,
@@ -90,7 +90,7 @@ final readonly class PublicKeyCredentialCreationOptions implements JsonSerializa
             $data['extensions'] = (object) $this->extensions; // cast so an empty map serializes as {} (a JSON object), never []
         }
 
-        return $data;
+        return (object) $data;
     }
 
     public function toJson(): string

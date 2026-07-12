@@ -5,6 +5,7 @@ namespace ShipMonk\Passkeys\Options;
 use JsonSerializable;
 use ShipMonk\Passkeys\Base64\Base64;
 use ShipMonk\Passkeys\Enum\PublicKeyCredentialType;
+use stdClass;
 
 /**
  * @see https://w3c.github.io/webauthn/#dictdef-publickeycredentialdescriptorjson
@@ -28,13 +29,13 @@ final readonly class PublicKeyCredentialDescriptor implements JsonSerializable
     }
 
     /**
-     * @return array{
+     * @return stdClass&object{
      *     type: PublicKeyCredentialType,
      *     id: string,
      *     transports?: list<string>,
      * }
      */
-    public function jsonSerialize(): array
+    public function jsonSerialize(): stdClass
     {
         $data = [
             'type' => $this->type,
@@ -45,7 +46,7 @@ final readonly class PublicKeyCredentialDescriptor implements JsonSerializable
             $data['transports'] = $this->transports;
         }
 
-        return $data;
+        return (object) $data;
     }
 
 }

@@ -6,6 +6,7 @@ use JsonSerializable;
 use ShipMonk\Passkeys\Enum\AuthenticatorAttachment;
 use ShipMonk\Passkeys\Enum\ResidentKeyRequirement;
 use ShipMonk\Passkeys\Enum\UserVerificationRequirement;
+use stdClass;
 
 /**
  * @see https://w3c.github.io/webauthn/#dictdef-authenticatorselectioncriteria
@@ -24,14 +25,14 @@ final readonly class AuthenticatorSelectionCriteria implements JsonSerializable
     }
 
     /**
-     * @return array{
+     * @return stdClass&object{
      *     authenticatorAttachment?: AuthenticatorAttachment,
      *     residentKey?: ResidentKeyRequirement,
      *     requireResidentKey?: bool,
      *     userVerification?: UserVerificationRequirement,
      * }
      */
-    public function jsonSerialize(): array
+    public function jsonSerialize(): stdClass
     {
         $data = [];
 
@@ -51,7 +52,7 @@ final readonly class AuthenticatorSelectionCriteria implements JsonSerializable
             $data['userVerification'] = $this->userVerification;
         }
 
-        return $data;
+        return (object) $data;
     }
 
 }

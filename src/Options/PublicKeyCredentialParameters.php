@@ -5,6 +5,7 @@ namespace ShipMonk\Passkeys\Options;
 use JsonSerializable;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
 use ShipMonk\Passkeys\Enum\PublicKeyCredentialType;
+use stdClass;
 
 /**
  * @see https://w3c.github.io/webauthn/#dictdef-publickeycredentialparameters
@@ -24,14 +25,14 @@ final readonly class PublicKeyCredentialParameters implements JsonSerializable
     }
 
     /**
-     * @return array{
+     * @return stdClass&object{
      *     type: PublicKeyCredentialType,
      *     alg: CoseAlgorithmIdentifier::*,
      * }
      */
-    public function jsonSerialize(): array
+    public function jsonSerialize(): stdClass
     {
-        return [
+        return (object) [
             'type' => $this->type,
             'alg' => $this->alg,
         ];
