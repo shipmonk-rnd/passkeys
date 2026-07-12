@@ -1,49 +1,48 @@
 <?php declare(strict_types = 1);
 
 /**
- * A small but realistic relying party built on ShipMonk\Passkeys: multiple users (each identified by an
- * email), each able to register several passkeys.
+ * A small but realistic relying party built on ShipMonk\Passkeys, in the shape most services
+ * actually have: a password is the primary credential, and passkeys are an *added* convenience an
+ * already-signed-in user enrols and manages. There is no self-service signup — two fixed accounts
+ * (alice@example.com / bob@example.com) are seeded with passwords by {@see PasskeyStore} — so the
+ * "prove you own this email before the first enrolment" problem never arises here: every passkey
+ * is added from an authenticated session, which is the pattern a real service should follow.
  *
  * Run it with PHP's built-in server from the project root:
  *
  *     php -S localhost:8000 example/server.php
  *
- * then open http://localhost:8000. The RP id / origin below assume exactly that host and port;
- * change them together if you serve it elsewhere.
+ * then open http://localhost:8000 and sign in with one of the seeded accounts (the demo passwords
+ * are printed on the page). The RP id / origin below assume exactly that host and port; change
+ * them together if you serve it elsewhere.
  *
- * All four WebAuthn endpoints go through the high-level {@see PasskeyFlow}, constructed with the
- * SQLite-backed {@see PasskeyStore} and the session-backed {@see SessionPendingCeremonyStore}:
- * login is usernameless, two-step by email, or conditional-mediation autofill; registration
- * enrols the resolved account. What remains here is only what a relying party genuinely owns —
- * resolving/creating accounts and the session.
+ * Passkey sign-in goes through the high-level {@see PasskeyFlow} — usernameless via the button, or
+ * conditional-mediation autofill — over the SQLite-backed {@see PasskeyStore} and the
+ * session-backed {@see SessionPendingCeremonyStore}. Password login, the seeded accounts, and the
+ * sign-in session are the relying party's own concern and live here.
  *
- * Accounts and credentials persist in a SQLite file next to this script (see PasskeyStore); only
- * the sign-in state and pending ceremonies live in $_SESSION.
- *
- * Deliberately NOT production code — importantly, the very first registration for an email is
- * allowed without proving ownership, so anyone can squat any email (first come, first served). A
- * real service gates every enrolment path — signup, adding a passkey, account recovery — on a live
- * proof: an authenticated session or a fresh email-control token, still valid when the ceremony
- * *completes*, not just when its options were issued. Adding *further* passkeys here does require
- * being signed in, which is the correct pattern. (The "email already has an account" reply also
- * reveals account existence — fine for a demo, something to obscure in production.)
+ * Deliberately NOT production code: the demo passwords are printed on the page, account existence
+ * is observable, and there is no rate limiting or CSRF protection. What it does get right is the
+ * trust model — a passkey is only ever added or removed from an authenticated session, and every
+ * add-passkey ceremony is pinned to the signed-in account with `$expectedUserHandle` so a ceremony
+ * started in one session can never complete in another and attach a cross-account credential.
  */
 
 namespace ShipMonk\PasskeysDemo;
 
 use ShipMonk\Passkeys\Ceremony\VerificationException;
 use ShipMonk\Passkeys\Json\JsonObject;
+use ShipMonk\Passkeys\Json\JsonObjectException;
 use ShipMonk\Passkeys\PasskeyFlow;
-use Throwable;
 use function file_get_contents;
-use function filter_var;
 use function header;
 use function http_response_code;
 use function is_string;
 use function json_encode;
 use function parse_url;
+use function password_verify;
+use function session_regenerate_id;
 use function session_start;
-use const FILTER_VALIDATE_EMAIL;
 use const JSON_THROW_ON_ERROR;
 use const PHP_URL_PATH;
 
@@ -82,10 +81,11 @@ function body(): JsonObject
 // --- Session state: who is signed in ------------------------------------------------------------
 // (Pending ceremony state lives in SessionPendingCeremonyStore, also on top of $_SESSION.)
 
-// A ceremony yields the opaque WebAuthn user handle; the relying party resolves it to its own
-// account (PasskeyStore::findUserByHandle) and the session keys off the integer user id.
+// Both password and passkey sign-in land here. The session id is rotated on every sign-in so a
+// fixed, pre-authentication id can't be reused to ride the new session (session fixation).
 function signIn(int $userId): void
 {
+    session_regenerate_id(true);
     $_SESSION['auth_user_id'] = $userId;
 }
 
@@ -94,25 +94,44 @@ function currentUserId(): ?int
     return $_SESSION['auth_user_id'] ?? null;
 }
 
+/**
+ * The signed-in account, or null after sending a 401 — the guard the passkey-management routes
+ * share, since a passkey is only ever added or removed from an authenticated session.
+ *
+ * @return array{id: int, passkey_user_handle: string, email: string, password_hash: string}|null
+ */
+function requireUser(PasskeyStore $store): ?array
+{
+    $userId = currentUserId();
+    $user = $userId === null ? null : $store->findUserById($userId);
+
+    if ($user === null) {
+        respond(401, ['ok' => false, 'message' => 'You must be signed in.']);
+        return null;
+    }
+
+    return $user;
+}
+
 match ($path) {
     '/' => (static function (): void {
         header('Content-Type: text/html; charset=utf-8');
         echo file_get_contents(__DIR__ . '/index.html');
     })(),
 
-    // Who is signed in, and their registered passkeys.
+    // Who is signed in, and the passkeys they can manage.
     '/me' => (static function () use ($store): void {
         $userId = currentUserId();
         $user = $userId === null ? null : $store->findUserById($userId);
 
-        if ($userId === null || $user === null) {
+        if ($user === null) {
             respond(200, ['authenticated' => false]);
             return;
         }
 
         $credentials = [];
 
-        foreach ($store->credentialsForUser($userId) as $row) {
+        foreach ($store->credentialsForUser($user['id']) as $row) {
             $credentials[] = [
                 'id' => $row['credential_id'],
                 'attachment' => $row['authenticator_attachment'],
@@ -128,94 +147,109 @@ match ($path) {
         respond(200, ['ok' => true]);
     })(),
 
-    // ---- Registration (navigator.credentials.create) ---------------------------------------
+    // ---- Password sign-in (the primary credential) ------------------------------------------
 
-    '/register/options' => (static function () use ($store, $flow): void {
+    // What a fresh visitor signs in with. Passkeys are added afterwards, from the session this
+    // establishes. The demo accounts and their passwords are seeded by PasskeyStore.
+    '/login/password' => (static function () use ($store): void {
         try {
-            $currentId = currentUserId();
+            $body = body();
+            $email = $body->getString('email');
+            $password = $body->getString('password');
 
-            if ($currentId !== null) {
-                // Signed in: enrol an additional passkey for the current account.
-                $user = $store->findUserById($currentId);
-
-                if ($user === null) {
-                    respond(400, ['ok' => false, 'message' => 'Signed-in user no longer exists']);
-                    return;
-                }
-
-            } else {
-                // Not signed in: register a brand-new account by email. An existing account must
-                // never be enrollable while signed out — that would let anyone who knows the email
-                // attach their own passkey to it and take it over.
-                $email = body()->getString('email');
-
-                if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
-                    respond(400, ['ok' => false, 'message' => 'A valid email is required to register.']);
-                    return;
-                }
-
-                $existing = $store->findUserByEmail($email);
-
-                if ($existing !== null) {
-                    respond(400, ['ok' => false, 'message' => 'This email already has an account — sign in with its passkey to add another one.']);
-                    return;
-                }
-
-                // The email is free: create the account and enrol its first passkey in one go. The
-                // account is minted with a fresh WebAuthn user handle — the flow generates the
-                // spec-recommended 64 random bytes; the store persists them and reuses that same
-                // handle for every passkey the account later enrols. A cancelled prompt leaves a
-                // credential-less row that blocks the email for good (delete the row to retry). That
-                // is deliberate, not resumed: a pending ceremony stays completable for as long as the
-                // session keeps it, so whoever requested options for this email first could still
-                // attach their passkey to the account after the real user enrolled. A real service
-                // side-steps the whole problem by gating first enrolment on email verification.
-                $user = $store->insertUser($email, $flow->generateUserHandle());
-            }
-
-            // The flow issues the challenge, excludes already-enrolled authenticators, and asks
-            // for a discoverable (resident) credential with user verification — the passkey defaults.
-            $options = $flow->registrationOptions($user['passkey_user_handle'], $user['email']);
-
-            respond(200, $options->toJson());
-
-        } catch (Throwable $e) {
-            respond(400, ['ok' => false, 'message' => $e->getMessage()]);
+        } catch (JsonObjectException $e) {
+            respond(400, ['ok' => false, 'message' => 'Email and password are required.']);
+            return;
         }
+
+        $user = $store->findUserByEmail($email);
+
+        // One generic message for both "no such account" and "wrong password", so the response does
+        // not disclose which failed. (Timing still differs — password_verify only runs for a known
+        // account; a real service verifies against a dummy hash to equalize it. Out of scope here.)
+        if ($user === null || !password_verify($password, $user['password_hash'])) {
+            respond(401, ['ok' => false, 'message' => 'Invalid email or password.']);
+            return;
+        }
+
+        signIn($user['id']);
+        respond(200, ['ok' => true, 'email' => $user['email']]);
+    })(),
+
+    // ---- Passkey management: add / remove, signed-in only -----------------------------------
+
+    // Enrol an additional passkey for the already-signed-in account (navigator.credentials.create).
+    // There is no signed-out registration path: the only way to a passkey is from a session that has
+    // already proved who it is.
+    '/register/options' => (static function () use ($store, $flow): void {
+        $user = requireUser($store);
+
+        if ($user === null) {
+            return;
+        }
+
+        // The flow issues the challenge, excludes already-enrolled authenticators, and asks for a
+        // discoverable (resident) credential with user verification — the passkey defaults.
+        $options = $flow->registrationOptions($user['passkey_user_handle'], $user['email']);
+        respond(200, $options->toJson());
     })(),
 
     '/register/verify' => (static function () use ($store, $flow): void {
+        $user = requireUser($store);
+
+        if ($user === null) {
+            return;
+        }
+
         try {
-            // The flow verifies the ceremony and persists the credential (PasskeyStore::saveCredential).
-            $registered = $flow->register((string) file_get_contents('php://input'));
-            $user = $store->findUserByHandle($registered->userHandle);
-
-            if ($user !== null) {
-                signIn($user['id']);
-            }
-
-            respond(200, ['ok' => true, 'email' => $user['email'] ?? 'unknown']);
+            // $expectedUserHandle pins the ceremony to the signed-in account: a pending registration
+            // minted in another session (for another user) is rejected before anything is verified
+            // or persisted, so a passkey can never be attached across accounts.
+            $flow->register(
+                (string) file_get_contents('php://input'),
+                expectedUserHandle: $user['passkey_user_handle'],
+            );
+            respond(200, ['ok' => true]);
 
         } catch (VerificationException $e) {
             respond(400, ['ok' => false, 'reason' => $e->reason, 'message' => $e->getMessage()]);
         }
     })(),
 
-    // ---- Authentication (navigator.credentials.get) ----------------------------------------
+    // Remove one of the account's passkeys.
+    '/passkeys/remove' => (static function () use ($store, $flow): void {
+        $user = requireUser($store);
 
-    // Without an email the options are usernameless (no allowCredentials — a discoverable passkey
-    // identifies the user); with one, the ceremony is pinned to that account and its credentials
-    // are listed. The same endpoint also feeds the conditional-mediation (autofill) request.
-    '/login/options' => (static function () use ($flow): void {
-        try {
-            $body = JsonObject::fromString((string) file_get_contents('php://input'));
-            $email = $body->getOptionalString('email');
-            $options = $flow->authenticationOptions($email);
-            respond(200, $options->toJson());
-
-        } catch (Throwable $e) {
-            respond(400, ['ok' => false, 'message' => $e->getMessage()]);
+        if ($user === null) {
+            return;
         }
+
+        try {
+            $credentialId = body()->getString('id');
+
+        } catch (JsonObjectException $e) {
+            respond(400, ['ok' => false, 'message' => 'A credential id is required.']);
+            return;
+        }
+
+        // Scoped to the user, so an account can only ever delete its own passkey.
+        $store->deleteCredential($user['id'], $credentialId);
+
+        // The account's accepted-credential set just changed: hand the browser the *complete*
+        // remaining set (WebAuthn §5.1.10) so its credential provider prunes the passkey it still
+        // lists. Read straight from the store after the delete, so it stays authoritative.
+        $signal = $flow->allAcceptedCredentialsSignal($user['passkey_user_handle']);
+        respond(200, ['ok' => true, 'signal' => $signal]);
+    })(),
+
+    // ---- Passkey sign-in (navigator.credentials.get) ----------------------------------------
+
+    // Usernameless: no allowCredentials, so a discoverable passkey identifies the account by its
+    // user handle. The same options feed both the explicit "sign in with a passkey" button and the
+    // conditional-mediation (autofill) request the page starts in the background.
+    '/login/options' => (static function () use ($flow): void {
+        $options = $flow->authenticationOptions();
+        respond(200, $options->toJson());
     })(),
 
     '/login/verify' => (static function () use ($store, $flow): void {

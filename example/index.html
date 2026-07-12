@@ -8,13 +8,20 @@
 		body { font: 16px/1.5 system-ui, sans-serif; max-width: 42rem; margin: 3rem auto; padding: 0 1rem; color: #1a1a1a; }
 		h1 { font-size: 1.4rem; }
 		p.lead { color: #555; }
-		input { font-size: 1rem; padding: 0.55rem 0.6rem; border: 1px solid #ccc; border-radius: 0.5rem; width: 16rem; }
+		label { display: block; font-size: 0.8rem; color: #555; margin: 0 0 0.2rem; }
+		.field { margin-bottom: 0.7rem; }
+		input { font-size: 1rem; padding: 0.55rem 0.6rem; border: 1px solid #ccc; border-radius: 0.5rem; width: 20rem; max-width: 100%; box-sizing: border-box; }
 		button { font-size: 1rem; padding: 0.6rem 1.1rem; margin: 0.3rem 0.3rem 0.3rem 0; border: 0; border-radius: 0.5rem; background: #2563eb; color: #fff; cursor: pointer; }
 		button.secondary { background: #e5e7eb; color: #1a1a1a; }
+		button.danger { background: #fee2e2; color: #b91c1c; padding: 0.4rem 0.8rem; font-size: 0.85rem; margin: 0; }
 		button:hover { filter: brightness(0.95); }
+		.divider { display: flex; align-items: center; gap: 0.7rem; color: #999; font-size: 0.85rem; margin: 1.1rem 0; }
+		.divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: #e5e7eb; }
+		.hint { font-size: 0.85rem; color: #555; background: #f5f5f5; border-radius: 0.5rem; padding: 0.6rem 0.8rem; margin-top: 1.2rem; }
 		#passkeys { list-style: none; padding: 0; }
-		#passkeys li { padding: 0.6rem 0.8rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; margin-bottom: 0.4rem; font-size: 0.9rem; }
+		#passkeys li { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; padding: 0.6rem 0.8rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; margin-bottom: 0.4rem; font-size: 0.9rem; }
 		#passkeys .meta { color: #666; font-size: 0.8rem; }
+		.empty { color: #666; font-size: 0.9rem; }
 		code { font: 13px ui-monospace, monospace; }
 		#log { margin-top: 1.5rem; padding: 0.9rem; background: #f5f5f5; border-radius: 0.5rem; white-space: pre-wrap; word-break: break-word; font: 13px/1.5 ui-monospace, monospace; }
 		.ok { color: #15803d; } .err { color: #b91c1c; }
@@ -23,22 +30,39 @@
 </head>
 <body>
 	<h1>🔑 ShipMonk\Passkeys passkey demo</h1>
-	<p class="lead">Multiple accounts, each identified by an email, each able to hold several passkeys.
-		Sign in via the button (with or without typing your email first) or via autofill on the email
-		field (conditional mediation). Login is verified server-side by <code>ShipMonk\Passkeys\PasskeyFlow</code>,
-		registration by <code>ShipMonk\Passkeys\Ceremony\RelyingParty</code>.</p>
+	<p class="lead">A password-first service where passkeys are an <em>added</em> convenience. Sign in
+		with your password, then add and manage passkeys for your account. Once you have one, sign in
+		with it via the button or via autofill on the email field (conditional mediation). Ceremonies
+		are verified server-side by <code>ShipMonk\Passkeys\PasskeyFlow</code>.</p>
 
 	<section id="signed-out" class="hidden">
-		<p><input id="email" type="email" placeholder="you@example.com" autocomplete="username webauthn"></p>
-		<button id="register-btn">Register a passkey</button>
+		<form id="password-form">
+			<div class="field">
+				<label for="email">Email</label>
+				<input id="email" type="email" placeholder="you@example.com" autocomplete="username webauthn">
+			</div>
+			<div class="field">
+				<label for="password">Password</label>
+				<input id="password" type="password" autocomplete="current-password">
+			</div>
+			<button type="submit">Sign in</button>
+		</form>
+
+		<div class="divider">or</div>
+
 		<button id="login-btn" class="secondary">Sign in with a passkey</button>
+
+		<p class="hint">Demo accounts (passwords shown for convenience — never do this for real):
+			<br><code>alice@example.com</code> / <code>alice</code>
+			<br><code>bob@example.com</code> / <code>bob</code></p>
 	</section>
 
 	<section id="signed-in" class="hidden">
 		<p>Signed in as <strong id="whoami"></strong>.</p>
 		<p>Your passkeys:</p>
 		<ul id="passkeys"></ul>
-		<button id="add-btn">Add another passkey</button>
+		<p id="no-passkeys" class="empty hidden">No passkeys yet — add one to sign in without your password next time.</p>
+		<button id="add-btn">Add a passkey</button>
 		<button id="logout-btn" class="secondary">Sign out</button>
 	</section>
 
@@ -48,6 +72,7 @@
 		const logEl = document.getElementById('log');
 		const log = (msg, cls = '') => { logEl.textContent = msg; logEl.className = cls; };
 		const supported = window.PublicKeyCredential && PublicKeyCredential.parseCreationOptionsFromJSON;
+		let credentials = [];
 
 		async function post(url, obj) {
 			const res = await fetch(url, {
@@ -63,8 +88,8 @@
 				: cred.attachment === 'cross-platform' ? 'Security key / phone'
 				: 'Passkey';
 			const when = cred.createdAt ? new Date(cred.createdAt).toLocaleString() : 'unknown';
-			return `<strong>${kind}</strong>`
-				+ `<div class="meta">added ${when} · <code>${cred.id.slice(0, 16)}…</code></div>`;
+			return `<div><strong>${kind}</strong>`
+				+ `<div class="meta">added ${when} · <code>${cred.id.slice(0, 16)}…</code></div></div>`;
 		}
 
 		async function refresh() {
@@ -73,11 +98,17 @@
 			const inn = document.getElementById('signed-in');
 
 			if (me.authenticated) {
+				cancelConditional();
 				out.classList.add('hidden');
 				inn.classList.remove('hidden');
 				document.getElementById('whoami').textContent = me.email;
-				document.getElementById('passkeys').innerHTML =
-					me.credentials.map(c => `<li>${describe(c)}</li>`).join('');
+				credentials = me.credentials;
+
+				const list = document.getElementById('passkeys');
+				list.innerHTML = credentials
+					.map((c, i) => `<li>${describe(c)}<button class="danger" data-remove="${i}">Remove</button></li>`)
+					.join('');
+				document.getElementById('no-passkeys').classList.toggle('hidden', credentials.length > 0);
 			} else {
 				inn.classList.add('hidden');
 				out.classList.remove('hidden');
@@ -85,10 +116,10 @@
 			}
 		}
 
-		// `email` is undefined when adding a passkey to the already-signed-in account.
-		async function register(email) {
+		// Add a passkey to the already-signed-in account.
+		async function addPasskey() {
 			log('Requesting registration options…');
-			const opt = await post('/register/options', email !== undefined ? { email } : {});
+			const opt = await post('/register/options', {});
 			if (!opt.ok) return log(opt.data.message || 'Could not start registration', 'err');
 
 			log('Waiting for your authenticator…');
@@ -97,14 +128,45 @@
 			});
 
 			const res = await post('/register/verify', credential.toJSON());
-			log(JSON.stringify(res.data, null, 2), res.ok ? 'ok' : 'err');
+			log(res.ok ? 'Passkey added.' : JSON.stringify(res.data, null, 2), res.ok ? 'ok' : 'err');
 			await refresh();
 		}
 
-		// `email` empty → usernameless; filled → the two-step flow (options pinned to that account).
-		async function login(email) {
+		async function removePasskey(index) {
+			const cred = credentials[index];
+			if (!cred) return;
+
+			const res = await post('/passkeys/remove', { id: cred.id });
+			if (!res.ok) return log(res.data.message || 'Could not remove passkey', 'err');
+
+			// Tell the platform's credential provider the accepted set changed so it prunes the
+			// passkey it still shows for this account (the server sends the complete remaining set).
+			if (res.data.signal && PublicKeyCredential.signalAllAcceptedCredentials) {
+				try { await PublicKeyCredential.signalAllAcceptedCredentials(res.data.signal); } catch (e) { /* best-effort */ }
+			}
+
+			log('Passkey removed.', 'ok');
+			await refresh();
+		}
+
+		async function passwordLogin() {
+			const email = document.getElementById('email').value.trim();
+			const password = document.getElementById('password').value;
+			log('Signing in…');
+
+			const res = await post('/login/password', { email, password });
+			if (!res.ok) { log(res.data.message || 'Sign-in failed', 'err'); return refresh(); }
+
+			document.getElementById('password').value = '';
+			log(`Signed in as ${res.data.email}.`, 'ok');
+			await refresh();
+		}
+
+		// Usernameless passkey sign-in via the explicit button (the email field is ignored here — a
+		// discoverable passkey identifies the account on its own).
+		async function loginWithPasskey() {
 			log('Requesting login options…');
-			const opt = await post('/login/options', email ? { email } : {});
+			const opt = await post('/login/options', {});
 			if (!opt.ok) return log(opt.data.message || 'Could not start login', 'err');
 
 			log('Waiting for your authenticator…');
@@ -113,11 +175,11 @@
 			});
 
 			const res = await post('/login/verify', credential.toJSON());
-			log(JSON.stringify(res.data, null, 2), res.ok ? 'ok' : 'err');
+			log(res.ok ? `Signed in as ${res.data.email}.` : JSON.stringify(res.data, null, 2), res.ok ? 'ok' : 'err');
 			await refresh();
 		}
 
-		// A conditional-mediation ceremony pends in the background so a passkey can be picked from
+		// A conditional-mediation ceremony pends in the background so a passkey can be offered from
 		// the email field's autofill. It runs concurrently with the button flows (the server keys
 		// pending ceremonies by challenge) but must be aborted before any modal WebAuthn call.
 		let conditional = null;
@@ -138,7 +200,7 @@
 				});
 
 				const res = await post('/login/verify', credential.toJSON());
-				log(JSON.stringify(res.data, null, 2), res.ok ? 'ok' : 'err');
+				log(res.ok ? `Signed in as ${res.data.email}.` : JSON.stringify(res.data, null, 2), res.ok ? 'ok' : 'err');
 				await refresh();
 			} catch (e) {
 				if (e.name !== 'AbortError') log(String(e), 'err');
@@ -152,18 +214,23 @@
 			conditional = null;
 		}
 
-		const guard = (fn) => async () => { try { cancelConditional(); await fn(); } catch (e) { log(String(e), 'err'); } };
+		const guard = (fn) => async (event) => {
+			event?.preventDefault();
+			try { cancelConditional(); await fn(); } catch (e) { log(String(e), 'err'); }
+		};
 
-		document.getElementById('register-btn').addEventListener('click', guard(() =>
-			register(document.getElementById('email').value.trim())));
-		document.getElementById('login-btn').addEventListener('click', guard(() =>
-			login(document.getElementById('email').value.trim())));
-		document.getElementById('add-btn').addEventListener('click', guard(() => register()));
+		document.getElementById('password-form').addEventListener('submit', guard(passwordLogin));
+		document.getElementById('login-btn').addEventListener('click', guard(loginWithPasskey));
+		document.getElementById('add-btn').addEventListener('click', guard(addPasskey));
 		document.getElementById('logout-btn').addEventListener('click', guard(async () => {
 			await post('/logout');
 			log('Signed out.');
 			await refresh();
 		}));
+		document.getElementById('passkeys').addEventListener('click', (event) => {
+			const btn = event.target.closest('[data-remove]');
+			if (btn) guard(() => removePasskey(Number(btn.dataset.remove)))(event);
+		});
 
 		if (!supported) {
 			log('This browser lacks the PublicKeyCredential JSON helpers. Use a recent Chrome, Safari, or Firefox.', 'err');

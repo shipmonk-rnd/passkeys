@@ -17,25 +17,36 @@ use function base64_encode;
 use function date;
 use function json_decode;
 use function json_encode;
+use function password_hash;
+use function random_bytes;
 use const JSON_THROW_ON_ERROR;
+use const PASSWORD_DEFAULT;
 
 /**
  * The demo's database: a SQLite file (pdo_sqlite), so accounts and passkeys survive server
  * restarts. It implements the library's {@see PasskeyStoreInterface PasskeyStore} — the durable
  * storage a {@see \ShipMonk\Passkeys\PasskeyFlow} runs against — plus the account methods the
- * demo's own endpoints need (insertUser, findUserByEmail, …). One user (identified by email) has
- * many credentials (a user_id foreign key):
+ * demo's own endpoints need: findUserByEmail for password login, and credentialsForUser /
+ * deleteCredential for the manage-passkeys page. One user (identified by email) has many
+ * credentials (a user_id foreign key):
  *
- *   table `users` — id (integer PK), passkey_user_handle (BLOB, unique), email (unique)
+ *   table `users` — id (integer PK), passkey_user_handle (BLOB, unique), email (unique),
+ *                          password_hash
  *   table `credentials` — credential_id (PK, base64), user_id (FK),
  *                          public_key (base64 of CoseKey::toBytes()), sign_count,
  *                          uv_initialized, backup_eligible, backup_state, transports,
  *                          authenticator_attachment, created_at
  *
+ * There is no self-service signup here — real services rarely let a passkey be the *first*
+ * credential — so instead of an insert-on-registration path the constructor seeds two fixed
+ * accounts (see {@see self::DEMO_ACCOUNTS}) with bcrypt password hashes; passkeys are only ever
+ * added later, from an authenticated session. `password_hash` holds the output of PHP's
+ * {@see password_hash()} and is checked with `password_verify()` in the server's login route.
+ *
  * The primary key is a plain integer id, as in a real schema; the WebAuthn user handle is a
- * separate value — the spec-recommended 64 opaque random bytes — in its own unique BLOB column,
- * minted once per user by {@see \ShipMonk\Passkeys\PasskeyFlow::generateUserHandle()} and stored by
- * {@see insertUser()}. Relations go through the integer id
+ * separate value — the spec-recommended 64 opaque random bytes, as
+ * {@see \ShipMonk\Passkeys\PasskeyFlow::generateUserHandle()} would mint — in its own unique BLOB
+ * column, generated once per account at seeding. Relations go through the integer id
  * (credentials.user_id); the handle only crosses the wire in ceremonies and is joined back in when
  * a {@see CredentialRecord} is hydrated. Handle parameters are bound as PDO::PARAM_LOB — a PHP
  * string binds as text by default, and in SQLite a TEXT value never compares equal to a BLOB.
@@ -46,6 +57,15 @@ use const JSON_THROW_ON_ERROR;
  */
 final class PasskeyStore implements PasskeyStoreInterface
 {
+
+    /**
+     * The demo's fixed accounts as email => plaintext password, seeded on construction. A real
+     * service gets its users from normal user-management and would never hard-code a password.
+     */
+    private const array DEMO_ACCOUNTS = [
+        'alice@example.com' => 'alice',
+        'bob@example.com' => 'bob',
+    ];
 
     private readonly PDO $db;
 
@@ -59,8 +79,9 @@ final class PasskeyStore implements PasskeyStoreInterface
         $this->db->exec('
 			CREATE TABLE IF NOT EXISTS users (
 				id                  INTEGER PRIMARY KEY,
-				passkey_user_handle BLOB NOT NULL UNIQUE,
-				email               TEXT NOT NULL UNIQUE
+				email               TEXT NOT NULL UNIQUE,
+				password_hash       TEXT NOT NULL,
+				passkey_user_handle BLOB NOT NULL UNIQUE
 			);
 
 			CREATE TABLE IF NOT EXISTS credentials (
@@ -76,30 +97,34 @@ final class PasskeyStore implements PasskeyStoreInterface
 				created_at               TEXT NOT NULL
 			);
 		');
+
+        $this->seedDemoAccounts();
+    }
+
+    /**
+     * Seeds {@see self::DEMO_ACCOUNTS} idempotently: INSERT OR IGNORE keys off the unique email, so
+     * a restart neither duplicates the accounts nor resets their handle/password. Each account is
+     * minted a fresh 64-byte user handle (bound as a BLOB) and a bcrypt hash of its demo password.
+     */
+    private function seedDemoAccounts(): void
+    {
+        $statement = $this->db->prepare('
+			INSERT OR IGNORE INTO users (passkey_user_handle, email, password_hash)
+			VALUES (:handle, :email, :password_hash)
+		');
+
+        foreach (self::DEMO_ACCOUNTS as $email => $password) {
+            $this->bindParameter($statement, ':handle', random_bytes(64), PDO::PARAM_LOB);
+            $this->bindParameter($statement, ':email', $email);
+            $this->bindParameter($statement, ':password_hash', password_hash($password, PASSWORD_DEFAULT));
+            $statement->execute();
+        }
     }
 
     // -- users table --------------------------------------------------------------------------
 
     /**
-     * @param string $userHandle raw user handle bytes minted by {@see \ShipMonk\Passkeys\PasskeyFlow::generateUserHandle()}
-     *      — the spec-recommended 64 opaque random bytes, unrelated to the primary key
-     * @return array{id: int, passkey_user_handle: string, email: string}
-     */
-    public function insertUser(
-        string $email,
-        string $userHandle,
-    ): array
-    {
-        $statement = $this->db->prepare('INSERT INTO users (passkey_user_handle, email) VALUES (:handle, :email)');
-        $this->bindParameter($statement, ':handle', $userHandle, PDO::PARAM_LOB);
-        $this->bindParameter($statement, ':email', $email);
-        $statement->execute();
-
-        return ['id' => (int) $this->db->lastInsertId(), 'passkey_user_handle' => $userHandle, 'email' => $email];
-    }
-
-    /**
-     * @return array{id: int, passkey_user_handle: string, email: string}|null
+     * @return array{id: int, passkey_user_handle: string, email: string, password_hash: string}|null
      */
     public function findUserByEmail(string $email): ?array
     {
@@ -112,7 +137,7 @@ final class PasskeyStore implements PasskeyStoreInterface
     }
 
     /**
-     * @return array{id: int, passkey_user_handle: string, email: string}|null
+     * @return array{id: int, passkey_user_handle: string, email: string, password_hash: string}|null
      */
     public function findUserById(int $id): ?array
     {
@@ -125,7 +150,7 @@ final class PasskeyStore implements PasskeyStoreInterface
     }
 
     /**
-     * @return array{id: int, passkey_user_handle: string, email: string}|null
+     * @return array{id: int, passkey_user_handle: string, email: string, password_hash: string}|null
      */
     public function findUserByHandle(string $userHandle): ?array
     {
@@ -139,7 +164,8 @@ final class PasskeyStore implements PasskeyStoreInterface
 
     public function findUserHandleByUsername(string $username): ?string
     {
-        // The demo's usernames are emails.
+        // The demo's usernames are emails. Only the two-step login flow consults this; the demo's
+        // passkey sign-in is usernameless, so it goes unused here — but the interface requires it.
         return $this->findUserByEmail($username)['passkey_user_handle'] ?? null;
     }
 
@@ -151,7 +177,6 @@ final class PasskeyStore implements PasskeyStoreInterface
             return null;
         }
 
-        // The demo has no separate display name, so the email doubles as both — as at registration.
         return new PublicKeyCredentialUserEntity(id: $user['passkey_user_handle'], name: $user['email'], displayName: $user['email']);
     }
 
@@ -248,8 +273,7 @@ final class PasskeyStore implements PasskeyStoreInterface
     }
 
     /**
-     * Every credential registered to a user, as raw rows — for the demo's passkey list and its
-     * "does this account have any passkeys yet" checks.
+     * Every credential registered to a user, as raw rows — for the demo's passkey list.
      *
      * @return list<array<string, mixed>>
      */
@@ -260,6 +284,25 @@ final class PasskeyStore implements PasskeyStoreInterface
         $statement->execute();
 
         return $statement->fetchAll();
+    }
+
+    /**
+     * Removes one of a user's credentials — the "remove passkey" action on the manage page. Scoped
+     * to the owning user_id, so a signed-in account can only ever delete its own passkey, never one
+     * addressed by credential id alone.
+     *
+     * @param string $credentialId the opaque credential id handed out by {@see self::credentialsForUser()}
+     *      (the base64 form stored in the primary-key column), echoed back verbatim by the page
+     */
+    public function deleteCredential(
+        int $userId,
+        string $credentialId,
+    ): void
+    {
+        $statement = $this->db->prepare('DELETE FROM credentials WHERE user_id = :user_id AND credential_id = :credential_id');
+        $this->bindParameter($statement, ':user_id', $userId, PDO::PARAM_INT);
+        $this->bindParameter($statement, ':credential_id', $credentialId);
+        $statement->execute();
     }
 
     /**
