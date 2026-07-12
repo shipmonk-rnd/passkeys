@@ -1,0 +1,10 @@
+#!/usr/bin/env php
+<?php declare(strict_types = 1);
+
+use ShipMonk\PasskeysSymfonyDemo\Kernel;
+use Symfony\Bundle\FrameworkBundle\Console\Application;
+
+// See public/index.php for why the root vendor/ is three levels up.
+require_once __DIR__ . '/../../../vendor/autoload_runtime.php';
+
+return static fn (): Application => new Application(new Kernel('dev', debug: true));

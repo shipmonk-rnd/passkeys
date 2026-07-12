@@ -226,15 +226,28 @@ if (loginFailedAsUnknownCredential) {
 }
 ```
 
-## Example
+## Examples
 
-A runnable, single-file relying party lives in [`example/`](example/) — multiple accounts, each
-with several passkeys, all four endpoints driven through `PasskeyFlow` with a SQLite-backed
-`PasskeyStore` and a `$_SESSION`-backed `PendingCeremonyStore`:
+Two runnable relying parties live in [`example/`](example/) — the *same* password-first flow
+(password login → add a passkey → usernameless / autofill passkey sign-in → remove), so you can
+compare the wiring on bare PHP and on a framework. Both serve `http://localhost:8000`.
 
-```sh
-php -S localhost:8000 example/server.php   # then open http://localhost:8000
-```
+- [`example/plain-php/`](example/plain-php/) — a single-file, dependency-free script: `PasskeyFlow`
+  over a SQLite-backed `PasskeyStore` and a `$_SESSION`-backed `PendingCeremonyStore`.
+
+  ```sh
+  php -S localhost:8000 example/plain-php/server.php   # then open http://localhost:8000
+  ```
+
+- [`example/symfony/`](example/symfony/) — the same relying party on Symfony (`MicroKernelTrait`),
+  wiring `PasskeyFlow` as a service over a **Doctrine ORM** `PasskeyStore`, a session-backed
+  `PendingCeremonyStore`, and a Twig page:
+
+  ```sh
+  composer install                                                       # from the repo root
+  php example/symfony/bin/console app:setup                              # schema + seed accounts
+  php -S localhost:8000 -t example/symfony/public example/symfony/public/index.php
+  ```
 
 See [`example/README.md`](example/README.md).
 
