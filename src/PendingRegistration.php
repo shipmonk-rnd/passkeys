@@ -25,7 +25,7 @@ final readonly class PendingRegistration
     public function __construct(
         public string $challenge,
         public string $userHandle,
-        public bool $conditionalMediation = false,
+        public bool $conditionalMediation,
     )
     {
     }
