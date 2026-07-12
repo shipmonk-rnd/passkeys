@@ -94,8 +94,8 @@ final class RelyingParty
     /**
      * @param PublicKeyCredential<AuthenticatorAttestationResponse> $credential
      *
-     * @throws MalformedDataException
      * @throws CoseKeyLoadException
+     * @throws MalformedDataException
      * @throws VerificationException
      */
     private function doVerifyRegistration(
@@ -297,8 +297,8 @@ final class RelyingParty
     /**
      * @param PublicKeyCredential<AuthenticatorAssertionResponse> $credential
      *
-     * @throws MalformedDataException
      * @throws CoseKeyLoadException
+     * @throws MalformedDataException
      * @throws VerificationException
      */
     private function doVerifyAuthentication(
