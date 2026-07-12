@@ -16,8 +16,7 @@ php -S localhost:8000 example/server.php
 
 Then open <http://localhost:8000>:
 
-1. **Sign in with a password.** Two accounts are seeded (passwords shown on the page and never
-   verified — this is a demo): `alice@example.com` / `alice` and `bob@example.com` / `bob`.
+1. **Sign in with a password.** Two accounts are seeded (passwords are hard-coded and shown on the page for convenience — this is a demo): `alice@example.com` / `alice` and `bob@example.com` / `bob`.
 2. While signed in, **Add a passkey** (your OS/browser prompts for Touch ID / Windows Hello / a
    security key). It shows up in the per-account list, where you can also **Remove** it.
 3. Sign out, then **Sign in with a passkey** — usernameless: the passkey itself identifies the
