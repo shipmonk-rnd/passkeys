@@ -6,6 +6,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use ShipMonk\Passkeys\Binary\BytesReader;
 use ShipMonk\Passkeys\Binary\BytesReaderException;
 use ShipMonk\PasskeysTests\PasskeysTestCase;
+use const PHP_INT_MAX;
 
 #[CoversClass(BytesReader::class)]
 final class BytesReaderTest extends PasskeysTestCase
@@ -156,6 +157,22 @@ final class BytesReaderTest extends PasskeysTestCase
             static function (): void {
                 BytesReader::read('A', static function (BytesReader $reader): void {
                     $reader->bytes(2);
+                });
+            },
+        );
+    }
+
+    public function testBytesLengthOverflow(): void
+    {
+        // A huge length with a non-zero offset must be rejected cleanly rather than pushing the
+        // bounds check into float arithmetic (which $this->offset + PHP_INT_MAX would trigger).
+        self::assertException(
+            BytesReaderException::class,
+            'Unexpected end of data',
+            static function (): void {
+                BytesReader::read('A', static function (BytesReader $reader): void {
+                    $reader->bytes(1);
+                    $reader->bytes(PHP_INT_MAX);
                 });
             },
         );
