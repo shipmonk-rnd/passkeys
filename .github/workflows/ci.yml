@@ -29,11 +29,13 @@ jobs:
           php-version: ${{ matrix.php-version }}
           coverage: pcov
 
-      - name: Validate composer.json
-        run: composer validate --strict
-
       - name: Install dependencies
         run: composer install --no-interaction --no-progress
+
+      # Runs composer normalize --dry-run (needs the installed plugin, hence after install)
+      # and composer validate --strict.
+      - name: Validate composer.json
+        run: composer check:composer
 
       # Audit third-party runtime dependencies only. This library has none today, and an empty
       # audit set is an error on some composer versions, so gate on there being something to audit.
