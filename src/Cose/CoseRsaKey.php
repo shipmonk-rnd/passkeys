@@ -57,9 +57,22 @@ final readonly class CoseRsaKey extends CoseKey
     private const int MIN_MODULUS_BYTES = 256;
 
     /**
+     * Maximum accepted modulus size in bytes (8192 bits). A "none"-format registration stores
+     * the key without any signature proving possession, so without a ceiling an enrollee could
+     * persist an oversized modulus that makes every later verification disproportionately slow.
+     */
+    private const int MAX_MODULUS_BYTES = 1_024;
+
+    /**
+     * Maximum accepted public exponent size in bytes (64 bits). Verification cost also grows
+     * with the exponent size, and real-world keys use small exponents (typically 65537).
+     */
+    private const int MAX_EXPONENT_BYTES = 8;
+
+    /**
      * @param value-of<self::ALGORITHMS> $alg
-     * @param string                     $n   modulus as raw big-endian bytes
-     * @param string                     $e   public exponent as raw big-endian bytes
+     * @param string                     $n   modulus as minimal big-endian bytes (no leading zeros)
+     * @param string                     $e   public exponent as minimal big-endian bytes (no leading zeros)
      */
     private function __construct(
         int $alg,
@@ -90,6 +103,10 @@ final readonly class CoseRsaKey extends CoseKey
             throw new CoseKeyException('RSA modulus must be at least 2048 bits');
         }
 
+        if (strlen($modulus) > self::MAX_MODULUS_BYTES) {
+            throw new CoseKeyException('RSA modulus must be at most 8192 bits');
+        }
+
         // A public exponent of 1 makes verification the identity function, so the
         // PKCS#1 encoded message can be presented as the signature and "verifies"
         // without the private key. Even exponents are likewise invalid for RSA.
@@ -99,7 +116,13 @@ final readonly class CoseRsaKey extends CoseKey
             throw new CoseKeyException('RSA public exponent must be an odd integer greater than 1');
         }
 
-        return new self($alg, $n, $e);
+        if (strlen($exponent) > self::MAX_EXPONENT_BYTES) {
+            throw new CoseKeyException('RSA public exponent must be at most 64 bits');
+        }
+
+        // Store the trimmed values so the size ceilings bound what is persisted: leading
+        // zero bytes must not smuggle an arbitrarily large bytestring past the checks.
+        return new self($alg, $modulus, $exponent);
     }
 
     public function toBytes(): string
