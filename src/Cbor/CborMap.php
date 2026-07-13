@@ -40,6 +40,11 @@ final readonly class CborMap
         return array_key_exists($key, $this->map);
     }
 
+    public function isEmpty(): bool
+    {
+        return $this->map === [];
+    }
+
     /**
      * @throws CborMapException
      */

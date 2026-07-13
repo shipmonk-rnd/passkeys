@@ -308,6 +308,19 @@ final class RelyingPartyTest extends CryptoTestCase
         );
     }
 
+    public function testRegistrationRejectsNoneAttestationWithNonEmptyStatement(): void
+    {
+        // §8.7: the `none` attestation statement is defined as an empty map.
+        $attStmt = CborTestEncoder::map([
+            [CborTestEncoder::textString('alg'), CborTestEncoder::int(CoseAlgorithmIdentifier::ES256)],
+        ]);
+
+        $this->assertRegistrationFails(
+            VerificationException::INVALID_ATTESTATION_STATEMENT,
+            self::registrationCredential($this->coseEntries, fmt: 'none', attStmtOverride: $attStmt),
+        );
+    }
+
     public function testRegistrationRejectsPackedAttestationWithCertificateChain(): void
     {
         // x5c present means Basic/AttCA attestation (§8.2), which needs the deferred X.509 layer.

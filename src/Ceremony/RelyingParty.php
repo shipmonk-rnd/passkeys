@@ -216,6 +216,14 @@ final class RelyingParty
     ): string
     {
         if ($attestationObject->fmt === self::FMT_NONE) {
+            // §8.7: the `none` attestation statement is defined as an empty map.
+            if (!$attestationObject->attStmt->isEmpty()) {
+                throw new VerificationException(
+                    VerificationException::INVALID_ATTESTATION_STATEMENT,
+                    "Attestation statement for format 'none' must be an empty map",
+                );
+            }
+
             return RegistrationResult::ATTESTATION_NONE;
         }
 

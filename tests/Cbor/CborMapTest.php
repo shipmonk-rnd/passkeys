@@ -51,6 +51,17 @@ final class CborMapTest extends PasskeysTestCase
         self::assertFalse($map->has('absent'));
     }
 
+    public function testIsEmpty(): void
+    {
+        self::assertFalse(self::sampleMap()->isEmpty());
+
+        $emptyMap = BytesReader::read(
+            self::bytesFromHex('a0'),
+            static fn (BytesReader $reader): CborMap => CborMap::fromBytesReader($reader),
+        );
+        self::assertTrue($emptyMap->isEmpty());
+    }
+
     public function testMissingKeyThrows(): void
     {
         self::assertException(
