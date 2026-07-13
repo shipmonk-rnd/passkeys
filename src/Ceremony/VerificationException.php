@@ -39,6 +39,7 @@ final class VerificationException extends RuntimeException
     public const string MISSING_ATTESTED_CREDENTIAL_DATA = 'missing_attested_credential_data';
     public const string UNSUPPORTED_ALGORITHM = 'unsupported_algorithm';
     public const string CREDENTIAL_ID_TOO_LONG = 'credential_id_too_long';
+    public const string CREDENTIAL_ID_TOO_SHORT = 'credential_id_too_short';
     public const string CREDENTIAL_ALREADY_REGISTERED = 'credential_already_registered';
     public const string CREDENTIAL_NOT_ALLOWED = 'credential_not_allowed';
     public const string UNKNOWN_CREDENTIAL = 'unknown_credential';

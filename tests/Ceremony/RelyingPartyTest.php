@@ -423,6 +423,14 @@ final class RelyingPartyTest extends CryptoTestCase
         );
     }
 
+    public function testRegistrationRejectsUndersizedCredentialId(): void
+    {
+        $this->assertRegistrationFails(
+            VerificationException::CREDENTIAL_ID_TOO_SHORT,
+            self::registrationCredential($this->coseEntries, credentialId: str_repeat("\x2a", 15)),
+        );
+    }
+
     public function testRegistrationRejectsAlreadyRegisteredCredential(): void
     {
         $store = self::storeWith($this->registeredRecord());
