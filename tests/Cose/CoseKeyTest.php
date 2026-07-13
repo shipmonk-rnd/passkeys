@@ -141,6 +141,11 @@ final class CoseKeyTest extends CryptoTestCase
             [1 => CoseRsaKey::KTY, 3 => CoseAlgorithmIdentifier::RS256, -1 => str_pad('', 128, "\x01"), -2 => "\x01\x00\x01"],
         ];
 
+        yield 'RSA modulus too large' => [
+            'RSA modulus must be at most 8192 bits',
+            [1 => CoseRsaKey::KTY, 3 => CoseAlgorithmIdentifier::RS256, -1 => str_pad('', 1_025, "\x01"), -2 => "\x01\x00\x01"],
+        ];
+
         yield 'RSA exponent of one (forgeable)' => [
             'RSA public exponent must be an odd integer greater than 1',
             [1 => CoseRsaKey::KTY, 3 => CoseAlgorithmIdentifier::RS256, -1 => $rsaModulus, -2 => "\x01"],

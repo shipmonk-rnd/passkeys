@@ -57,6 +57,13 @@ final readonly class CoseRsaKey extends CoseKey
     private const int MIN_MODULUS_BYTES = 256;
 
     /**
+     * Maximum accepted modulus size in bytes (8192 bits). A "none"-format registration stores
+     * the key without any signature proving possession, so without a ceiling an enrollee could
+     * persist an oversized modulus that makes every later verification disproportionately slow.
+     */
+    private const int MAX_MODULUS_BYTES = 1_024;
+
+    /**
      * @param value-of<self::ALGORITHMS> $alg
      * @param string                     $n   modulus as raw big-endian bytes
      * @param string                     $e   public exponent as raw big-endian bytes
@@ -88,6 +95,10 @@ final readonly class CoseRsaKey extends CoseKey
 
         if (strlen($modulus) < self::MIN_MODULUS_BYTES) {
             throw new CoseKeyException('RSA modulus must be at least 2048 bits');
+        }
+
+        if (strlen($modulus) > self::MAX_MODULUS_BYTES) {
+            throw new CoseKeyException('RSA modulus must be at most 8192 bits');
         }
 
         // A public exponent of 1 makes verification the identity function, so the
