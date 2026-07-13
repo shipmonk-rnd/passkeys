@@ -53,6 +53,14 @@ final class RelyingParty
      */
     public const int MAX_CREDENTIAL_ID_LENGTH = 1023;
 
+    /**
+     * The {@link https://w3c.github.io/webauthn/#credential-id credential ID definition} requires
+     * authenticators to emit at least 16 bytes (with ≥100 bits of entropy). §7.1 does not mandate
+     * this check on the relying party, but a shorter ID can only come from a non-conforming or
+     * malicious authenticator, so it is rejected fail-closed.
+     */
+    public const int MIN_CREDENTIAL_ID_LENGTH = 16;
+
     private const string FMT_NONE = 'none';
     private const string FMT_PACKED = 'packed';
 
@@ -163,13 +171,21 @@ final class RelyingParty
         // an X.509 trust path are rejected fail-closed until the attestation layer lands.
         $attestationType = $this->verifyAttestationStatement($attestationObject, $publicKey, $response->clientDataJSON);
 
-        // §7.1 step 25: credential ids are bounded at 1023 bytes.
+        // §7.1 step 25: credential ids are bounded at 1023 bytes. The 16-byte floor comes from the
+        // credential ID definition (an authenticator obligation, not a §7.1 step) — see the constant.
         $credentialId = $attestedCredentialData->credentialId;
 
         if (strlen($credentialId) > self::MAX_CREDENTIAL_ID_LENGTH) {
             throw new VerificationException(
                 VerificationException::CREDENTIAL_ID_TOO_LONG,
                 'Credential ID exceeds ' . self::MAX_CREDENTIAL_ID_LENGTH . ' bytes',
+            );
+        }
+
+        if (strlen($credentialId) < self::MIN_CREDENTIAL_ID_LENGTH) {
+            throw new VerificationException(
+                VerificationException::CREDENTIAL_ID_TOO_SHORT,
+                'Credential ID is shorter than ' . self::MIN_CREDENTIAL_ID_LENGTH . ' bytes',
             );
         }
 
