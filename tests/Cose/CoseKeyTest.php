@@ -97,6 +97,35 @@ final class CoseKeyTest extends CryptoTestCase
     }
 
     /**
+     * The size ceilings are checked on the numeric values, so the stored parameters must be the
+     * trimmed bytes too — otherwise leading zero bytes could smuggle an arbitrarily large
+     * bytestring into storage past the checks.
+     */
+    public function testRsaKeyNormalizesLeadingZeros(): void
+    {
+        $modulus = str_pad('', 256, "\x01");
+        $exponent = "\x01\x00\x01";
+
+        $padded = CoseKey::fromCborMap(self::cborMap([
+            1 => CoseRsaKey::KTY,
+            3 => CoseAlgorithmIdentifier::RS256,
+            -1 => str_pad('', 16, "\x00") . $modulus,
+            -2 => "\x00\x00" . $exponent,
+        ]));
+        $trimmed = CoseKey::fromCborMap(self::cborMap([
+            1 => CoseRsaKey::KTY,
+            3 => CoseAlgorithmIdentifier::RS256,
+            -1 => $modulus,
+            -2 => $exponent,
+        ]));
+
+        self::assertSame(
+            bin2hex($trimmed->toBytes()),
+            bin2hex($padded->toBytes()),
+        );
+    }
+
+    /**
      * @return iterable<string, array{string, array<int, int|string>}>
      */
     public static function provideInvalidKeys(): iterable
@@ -159,6 +188,11 @@ final class CoseKeyTest extends CryptoTestCase
         yield 'RSA empty exponent' => [
             'RSA public exponent must be an odd integer greater than 1',
             [1 => CoseRsaKey::KTY, 3 => CoseAlgorithmIdentifier::RS256, -1 => $rsaModulus, -2 => ''],
+        ];
+
+        yield 'RSA exponent too large' => [
+            'RSA public exponent must be at most 64 bits',
+            [1 => CoseRsaKey::KTY, 3 => CoseAlgorithmIdentifier::RS256, -1 => $rsaModulus, -2 => str_pad('', 9, "\x01")],
         ];
 
         yield 'unsupported OKP algorithm' => [
