@@ -74,6 +74,12 @@ use const STR_PAD_LEFT;
  * Malformed or unacceptable options throw a {@see LogicException} — in a test, both indicate a
  * bug, either in the relying party under test or in the test itself.
  *
+ * Two deliberate simplifications, so you know what your tests do *not* cover: unlike a real
+ * client, it takes the RP ID from the options at face value instead of validating it against the
+ * origin — a mismatched `rpId`/`origins` configuration therefore passes here and only fails in a
+ * real browser; and it always reports itself as a platform authenticator
+ * (`authenticatorAttachment: "platform"`, `transports: ["internal"]`).
+ *
  * @api
  */
 final class FakeAuthenticator
@@ -111,7 +117,8 @@ final class FakeAuthenticator
      *
      * Mirroring a real client, it refuses (`InvalidStateError`) when `excludeCredentials` lists a
      * passkey it already holds for the RP, and (`NotSupportedError`) when `pubKeyCredParams` does
-     * not offer the authenticator's algorithm.
+     * not offer the authenticator's algorithm. Unlike a real client, it does not check that the
+     * RP ID is a registrable suffix of the origin.
      *
      * @param string $creationOptionsJson the JSON your registration-options endpoint returned
      */
