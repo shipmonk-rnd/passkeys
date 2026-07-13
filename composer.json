@@ -2,6 +2,14 @@
     "name": "shipmonk/passkeys",
     "description": "Passkeys (WebAuthn) library for PHP with zero dependencies",
     "license": "MIT",
+    "keywords": [
+        "authentication",
+        "fido2",
+        "passkeys",
+        "passwordless",
+        "security",
+        "webauthn"
+    ],
     "require": {
         "php": ">=8.4",
         "ext-openssl": "*"
