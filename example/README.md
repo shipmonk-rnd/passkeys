@@ -22,9 +22,9 @@ php -S localhost:8000 example/plain-php/server.php
 
 The same relying party built idiomatically on Symfony (`MicroKernelTrait`): `PasskeyFlow` as a
 container service, a **Doctrine ORM** `PasskeyStore` (with custom DBAL types for the binary
-WebAuthn fields), a session-backed `PendingCeremonyStore`, and a Twig page. The Symfony/Doctrine/Twig
-packages are `require-dev` of the library, so a single root `composer install` is all the setup it
-needs.
+WebAuthn fields), a session-backed `PendingCeremonyStore`, and a static HTML page. The
+Symfony/Doctrine packages are `require-dev` of the library, so a single root `composer install` is
+all the setup it needs.
 
 ```sh
 composer install                                                       # from the repo root

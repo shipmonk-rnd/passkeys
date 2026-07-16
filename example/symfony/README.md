@@ -2,13 +2,13 @@
 
 The same password-first relying party as [`../plain-php/`](../plain-php/), rebuilt idiomatically on
 **Symfony** with `MicroKernelTrait` (the whole app is configured inline in one `Kernel`), a
-**Doctrine ORM** `PasskeyStore`, a session-backed `PendingCeremonyStore`, and a Twig page. It shows
+**Doctrine ORM** `PasskeyStore`, a session-backed `PendingCeremonyStore`, and a static HTML page. It shows
 how the framework-agnostic `ShipMonk\Passkeys` library plugs into a real Symfony application:
 dependency injection, the session, and Doctrine.
 
 ## Run it
 
-The Symfony, Doctrine, and Twig packages are `require-dev` of the library, so this example runs off
+The Symfony and Doctrine packages are `require-dev` of the library, so this example runs off
 the repository's root `vendor/` — no separate `composer install` here. From the **repository root**:
 
 ```sh
