@@ -13,7 +13,6 @@ use ShipMonk\PasskeysSymfonyDemo\Passkey\DoctrinePasskeyStore;
 use ShipMonk\PasskeysSymfonyDemo\Passkey\SessionPendingCeremonyStore;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
-use Symfony\Bundle\TwigBundle\TwigBundle;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpKernel\Kernel as BaseKernel;
 use Symfony\Component\Routing\Loader\Configurator\RoutingConfigurator;
@@ -41,7 +40,6 @@ final class Kernel extends BaseKernel
     {
         yield new FrameworkBundle();
         yield new DoctrineBundle();
-        yield new TwigBundle();
     }
 
     public function getProjectDir(): string

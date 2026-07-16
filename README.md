@@ -241,7 +241,7 @@ compare the wiring on bare PHP and on a framework. Both serve `http://localhost:
 
 - [`example/symfony/`](example/symfony/) — the same relying party on Symfony (`MicroKernelTrait`),
   wiring `PasskeyFlow` as a service over a **Doctrine ORM** `PasskeyStore`, a session-backed
-  `PendingCeremonyStore`, and a Twig page:
+  `PendingCeremonyStore`, and a static HTML page:
 
   ```sh
   composer install                                                       # from the repo root
