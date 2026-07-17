@@ -8,7 +8,7 @@ $config = new Config();
 
 // Every method must be fully covered, except for lines that throw LogicException.
 $config->addExecutableLineExcluder(new IgnoreThrowNewExceptionLineExcluder([
-	LogicException::class,
+    LogicException::class,
 ]));
 $config->addRule(new EnforceCoverageForMethodsRule(requiredCoveragePercentage: 100));
 
