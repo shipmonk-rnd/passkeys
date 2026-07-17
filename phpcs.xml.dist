@@ -6,6 +6,7 @@
     <arg name="basepath" value="."/>
     <arg name="cache" value="cache/phpcs.cache"/>
 
+    <file>coverage-guard.php</file>
     <file>example/</file>
     <file>src/</file>
     <file>tests/</file>
