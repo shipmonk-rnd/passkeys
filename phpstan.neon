@@ -19,6 +19,7 @@ parameters:
     max: 80500
 
   paths:
+    - coverage-guard.php
     - src
     - tests
 
