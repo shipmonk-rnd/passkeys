@@ -68,6 +68,10 @@ final class FakeAuthenticatorTest extends PasskeysTestCase
         self::assertTrue($registered->result->userVerified);
         self::assertSame(['internal'], $registered->toCredentialRecord()->transports);
 
+        // A default authenticator is a single-device one: not backup eligible, so never backed up.
+        self::assertFalse($registered->result->backupEligible);
+        self::assertFalse($registered->result->backupState);
+
         $passkey = $authenticator->getPasskeys()[0] ?? null;
         self::assertNotNull($passkey);
         self::assertSame($registered->result->credentialId, $passkey->credentialId);
@@ -190,6 +194,26 @@ final class FakeAuthenticatorTest extends PasskeysTestCase
         );
     }
 
+    /**
+     * The silent passkey upgrade: a conditional-mediation creation happens without any user
+     * interaction, so the fake emulates it with neither flag set — and the flow, which relaxes both
+     * checks for that ceremony, accepts it.
+     */
+    public function testSilentCreationSetsNeitherUserFlag(): void
+    {
+        $flow = $this->createFlow();
+        $authenticator = new FakeAuthenticator(origin: self::ORIGIN, userPresent: false, userVerified: false);
+        $this->store->addUser(self::ALICE, self::ALICE_HANDLE);
+
+        $registered = $flow->register($authenticator->createPasskey(
+            $flow->registrationOptions(self::ALICE_HANDLE, self::ALICE, conditionalMediation: true)->toJson(),
+        ));
+
+        self::assertTrue($registered->conditionalMediation);
+        self::assertFalse($registered->result->userVerified);
+        self::assertFalse($registered->toCredentialRecord()->uvInitialized);
+    }
+
     public function testBackedUpPasskeyReportsBackupFlags(): void
     {
         $flow = $this->createFlow();
@@ -232,20 +256,86 @@ final class FakeAuthenticatorTest extends PasskeysTestCase
         self::assertSame(1, $passkey->signCount);
     }
 
-    public function testMalformedOptionsAreRejected(): void
+    /**
+     * A relying party may scope its credentials to a registrable suffix of the origin, so an
+     * explicit `rp.id` / `rpId` has to be honoured as given — the origin host is only the fallback
+     * for when the options omit it.
+     */
+    public function testExplicitRpIdIsUsedInsteadOfTheOriginHost(): void
+    {
+        $authenticator = new FakeAuthenticator(origin: 'https://login.example.com');
+
+        $authenticator->createPasskey(json_encode([
+            'challenge' => Base64::urlEncode('a-challenge-of-32-bytes-length!!'),
+            'rp' => ['name' => 'Example RP', 'id' => self::RP_ID],
+            'user' => [
+                'id' => Base64::urlEncode(self::ALICE_HANDLE),
+                'name' => self::ALICE,
+                'displayName' => self::ALICE,
+            ],
+            'pubKeyCredParams' => [['type' => 'public-key', 'alg' => CoseAlgorithmIdentifier::ES256]],
+        ], JSON_THROW_ON_ERROR));
+
+        $passkey = $authenticator->getPasskeys()[0] ?? null;
+        self::assertNotNull($passkey);
+        self::assertSame(self::RP_ID, $passkey->rpId);
+
+        // The assertion side resolves the RP ID the same way, so it finds that very passkey.
+        $authenticator->authenticate(json_encode([
+            'challenge' => Base64::urlEncode('another-challenge-32-bytes-long!'),
+            'rpId' => self::RP_ID,
+        ], JSON_THROW_ON_ERROR));
+
+        self::assertSame(1, $passkey->signCount);
+    }
+
+    #[DataProvider('provideMalformedOptions')]
+    public function testMalformedOptionsAreRejected(
+        bool $creation,
+        string $optionsJson,
+        string $message,
+    ): void
     {
         $authenticator = new FakeAuthenticator(origin: self::ORIGIN);
 
         self::assertException(
             LogicException::class,
+            $message,
+            static fn () => $creation
+                ? $authenticator->createPasskey($optionsJson)
+                : $authenticator->authenticate($optionsJson),
+        );
+    }
+
+    /**
+     * @return iterable<string, array{bool, string, string}>
+     */
+    public static function provideMalformedOptions(): iterable
+    {
+        yield 'creation options that are not JSON' => [true, 'not json', 'Malformed creation options: %a'];
+        yield 'request options with a non-string challenge' => [false, '{"challenge": 42}', 'Malformed request options: %a'];
+
+        // Members the options carry base64url-encoded fail the same way a structural problem does.
+        yield 'creation options with an invalid base64url user id' => [
+            true,
+            json_encode([
+                'challenge' => Base64::urlEncode('a-challenge-of-32-bytes-length!!'),
+                'rp' => ['name' => 'Example RP', 'id' => self::RP_ID],
+                'user' => ['id' => 'not base64url!', 'name' => self::ALICE, 'displayName' => self::ALICE],
+                'pubKeyCredParams' => [['type' => 'public-key', 'alg' => CoseAlgorithmIdentifier::ES256]],
+            ], JSON_THROW_ON_ERROR),
             'Malformed creation options: %a',
-            static fn () => $authenticator->createPasskey('not json'),
-        );
-        self::assertException(
-            LogicException::class,
+        ];
+
+        yield 'request options with an invalid base64url credential id' => [
+            false,
+            json_encode([
+                'challenge' => Base64::urlEncode('another-challenge-32-bytes-long!'),
+                'rpId' => self::RP_ID,
+                'allowCredentials' => [['type' => 'public-key', 'id' => 'not base64url!']],
+            ], JSON_THROW_ON_ERROR),
             'Malformed request options: %a',
-            static fn () => $authenticator->authenticate('{"challenge": 42}'),
-        );
+        ];
     }
 
     /**

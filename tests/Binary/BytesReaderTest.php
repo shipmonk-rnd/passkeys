@@ -86,6 +86,16 @@ final class BytesReaderTest extends PasskeysTestCase
             self::assertSame(66_051, $reader->u32());
         });
 
+        // Each byte must land in its own octet, so the most significant one has to carry weight
+        // 2^24 — the widest value a 4-byte big-endian field holds.
+        BytesReader::read("\xff\xff\xff\xff", static function (BytesReader $reader): void {
+            self::assertSame(4_294_967_295, $reader->u32());
+        });
+
+        BytesReader::read("\x80\x00\x00\x00", static function (BytesReader $reader): void {
+            self::assertSame(2_147_483_648, $reader->u32());
+        });
+
         self::assertException(
             BytesReaderException::class,
             'Unexpected end of data',
@@ -101,6 +111,11 @@ final class BytesReaderTest extends PasskeysTestCase
     {
         BytesReader::read("\x00\x01\x02\x03\x04\x05\x06\x07", static function (BytesReader $reader): void {
             self::assertSame(283_686_952_306_183, $reader->u64());
+        });
+
+        // Zero is accepted: the overflow guard rejects only a *negative* accumulator.
+        BytesReader::read("\x00\x00\x00\x00\x00\x00\x00\x00", static function (BytesReader $reader): void {
+            self::assertSame(0, $reader->u64());
         });
 
         BytesReader::read("\x7f\xff\xff\xff\xff\xff\xff\xff", static function (BytesReader $reader): void {
@@ -156,6 +171,25 @@ final class BytesReaderTest extends PasskeysTestCase
             'Unexpected end of data',
             static function (): void {
                 BytesReader::read('A', static function (BytesReader $reader): void {
+                    $reader->bytes(2);
+                });
+            },
+        );
+    }
+
+    /**
+     * The bounds check must measure against what is *left* (length - offset), not the whole input:
+     * after some bytes have been consumed, a read that fits the input but overruns the remainder
+     * still has to fail instead of silently returning a short string.
+     */
+    public function testBytesRejectsReadPastTheRemainder(): void
+    {
+        self::assertException(
+            BytesReaderException::class,
+            'Unexpected end of data',
+            static function (): void {
+                BytesReader::read('AB', static function (BytesReader $reader): void {
+                    self::assertSame('A', $reader->bytes(1));
                     $reader->bytes(2);
                 });
             },

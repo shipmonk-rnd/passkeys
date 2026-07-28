@@ -13,6 +13,7 @@ use ShipMonk\Passkeys\Cose\CoseOkpKey;
 use ShipMonk\Passkeys\Cose\CoseRsaKey;
 use ShipMonk\PasskeysTests\CryptoTestCase;
 use function chr;
+use function openssl_pkey_get_public;
 use function ord;
 use function substr;
 use const OPENSSL_ALGO_SHA256;
@@ -79,15 +80,70 @@ final class CoseKeyVerifyTest extends CryptoTestCase
 
     public function testThrowsWhenPublicKeyCannotBeLoaded(): void
     {
-        $key = new readonly class (CoseAlgorithmIdentifier::ES256) extends CoseKey {
+        $key = self::unloadableKey();
 
-            public function __construct(int $alg)
+        self::assertException(
+            CoseKeyLoadException::class,
+            'Failed to load public key%A',
+            static fn () => $key->verify('x', 'y'),
+        );
+    }
+
+    /**
+     * Whatever OpenSSL logged while rejecting the key material is what the exception has to report,
+     * so the cause of the load failure is not lost.
+     */
+    public function testReportsTheOpenSslErrorsBehindALoadFailure(): void
+    {
+        $key = self::unloadableKey(logOpenSslError: true);
+
+        self::assertException(
+            CoseKeyLoadException::class,
+            'Failed to load public key: error:%a',
+            static fn () => $key->verify('x', 'y'),
+        );
+    }
+
+    /**
+     * OpenSSL's error queue is process-wide and survives across calls, so an error left there by
+     * unrelated code must not be attributed to this verification: the queue is drained on entry.
+     */
+    public function testDoesNotReportOpenSslErrorsLeftBehindByEarlierCalls(): void
+    {
+        $key = self::unloadableKey();
+
+        // Leave a stale entry in the queue, the way any earlier failed OpenSSL call would.
+        self::assertFalse(openssl_pkey_get_public('not a key at all'));
+
+        self::assertException(
+            CoseKeyLoadException::class,
+            'Failed to load public key: ',
+            static fn () => $key->verify('x', 'y'),
+        );
+    }
+
+    /**
+     * A key whose material OpenSSL refuses to load, optionally logging a real error to the queue
+     * on the way — the two shapes a load failure takes in practice.
+     */
+    private static function unloadableKey(bool $logOpenSslError = false): CoseKey
+    {
+        return new readonly class (CoseAlgorithmIdentifier::ES256, $logOpenSslError) extends CoseKey {
+
+            public function __construct(
+                int $alg,
+                private bool $logOpenSslError,
+            )
             {
                 parent::__construct($alg);
             }
 
             protected function toOpenSslPublicKey(): OpenSSLAsymmetricKey|false
             {
+                if ($this->logOpenSslError) {
+                    openssl_pkey_get_public('not a key at all');
+                }
+
                 return false;
             }
 
@@ -102,12 +158,6 @@ final class CoseKeyVerifyTest extends CryptoTestCase
             }
 
         };
-
-        self::assertException(
-            CoseKeyLoadException::class,
-            'Failed to load public key%A',
-            static fn () => $key->verify('x', 'y'),
-        );
     }
 
     /**

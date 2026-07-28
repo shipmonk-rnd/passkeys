@@ -3,6 +3,7 @@
 namespace ShipMonk\PasskeysTests\Credential;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use ShipMonk\Passkeys\Base64\Base64;
 use ShipMonk\Passkeys\Credential\AuthenticatorAssertionResponse;
 use ShipMonk\Passkeys\Credential\AuthenticatorAttestationResponse;
@@ -120,6 +121,123 @@ final class PublicKeyCredentialTest extends PasskeysTestCase
             'Malformed attestation object',
             static fn () => $response->parseAttestationObject(),
         );
+    }
+
+    /**
+     * The attestation object is one self-contained CBOR map, so undecodable CBOR and CBOR that
+     * decodes to something other than a map must both be repacked into a MalformedDataException.
+     */
+    #[DataProvider('provideMalformedAttestationObject')]
+    public function testParseAttestationObjectRejectsEveryDecodeFailure(string $attestationObject): void
+    {
+        $this->assertAttestationObjectRejected($attestationObject);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function provideMalformedAttestationObject(): iterable
+    {
+        yield 'undecodable CBOR' => ["\xff"];
+        yield 'CBOR that is not a map' => ["\x01"];
+    }
+
+    /**
+     * A complete attestation object is the *whole* of the member: a byte past its end must not be
+     * silently ignored either.
+     */
+    public function testParseAttestationObjectRejectsTrailingBytes(): void
+    {
+        $this->assertAttestationObjectRejected(Base64::urlDecode(self::ATTESTATION_OBJECT) . "\x00");
+    }
+
+    private function assertAttestationObjectRejected(string $attestationObject): void
+    {
+        $credential = PublicKeyCredential::fromRegistrationResponseJson(JsonObject::fromString(json_encode([
+            'id' => Base64::urlEncode('credential-id'),
+            'rawId' => Base64::urlEncode('credential-id'),
+            'type' => 'public-key',
+            'response' => [
+                'clientDataJSON' => Base64::urlEncode('{"type":"webauthn.create"}'),
+                'attestationObject' => Base64::urlEncode($attestationObject),
+            ],
+        ], JSON_THROW_ON_ERROR)));
+
+        $response = $credential->response;
+        self::assertInstanceOf(AuthenticatorAttestationResponse::class, $response);
+
+        self::assertException(
+            MalformedDataException::class,
+            'Malformed attestation object',
+            static fn () => $response->parseAttestationObject(),
+        );
+    }
+
+    /**
+     * The base64url members are decoded while parsing the response, so invalid encoding fails the
+     * same way a structurally wrong response does — never by letting InvalidBase64Exception out.
+     */
+    #[DataProvider('provideInvalidBase64Response')]
+    public function testRejectsInvalidBase64UrlMembers(
+        bool $registration,
+        string $json,
+    ): void
+    {
+        $jsonObject = JsonObject::fromString($json);
+
+        self::assertException(
+            MalformedDataException::class,
+            $registration ? 'Malformed registration response' : 'Malformed authentication response',
+            static fn () => $registration
+                ? PublicKeyCredential::fromRegistrationResponseJson($jsonObject)
+                : PublicKeyCredential::fromAuthenticationResponseJson($jsonObject),
+        );
+    }
+
+    /**
+     * @return iterable<string, array{bool, string}>
+     */
+    public static function provideInvalidBase64Response(): iterable
+    {
+        $registration = [
+            'id' => Base64::urlEncode('credential-id'),
+            'rawId' => Base64::urlEncode('credential-id'),
+            'type' => 'public-key',
+            'response' => [
+                'clientDataJSON' => Base64::urlEncode('{"type":"webauthn.create"}'),
+                'attestationObject' => self::ATTESTATION_OBJECT,
+            ],
+        ];
+
+        $authentication = [
+            'id' => Base64::urlEncode('credential-id'),
+            'rawId' => Base64::urlEncode('credential-id'),
+            'type' => 'public-key',
+            'response' => [
+                'clientDataJSON' => Base64::urlEncode('{"type":"webauthn.get"}'),
+                'authenticatorData' => Base64::urlEncode('authenticator-data'),
+                'signature' => Base64::urlEncode('signature'),
+            ],
+        ];
+
+        $invalid = 'not base64url!';
+
+        yield 'registration rawId' => [true, self::encodeWith($registration, ['rawId' => $invalid])];
+        yield 'registration clientDataJSON' => [true, self::encodeWith($registration, ['response' => ['clientDataJSON' => $invalid] + $registration['response']])];
+        yield 'authentication rawId' => [false, self::encodeWith($authentication, ['rawId' => $invalid])];
+        yield 'authentication signature' => [false, self::encodeWith($authentication, ['response' => ['signature' => $invalid] + $authentication['response']])];
+    }
+
+    /**
+     * @param array<string, mixed> $base
+     * @param array<string, mixed> $overrides
+     */
+    private static function encodeWith(
+        array $base,
+        array $overrides,
+    ): string
+    {
+        return json_encode($overrides + $base, JSON_THROW_ON_ERROR);
     }
 
     public function testFromAuthenticationResponseJson(): void

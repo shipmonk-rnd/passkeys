@@ -7,14 +7,17 @@ use OpenSSLAsymmetricKey;
 use PHPUnit\Framework\Attributes\CoversClass;
 use ShipMonk\Passkeys\Base64\Base64;
 use ShipMonk\Passkeys\Ceremony\CredentialRecord;
+use ShipMonk\Passkeys\Ceremony\RegistrationResult;
 use ShipMonk\Passkeys\Ceremony\VerificationException;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
 use ShipMonk\Passkeys\Cose\CoseKey;
 use ShipMonk\Passkeys\Credential\AuthenticatorData;
 use ShipMonk\Passkeys\Enum\AuthenticatorAttachment;
+use ShipMonk\Passkeys\Enum\AuthenticatorTransport;
 use ShipMonk\Passkeys\Enum\PublicKeyCredentialType;
 use ShipMonk\Passkeys\Enum\ResidentKeyRequirement;
 use ShipMonk\Passkeys\Enum\UserVerificationRequirement;
+use ShipMonk\Passkeys\Options\PublicKeyCredentialDescriptor;
 use ShipMonk\Passkeys\Options\PublicKeyCredentialParameters;
 use ShipMonk\Passkeys\Options\PublicKeyCredentialRequestOptions;
 use ShipMonk\Passkeys\PasskeyFlow;
@@ -32,6 +35,7 @@ use function hash_hmac;
 use function json_encode;
 use function ord;
 use function pack;
+use function str_repeat;
 use function strlen;
 use const JSON_THROW_ON_ERROR;
 
@@ -66,6 +70,10 @@ final class PasskeyFlowTest extends CryptoTestCase
     private const string AAGUID = "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10";
 
     private const string HARDENING_SECRET = 'enumeration-hardening-secret-32b!';
+
+    private const string FIXED_CHALLENGE = 'a-fixed-32-byte-challenge-value!';
+    private const string EMBEDDER_ORIGIN = 'https://embedder.example';
+    private const string DECOY_CREDENTIAL_ID = "\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e";
 
     private const int FLAGS_UP_UV = AuthenticatorData::FLAG_USER_PRESENT | AuthenticatorData::FLAG_USER_VERIFIED;
 
@@ -306,6 +314,22 @@ final class PasskeyFlowTest extends CryptoTestCase
         $flow->authenticationOptions('nobody@example.com');
     }
 
+    /**
+     * The 16-byte floor on the hardening secret is inclusive — exactly 16 bytes is accepted.
+     */
+    public function testHardeningAcceptsSecretExactlyAtTheMinimumLength(): void
+    {
+        $secret = str_repeat('s', 16);
+        $flow = $this->hardenedFlowWithAlice($secret);
+
+        $options = $flow->authenticationOptions('nobody@example.com');
+
+        self::assertSame(
+            hash_hmac('sha256', 'nobody@example.com', $secret, binary: true),
+            $this->onlyAllowCredentialId($options),
+        );
+    }
+
     // --- Combined flows: challenge-keyed pending ceremonies -------------------------------------
 
     public function testConcurrentCeremoniesAreKeyedByChallenge(): void
@@ -425,6 +449,20 @@ final class PasskeyFlowTest extends CryptoTestCase
         self::assertSame([], $this->store->savedPasskeys);
     }
 
+    /**
+     * The display name is what authenticator UIs label the passkey with, so an explicitly supplied
+     * one must be passed through unchanged; only its absence falls back to the username.
+     */
+    public function testRegistrationOptionsUseTheSuppliedDisplayName(): void
+    {
+        $flow = $this->createFlow();
+
+        $options = $flow->registrationOptions(self::DAVE_HANDLE, self::DAVE, displayName: 'Dave Doe');
+
+        self::assertSame(self::DAVE, $options->user->name);
+        self::assertSame('Dave Doe', $options->user->displayName);
+    }
+
     public function testRegistrationOptionsExcludeExistingCredentials(): void
     {
         $flow = $this->flowWithAlice();
@@ -508,8 +546,8 @@ final class PasskeyFlowTest extends CryptoTestCase
     {
         $flow = $this->createFlow();
 
-        $this->assertRegistrationFails(VerificationException::MALFORMED_RESPONSE, $flow, 'not json');
-        $this->assertRegistrationFails(VerificationException::MALFORMED_RESPONSE, $flow, '{}');
+        $this->assertRegistrationFails(VerificationException::MALFORMED_RESPONSE, $flow, 'not json', message: 'Malformed registration response: %s');
+        $this->assertRegistrationFails(VerificationException::MALFORMED_RESPONSE, $flow, '{}', message: 'Malformed registration response: %s');
     }
 
     public function testPendingRegistrationsAndAuthenticationsAreSeparate(): void
@@ -551,8 +589,8 @@ final class PasskeyFlowTest extends CryptoTestCase
         $flow = $this->flowWithAlice();
         $flow->authenticationOptions();
 
-        $this->assertAuthenticationFails(VerificationException::MALFORMED_RESPONSE, $flow, 'not json');
-        $this->assertAuthenticationFails(VerificationException::MALFORMED_RESPONSE, $flow, '{}');
+        $this->assertAuthenticationFails(VerificationException::MALFORMED_RESPONSE, $flow, 'not json', 'Malformed authentication response: %s');
+        $this->assertAuthenticationFails(VerificationException::MALFORMED_RESPONSE, $flow, '{}', 'Malformed authentication response: %s');
 
         // A response that never parsed must not consume the pending ceremony.
         self::assertCount(1, $this->pending->pendingAuthentications);
@@ -664,12 +702,107 @@ final class PasskeyFlowTest extends CryptoTestCase
         $flow->currentUserDetailsSignal('no-such-handle');
     }
 
+    // --- Customisation hooks ----------------------------------------------------------------------
+
+    /**
+     * The protected hooks are the documented customisation surface of the flow, so overriding them
+     * in a subclass must actually steer the options each ceremony offers.
+     */
+    public function testOverriddenHooksSteerTheCeremonyOptions(): void
+    {
+        $flow = $this->customizedFlowWithAlice();
+
+        $registrationOptions = $flow->registrationOptions(self::DAVE_HANDLE, self::DAVE);
+
+        self::assertSame(self::FIXED_CHALLENGE, $registrationOptions->challenge);
+        self::assertSame(
+            [CoseAlgorithmIdentifier::ES512],
+            array_map(static fn (PublicKeyCredentialParameters $parameters) => $parameters->alg, $registrationOptions->pubKeyCredParams),
+        );
+        self::assertSame(ResidentKeyRequirement::PREFERRED, $registrationOptions->authenticatorSelection?->residentKey);
+        self::assertNull($registrationOptions->timeout);
+
+        $authenticationOptions = $flow->authenticationOptions();
+
+        self::assertSame(self::FIXED_CHALLENGE, $authenticationOptions->challenge);
+        self::assertNull($authenticationOptions->timeout);
+    }
+
+    /**
+     * An overridden {@see PasskeyFlow::fabricateAllowCredentials()} replaces the built-in decoy
+     * wholesale — the hook exists so the fake descriptors can be made to match an app's real ones.
+     */
+    public function testOverriddenFabricationReplacesTheBuiltInDecoy(): void
+    {
+        $flow = $this->customizedFlowWithAlice();
+
+        $options = $flow->authenticationOptions('nobody@example.com');
+
+        self::assertNotNull($options->allowCredentials);
+        self::assertSame(
+            [self::DECOY_CREDENTIAL_ID],
+            array_map(static fn (PublicKeyCredentialDescriptor $descriptor) => $descriptor->id, $options->allowCredentials),
+        );
+    }
+
+    /**
+     * {@see PasskeyFlow::getAllowedTopOrigins()} decides which page may embed the login iframe:
+     * the listed embedder is accepted, any other is refused even with cross-origin use allowed.
+     */
+    public function testOverriddenTopOriginsGateCrossOriginAssertions(): void
+    {
+        $flow = $this->customizedFlowWithAlice();
+
+        $result = $flow->authenticate($this->aliceAssertion(
+            $flow->authenticationOptions()->challenge,
+            crossOrigin: true,
+            topOrigin: self::EMBEDDER_ORIGIN,
+        ));
+        self::assertSame(self::ALICE_HANDLE, $result->userHandle);
+
+        $this->assertAuthenticationFails(
+            VerificationException::UNTRUSTED_TOP_ORIGIN,
+            $flow,
+            $this->aliceAssertion(
+                $flow->authenticationOptions()->challenge,
+                crossOrigin: true,
+                topOrigin: 'https://elsewhere.example',
+            ),
+        );
+    }
+
+    /**
+     * A passkey an application builds itself (rather than receiving from {@see PasskeyFlow::register()})
+     * is a modal, non-conditional registration unless it says otherwise.
+     */
+    public function testRegisteredPasskeyIsNotConditionalMediationByDefault(): void
+    {
+        $passkey = new RegisteredPasskey(
+            self::DAVE_HANDLE,
+            AuthenticatorAttachment::PLATFORM,
+            new RegistrationResult(
+                credentialId: self::NEW_CREDENTIAL_ID,
+                publicKey: CoseKey::fromCborMap(self::cborMap($this->coseEntries)),
+                signCount: 0,
+                userVerified: true,
+                backupEligible: false,
+                backupState: false,
+                aaguid: self::AAGUID,
+                transports: null,
+                attestationType: RegistrationResult::ATTESTATION_NONE,
+            ),
+        );
+
+        self::assertFalse($passkey->conditionalMediation);
+    }
+
     // --- Assertion helpers ------------------------------------------------------------------------
 
     private function assertAuthenticationFails(
         string $reason,
         PasskeyFlow $flow,
         string $body,
+        ?string $message = null,
     ): void
     {
         try {
@@ -678,6 +811,10 @@ final class PasskeyFlowTest extends CryptoTestCase
 
         } catch (VerificationException $e) {
             self::assertSame($reason, $e->reason);
+
+            if ($message !== null) {
+                self::assertStringMatchesFormat($message, $e->getMessage());
+            }
         }
     }
 
@@ -686,6 +823,7 @@ final class PasskeyFlowTest extends CryptoTestCase
         PasskeyFlow $flow,
         string $body,
         ?string $expectedUserHandle = null,
+        ?string $message = null,
     ): void
     {
         try {
@@ -694,6 +832,10 @@ final class PasskeyFlowTest extends CryptoTestCase
 
         } catch (VerificationException $e) {
             self::assertSame($reason, $e->reason);
+
+            if ($message !== null) {
+                self::assertStringMatchesFormat($message, $e->getMessage());
+            }
         }
     }
 
@@ -790,6 +932,82 @@ final class PasskeyFlowTest extends CryptoTestCase
     }
 
     /**
+     * A flow seeded with Alice whose every remaining protected hook is overridden, so one ceremony
+     * exercises the whole customisation surface at once.
+     */
+    private function customizedFlowWithAlice(): PasskeyFlow
+    {
+        $flow = new class (self::RP_ID, [self::ORIGIN], $this->store, $this->pending, self::FIXED_CHALLENGE, self::EMBEDDER_ORIGIN, self::DECOY_CREDENTIAL_ID) extends PasskeyFlow {
+
+            /**
+             * @param list<string> $origins
+             */
+            public function __construct(
+                string $rpId,
+                array $origins,
+                PasskeyStore $store,
+                PendingCeremonyStore $pendingStore,
+                private readonly string $challenge,
+                private readonly string $embedderOrigin,
+                private readonly string $decoyCredentialId,
+            )
+            {
+                parent::__construct($rpId, 'Example RP', $origins, $store, $pendingStore);
+            }
+
+            protected function getAllowedAlgorithms(): array
+            {
+                return [CoseAlgorithmIdentifier::ES512];
+            }
+
+            protected function getResidentKeyRequirement(): ResidentKeyRequirement
+            {
+                return ResidentKeyRequirement::PREFERRED;
+            }
+
+            protected function getTimeout(): ?int
+            {
+                return null;
+            }
+
+            protected function isCrossOriginAllowed(): bool
+            {
+                return true;
+            }
+
+            protected function getAllowedTopOrigins(): array
+            {
+                return [$this->embedderOrigin];
+            }
+
+            protected function generateChallenge(): string
+            {
+                return $this->challenge;
+            }
+
+            /**
+             * @return list<PublicKeyCredentialDescriptor>
+             */
+            protected function fabricateAllowCredentials(string $username): array
+            {
+                return [
+                    new PublicKeyCredentialDescriptor(
+                        PublicKeyCredentialType::PUBLIC_KEY,
+                        $this->decoyCredentialId,
+                        [AuthenticatorTransport::USB],
+                    ),
+                ];
+            }
+
+        };
+
+        $this->store->addUser(self::ALICE, self::ALICE_HANDLE);
+        $this->store->addCredential($this->record(self::ALICE_CREDENTIAL_ID, self::ALICE_HANDLE, $this->coseEntries));
+
+        return $flow;
+    }
+
+    /**
      * The single fabricated (or real) credential id an authentication options response allow-lists.
      */
     private function onlyAllowCredentialId(PublicKeyCredentialRequestOptions $options): string
@@ -827,6 +1045,7 @@ final class PasskeyFlowTest extends CryptoTestCase
         ?int $flags = null,
         bool $tamperSignature = false,
         ?bool $crossOrigin = null,
+        ?string $topOrigin = null,
     ): string
     {
         return self::assertionBody(
@@ -838,6 +1057,7 @@ final class PasskeyFlowTest extends CryptoTestCase
             flags: $flags,
             tamperSignature: $tamperSignature,
             crossOrigin: $crossOrigin,
+            topOrigin: $topOrigin,
         );
     }
 
@@ -902,6 +1122,7 @@ final class PasskeyFlowTest extends CryptoTestCase
         ?int $flags = null,
         bool $tamperSignature = false,
         ?bool $crossOrigin = null,
+        ?string $topOrigin = null,
     ): string
     {
         $clientData = [
@@ -912,6 +1133,10 @@ final class PasskeyFlowTest extends CryptoTestCase
 
         if ($crossOrigin !== null) {
             $clientData['crossOrigin'] = $crossOrigin;
+        }
+
+        if ($topOrigin !== null) {
+            $clientData['topOrigin'] = $topOrigin;
         }
 
         $clientDataJson = json_encode($clientData, JSON_THROW_ON_ERROR);

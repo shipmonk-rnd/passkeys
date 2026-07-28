@@ -356,16 +356,23 @@ Signatures are verified through `ext-openssl` with the COSE algorithm identifier
 ## Development
 
 ```sh
-composer check          # all the checks below
-composer check:cs       # Code Sniffer
-composer fix:cs         # Code Sniffer auto-fix
-composer check:tests    # PHPUnit
-composer check:types    # PHPStan (level max)
-composer check:coverage # PHPUnit with coverage + coverage-guard (needs Xdebug or PCOV)
+composer check           # all the checks below
+composer check:cs        # Code Sniffer
+composer fix:cs          # Code Sniffer auto-fix
+composer check:tests     # PHPUnit
+composer check:types     # PHPStan (level max)
+composer check:coverage  # PHPUnit with coverage + coverage-guard (needs Xdebug or PCOV)
+composer check:mutations # Infection mutation testing (needs Xdebug or PCOV)
 ```
 
-CI runs the test suite with coverage enforcement (`shipmonk/coverage-guard`), PHPStan at level
-`max`, and `composer audit` on every push and pull request.
+Coverage is enforced twice over: `shipmonk/coverage-guard` requires every method to be fully
+covered, and [Infection](https://infection.github.io/) then requires the tests to actually *detect*
+changes to the covered code, failing below the mutation score in `infection.json`. A handful of
+surviving mutants are equivalent to the original (e.g. the redundant `=` padding in
+`Base64::urlDecode()`, which `base64_decode()` does not need) or alter only an unread exception
+code; the threshold is set just below 100% to account for them.
+
+CI runs all of the above plus `composer audit` on every push and pull request.
 
 ## License
 

@@ -68,6 +68,19 @@ final class CoseKeyTest extends CryptoTestCase
         );
     }
 
+    /**
+     * CBOR that decodes cleanly but is not a map is a distinct failure from undecodable CBOR, and
+     * has to be repacked the same way rather than escaping as a CborMapException.
+     */
+    public function testFromBytesRejectsCborThatIsNotAMap(): void
+    {
+        self::assertException(
+            CoseKeyException::class,
+            'Malformed COSE key',
+            static fn () => CoseKey::fromBytes(self::bytesFromHex('01')),
+        );
+    }
+
     public function testFromBytesRejectsTrailingBytes(): void
     {
         [$coseKey] = self::generateCoseKeyPair(CoseAlgorithmIdentifier::ES256);
@@ -123,6 +136,36 @@ final class CoseKeyTest extends CryptoTestCase
             bin2hex($trimmed->toBytes()),
             bin2hex($padded->toBytes()),
         );
+    }
+
+    /**
+     * The RSA size ceilings are inclusive, so a modulus of exactly 8192 bits and an exponent of
+     * exactly 64 bits are still accepted — one byte more is what gets rejected above.
+     *
+     * @param array<int, int|string> $entries
+     */
+    #[DataProvider('provideKeysAtTheSizeLimits')]
+    public function testFromCborMapAcceptsKeysExactlyAtTheSizeLimits(array $entries): void
+    {
+        self::assertInstanceOf(CoseRsaKey::class, CoseKey::fromCborMap(self::cborMap($entries)));
+    }
+
+    /**
+     * @return iterable<string, array{array<int, int|string>}>
+     */
+    public static function provideKeysAtTheSizeLimits(): iterable
+    {
+        yield 'RSA modulus of exactly 8192 bits' => [
+            [1 => CoseRsaKey::KTY, 3 => CoseAlgorithmIdentifier::RS256, -1 => str_pad('', 1_024, "\x01"), -2 => "\x01\x00\x01"],
+        ];
+
+        yield 'RSA exponent of exactly 64 bits' => [
+            [1 => CoseRsaKey::KTY, 3 => CoseAlgorithmIdentifier::RS256, -1 => str_pad('', 256, "\x01"), -2 => str_pad('', 8, "\x01")],
+        ];
+
+        yield 'RSA modulus of exactly 2048 bits' => [
+            [1 => CoseRsaKey::KTY, 3 => CoseAlgorithmIdentifier::RS256, -1 => str_pad('', 256, "\x01"), -2 => "\x01\x00\x01"],
+        ];
     }
 
     /**

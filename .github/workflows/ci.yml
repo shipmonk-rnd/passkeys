@@ -53,6 +53,27 @@ jobs:
       - name: Coverage guard
         run: vendor/bin/coverage-guard check clover.xml
 
+  mutation-testing:
+    name: Mutation testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: pcov
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress
+
+      # Fails below the minMsi threshold in infection.json, so a change that no test can tell
+      # apart from the original cannot land unnoticed.
+      - name: Infection
+        run: vendor/bin/infection --threads=max --no-interaction --no-progress
+
   phpstan:
     name: PHPStan
     runs-on: ubuntu-latest

@@ -19,6 +19,7 @@ use ShipMonk\Passkeys\Cose\CoseKey;
 use ShipMonk\Passkeys\Credential\AuthenticatorAssertionResponse;
 use ShipMonk\Passkeys\Credential\AuthenticatorAttestationResponse;
 use ShipMonk\Passkeys\Credential\AuthenticatorData;
+use ShipMonk\Passkeys\Credential\MalformedDataException;
 use ShipMonk\Passkeys\Credential\PublicKeyCredential;
 use ShipMonk\Passkeys\Json\JsonObject;
 use ShipMonk\PasskeysTests\Cbor\CborTestEncoder;
@@ -205,6 +206,57 @@ final class RelyingPartyTest extends CryptoTestCase
         self::assertFalse($result->possibleClone);
     }
 
+    /**
+     * Only the *both counters zero* case is exempt (an authenticator that does not keep a counter
+     * at all). A stored counter that has already moved and then reports zero is a regression like
+     * any other, so the clone signal must still be raised.
+     */
+    public function testAuthenticationFlagsPossibleCloneWhenCounterFallsBackToZero(): void
+    {
+        $store = self::storeWith($this->registeredRecord(signCount: 5));
+
+        $result = (new RelyingParty())->verifyAuthentication(
+            self::authenticationCredential($this->privateKey, CoseAlgorithmIdentifier::ES256, signCount: 0),
+            self::authenticationExpectations(),
+            $store,
+        );
+
+        self::assertTrue($result->possibleClone);
+        self::assertSame(0, $result->newSignCount);
+    }
+
+    /**
+     * The mirror image of {@see self::testAuthenticationRejectsMissingUserVerifiedWhenRequired()}:
+     * with the requirement on and the UV flag set, the assertion is accepted — the check must gate
+     * on both, not throw whenever user verification is required.
+     */
+    public function testAuthenticationAcceptsVerifiedUserWhenVerificationIsRequired(): void
+    {
+        $store = self::storeWith($this->registeredRecord());
+
+        $result = (new RelyingParty())->verifyAuthentication(
+            self::authenticationCredential($this->privateKey, CoseAlgorithmIdentifier::ES256),
+            self::authenticationExpectations(requireUserVerification: true),
+            $store,
+        );
+
+        self::assertTrue($result->userVerified);
+    }
+
+    /**
+     * The same for registration, where the UV requirement is likewise only a gate.
+     */
+    public function testRegistrationAcceptsVerifiedUserWhenVerificationIsRequired(): void
+    {
+        $result = (new RelyingParty())->verifyRegistration(
+            self::registrationCredential($this->coseEntries),
+            self::registrationExpectations(requireUserVerification: true),
+            new InMemoryCredentialStore(),
+        );
+
+        self::assertTrue($result->userVerified);
+    }
+
     // --- Registration negatives -----------------------------------------------------------------
 
     public function testRegistrationRejectsWrongClientDataType(): void
@@ -212,6 +264,7 @@ final class RelyingPartyTest extends CryptoTestCase
         $this->assertRegistrationFails(
             VerificationException::INVALID_CLIENT_DATA_TYPE,
             self::registrationCredential($this->coseEntries, type: 'webauthn.get'),
+            "Expected client data type 'webauthn.create', got 'webauthn.get'",
         );
     }
 
@@ -305,6 +358,7 @@ final class RelyingPartyTest extends CryptoTestCase
         $this->assertRegistrationFails(
             VerificationException::UNSUPPORTED_ATTESTATION_FORMAT,
             self::registrationCredential($this->coseEntries, fmt: 'fido-u2f'),
+            "Attestation format 'fido-u2f' is not supported",
         );
     }
 
@@ -330,9 +384,12 @@ final class RelyingPartyTest extends CryptoTestCase
             [CborTestEncoder::textString('x5c'), CborTestEncoder::byteString('certificate-chain-placeholder')],
         ]);
 
+        // The message names the x5c chain, so an unsupported format and an unsupported *statement*
+        // of a supported format stay distinguishable in logs.
         $this->assertRegistrationFails(
             VerificationException::UNSUPPORTED_ATTESTATION_FORMAT,
             self::registrationCredential($this->coseEntries, fmt: 'packed', attStmtOverride: $attStmt),
+            "Attestation format 'packed' with an x5c certificate chain is not supported",
         );
     }
 
@@ -342,6 +399,7 @@ final class RelyingPartyTest extends CryptoTestCase
         $this->assertRegistrationFails(
             VerificationException::INVALID_ATTESTATION_STATEMENT,
             self::registrationCredential($this->coseEntries, fmt: 'packed'),
+            'Malformed packed attestation statement: %s',
         );
     }
 
@@ -380,6 +438,7 @@ final class RelyingPartyTest extends CryptoTestCase
         $this->assertRegistrationFails(
             VerificationException::UNUSABLE_CREDENTIAL_KEY,
             self::registrationCredential($coseEntries, fmt: 'packed', attStmtOverride: $attStmt),
+            'Attested credential key is unusable: %s',
         );
     }
 
@@ -420,6 +479,7 @@ final class RelyingPartyTest extends CryptoTestCase
         $this->assertRegistrationFails(
             VerificationException::CREDENTIAL_ID_TOO_LONG,
             self::registrationCredential($this->coseEntries, credentialId: str_repeat("\x2a", 1024)),
+            'Credential ID exceeds 1023 bytes',
         );
     }
 
@@ -428,7 +488,36 @@ final class RelyingPartyTest extends CryptoTestCase
         $this->assertRegistrationFails(
             VerificationException::CREDENTIAL_ID_TOO_SHORT,
             self::registrationCredential($this->coseEntries, credentialId: str_repeat("\x2a", 15)),
+            'Credential ID is shorter than 16 bytes',
         );
+    }
+
+    /**
+     * Both credential-id bounds are inclusive: 16 bytes (the {@see RelyingParty::MIN_CREDENTIAL_ID_LENGTH}
+     * floor, which the default fixture already uses) and 1023 bytes (the §7.1 step 25 ceiling) are
+     * the widest ids an authenticator may legitimately emit, and must be accepted.
+     */
+    #[DataProvider('provideCredentialIdLengthsAtTheBounds')]
+    public function testRegistrationAcceptsCredentialIdExactlyAtTheBounds(int $length): void
+    {
+        $credentialId = str_repeat("\x2a", $length);
+
+        $result = (new RelyingParty())->verifyRegistration(
+            self::registrationCredential($this->coseEntries, credentialId: $credentialId),
+            self::registrationExpectations(),
+            new InMemoryCredentialStore(),
+        );
+
+        self::assertSame($credentialId, $result->credentialId);
+    }
+
+    /**
+     * @return iterable<string, array{int}>
+     */
+    public static function provideCredentialIdLengthsAtTheBounds(): iterable
+    {
+        yield 'minimum (16 bytes)' => [RelyingParty::MIN_CREDENTIAL_ID_LENGTH];
+        yield 'maximum (1023 bytes)' => [RelyingParty::MAX_CREDENTIAL_ID_LENGTH];
     }
 
     public function testRegistrationRejectsAlreadyRegisteredCredential(): void
@@ -520,6 +609,7 @@ final class RelyingPartyTest extends CryptoTestCase
             VerificationException::INVALID_CLIENT_DATA_TYPE,
             self::authenticationCredential($this->privateKey, CoseAlgorithmIdentifier::ES256, type: 'webauthn.create'),
             $store,
+            "Expected client data type 'webauthn.get', got 'webauthn.create'",
         );
     }
 
@@ -653,6 +743,7 @@ final class RelyingPartyTest extends CryptoTestCase
             VerificationException::UNUSABLE_CREDENTIAL_KEY,
             self::authenticationCredential($this->privateKey, CoseAlgorithmIdentifier::ES256),
             self::storeWith($record),
+            'Stored credential key is unusable: %s',
         );
     }
 
@@ -773,6 +864,7 @@ final class RelyingPartyTest extends CryptoTestCase
             VerificationException::MALFORMED_RESPONSE,
             self::authenticationCredential($this->privateKey, CoseAlgorithmIdentifier::ES256, authDataOverride: "\x00\x01\x02"),
             $store,
+            'Malformed authentication response: %s',
         );
     }
 
@@ -781,6 +873,7 @@ final class RelyingPartyTest extends CryptoTestCase
     public function testRegistrationExpectationsRejectShortChallenge(): void
     {
         $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Challenge must be at least 16 bytes');
 
         new RegistrationExpectations(
             challenge: 'too-short',
@@ -793,12 +886,90 @@ final class RelyingPartyTest extends CryptoTestCase
     public function testAuthenticationExpectationsRejectShortChallenge(): void
     {
         $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Challenge must be at least 16 bytes');
 
         new AuthenticationExpectations(
             challenge: 'too-short',
             rpId: self::RP_ID,
             origins: [self::ORIGIN],
         );
+    }
+
+    /**
+     * The 16-byte floor (WebAuthn §13.4.3) is inclusive: exactly 16 bytes is the shortest challenge
+     * still accepted.
+     */
+    public function testExpectationsAcceptChallengeExactlyAtTheMinimumLength(): void
+    {
+        $challenge = str_repeat('c', 16);
+
+        $registration = new RegistrationExpectations(
+            challenge: $challenge,
+            rpId: self::RP_ID,
+            origins: [self::ORIGIN],
+            allowedAlgorithms: [CoseAlgorithmIdentifier::ES256],
+        );
+        $authentication = new AuthenticationExpectations(
+            challenge: $challenge,
+            rpId: self::RP_ID,
+            origins: [self::ORIGIN],
+        );
+
+        self::assertSame($challenge, $registration->challenge);
+        self::assertSame($challenge, $authentication->challenge);
+    }
+
+    /**
+     * The policy defaults are part of the API: everything optional starts off, so a relying party
+     * that passes only the required arguments gets the permissive-but-explicit baseline documented
+     * on each property, and any stricter policy is opted into.
+     */
+    public function testExpectationsDefaults(): void
+    {
+        $registration = new RegistrationExpectations(
+            challenge: self::CHALLENGE,
+            rpId: self::RP_ID,
+            origins: [self::ORIGIN],
+            allowedAlgorithms: [CoseAlgorithmIdentifier::ES256],
+        );
+
+        self::assertFalse($registration->requireUserVerification);
+        self::assertFalse($registration->allowCrossOrigin);
+        self::assertSame([], $registration->allowedTopOrigins);
+        self::assertFalse($registration->conditionalMediation);
+
+        $authentication = new AuthenticationExpectations(
+            challenge: self::CHALLENGE,
+            rpId: self::RP_ID,
+            origins: [self::ORIGIN],
+        );
+
+        self::assertNull($authentication->allowedCredentialIds);
+        self::assertFalse($authentication->requireUserVerification);
+        self::assertFalse($authentication->allowCrossOrigin);
+        self::assertSame([], $authentication->allowedTopOrigins);
+        self::assertNull($authentication->expectedUserHandle);
+    }
+
+    /**
+     * A VerificationException carries the machine-readable reason *and* a human-readable message,
+     * and keeps the underlying failure as its previous exception so the cause stays diagnosable.
+     */
+    public function testVerificationExceptionCarriesMessageAndCause(): void
+    {
+        try {
+            (new RelyingParty())->verifyRegistration(
+                self::registrationCredential($this->coseEntries, attestationObjectOverride: 'not-valid-cbor-at-all'),
+                self::registrationExpectations(),
+                new InMemoryCredentialStore(),
+            );
+            self::fail('Expected a VerificationException');
+
+        } catch (VerificationException $e) {
+            self::assertSame(VerificationException::MALFORMED_RESPONSE, $e->reason);
+            self::assertSame('Malformed registration response: Malformed attestation object', $e->getMessage());
+            self::assertInstanceOf(MalformedDataException::class, $e->getPrevious());
+        }
     }
 
     // --- Assertion helpers ----------------------------------------------------------------------
@@ -810,10 +981,11 @@ final class RelyingPartyTest extends CryptoTestCase
     private function assertRegistrationFails(
         string $reason,
         PublicKeyCredential $credential,
+        ?string $message = null,
     ): void
     {
         $this->assertVerificationFailure($reason, static fn () =>
-            (new RelyingParty())->verifyRegistration($credential, self::registrationExpectations(), new InMemoryCredentialStore()));
+            (new RelyingParty())->verifyRegistration($credential, self::registrationExpectations(), new InMemoryCredentialStore()), $message);
     }
 
     /**
@@ -824,10 +996,11 @@ final class RelyingPartyTest extends CryptoTestCase
         string $reason,
         PublicKeyCredential $credential,
         InMemoryCredentialStore $store,
+        ?string $message = null,
     ): void
     {
         $this->assertVerificationFailure($reason, static fn () =>
-            (new RelyingParty())->verifyAuthentication($credential, self::authenticationExpectations(), $store));
+            (new RelyingParty())->verifyAuthentication($credential, self::authenticationExpectations(), $store), $message);
     }
 
     /**
@@ -839,6 +1012,7 @@ final class RelyingPartyTest extends CryptoTestCase
     private function assertVerificationFailure(
         string $expectedReason,
         callable $cb,
+        ?string $expectedMessage = null,
     ): void
     {
         try {
@@ -847,6 +1021,10 @@ final class RelyingPartyTest extends CryptoTestCase
 
         } catch (VerificationException $e) {
             self::assertSame($expectedReason, $e->reason);
+
+            if ($expectedMessage !== null) {
+                self::assertStringMatchesFormat($expectedMessage, $e->getMessage());
+            }
         }
     }
 

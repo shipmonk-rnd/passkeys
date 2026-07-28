@@ -8,8 +8,12 @@ use ShipMonk\Passkeys\Binary\BytesReader;
 use ShipMonk\Passkeys\Cbor\CborDecoder;
 use ShipMonk\Passkeys\Cbor\InvalidCborException;
 use ShipMonk\PasskeysTests\PasskeysTestCase;
+use function array_fill;
 use function json_decode;
+use function sprintf;
 use function str_repeat;
+use function str_replace;
+use function substr;
 use const JSON_THROW_ON_ERROR;
 
 #[CoversClass(CborDecoder::class)]
@@ -110,8 +114,212 @@ final class CborDecoderTest extends PasskeysTestCase
         ];
     }
 
+    /**
+     * Decodes every accepted CBOR initial byte, each with the minimal well-formed payload its head
+     * calls for: the shorthand forms that carry the argument in the initial byte itself (0x00–0x17
+     * of each major type) as well as the explicit 1/2/4/8-byte argument forms, plus the three
+     * literals. Together with {@see self::testDecodeRejectsEveryOtherInitialByte()} this pins down
+     * all 256 initial bytes, so no arm of the decoder's match can be dropped or shifted by one
+     * without failing here.
+     */
+    #[DataProvider('provideEveryAcceptedInitialByte')]
+    public function testDecodeEveryAcceptedInitialByte(
+        string $data,
+        mixed $expected,
+    ): void
+    {
+        $bytes = self::bytesFromHex($data);
+
+        $actual = BytesReader::read($bytes, static function (BytesReader $reader): mixed {
+            return CborDecoder::decode($reader);
+        });
+
+        self::assertSame($expected, $actual);
+    }
+
+    /**
+     * @return iterable<string, array{string, mixed}>
+     */
+    public static function provideEveryAcceptedInitialByte(): iterable
+    {
+        // major type 0 (0x00–0x1b): unsigned integer; 0x00–0x17 are the value itself.
+        for ($byte = 0x00; $byte <= 0x17; $byte++) {
+            yield sprintf('unsigned 0x%02x', $byte) => [sprintf('%02x', $byte), $byte];
+        }
+
+        yield 'unsigned 1-byte argument' => ['18 ff', 0xFF];
+        yield 'unsigned 2-byte argument' => ['19 ff ff', 0xFFFF];
+        yield 'unsigned 4-byte argument' => ['1a ff ff ff ff', 0xFFFFFFFF];
+        yield 'unsigned 8-byte argument' => ['1b 00 00 00 01 00 00 00 00', 0x100000000];
+
+        // major type 1 (0x20–0x3b): negative integer, encoded as -1 - argument.
+        for ($byte = 0x20; $byte <= 0x37; $byte++) {
+            yield sprintf('negative 0x%02x', $byte) => [sprintf('%02x', $byte), -1 - ($byte & 0x1F)];
+        }
+
+        yield 'negative 1-byte argument' => ['38 ff', -0x100];
+        yield 'negative 2-byte argument' => ['39 ff ff', -0x10000];
+        yield 'negative 4-byte argument' => ['3a ff ff ff ff', -0x100000000];
+        yield 'negative 8-byte argument' => ['3b 00 00 00 01 00 00 00 00', -0x100000001];
+
+        // major type 2 (0x40–0x5b): byte string of the given length.
+        for ($byte = 0x40; $byte <= 0x57; $byte++) {
+            $length = $byte & 0x1F;
+
+            yield sprintf('byte string 0x%02x', $byte) => [
+                sprintf('%02x', $byte) . str_repeat('41', $length),
+                str_repeat('A', $length),
+            ];
+        }
+
+        yield 'byte string 1-byte length' => ['58 02 41 42', 'AB'];
+        yield 'byte string 2-byte length' => ['59 00 02 41 42', 'AB'];
+        yield 'byte string 4-byte length' => ['5a 00 00 00 02 41 42', 'AB'];
+        yield 'byte string 8-byte length' => ['5b 00 00 00 00 00 00 00 02 41 42', 'AB'];
+
+        // major type 3 (0x60–0x7b): utf-8 string of the given length.
+        for ($byte = 0x60; $byte <= 0x77; $byte++) {
+            $length = $byte & 0x1F;
+
+            yield sprintf('utf-8 string 0x%02x', $byte) => [
+                sprintf('%02x', $byte) . str_repeat('41', $length),
+                str_repeat('A', $length),
+            ];
+        }
+
+        yield 'utf-8 string 1-byte length' => ['78 02 41 42', 'AB'];
+        yield 'utf-8 string 2-byte length' => ['79 00 02 41 42', 'AB'];
+        yield 'utf-8 string 4-byte length' => ['7a 00 00 00 02 41 42', 'AB'];
+        yield 'utf-8 string 8-byte length' => ['7b 00 00 00 00 00 00 00 02 41 42', 'AB'];
+
+        // major type 4 (0x80–0x9b): array of the given number of items (each a zero).
+        for ($byte = 0x80; $byte <= 0x97; $byte++) {
+            $count = $byte & 0x1F;
+
+            yield sprintf('array 0x%02x', $byte) => [
+                sprintf('%02x', $byte) . str_repeat('00', $count),
+                array_fill(0, $count, 0),
+            ];
+        }
+
+        yield 'array 1-byte count' => ['98 02 00 00', [0, 0]];
+        yield 'array 2-byte count' => ['99 00 02 00 00', [0, 0]];
+        yield 'array 4-byte count' => ['9a 00 00 00 02 00 00', [0, 0]];
+        yield 'array 8-byte count' => ['9b 00 00 00 00 00 00 00 02 00 00', [0, 0]];
+
+        // major type 5 (0xa0–0xbb): map of the given number of pairs (distinct integer keys).
+        for ($byte = 0xA0; $byte <= 0xB7; $byte++) {
+            $count = $byte & 0x1F;
+            $pairs = '';
+
+            for ($key = 0; $key < $count; $key++) {
+                $pairs .= sprintf('%02x', $key) . '00';
+            }
+
+            yield sprintf('map 0x%02x', $byte) => [
+                sprintf('%02x', $byte) . $pairs,
+                array_fill(0, $count, 0),
+            ];
+        }
+
+        yield 'map 1-byte count' => ['b8 02 00 00 01 00', [0, 0]];
+        yield 'map 2-byte count' => ['b9 00 02 00 00 01 00', [0, 0]];
+        yield 'map 4-byte count' => ['ba 00 00 00 02 00 00 01 00', [0, 0]];
+        yield 'map 8-byte count' => ['bb 00 00 00 00 00 00 00 02 00 00 01 00', [0, 0]];
+
+        // major type 7: the three literals we support.
+        yield 'literal false' => ['f4', false];
+        yield 'literal true' => ['f5', true];
+        yield 'literal null' => ['f6', null];
+    }
+
+    /**
+     * The other 78 initial bytes: every unassigned additional-information value (0x1c–0x1e of each
+     * major type), every indefinite-length head (…0x1f), every tag, every simple value we do not
+     * recognise, and the three float widths. Each must be refused with its own message rather than
+     * silently falling into a neighbouring arm.
+     */
+    #[DataProvider('provideEveryRejectedInitialByte')]
+    public function testDecodeRejectsEveryOtherInitialByte(
+        string $data,
+        string $message,
+    ): void
+    {
+        $this->assertDecodeFails($data, $message);
+    }
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function provideEveryRejectedInitialByte(): iterable
+    {
+        $accepted = [];
+
+        foreach (self::provideEveryAcceptedInitialByte() as [$data]) {
+            $accepted[substr(str_replace(' ', '', $data), 0, 2)] = true;
+        }
+
+        for ($byte = 0x00; $byte <= 0xFF; $byte++) {
+            $initialByte = sprintf('%02x', $byte);
+
+            if (isset($accepted[$initialByte])) {
+                continue;
+            }
+
+            $message = match (true) {
+                ($byte & 0x1F) === 31 => 'Indefinite-length values are not supported',
+                ($byte >> 5) === 6 => 'Tagged values are not supported',
+                $byte >= 0xF9 && $byte <= 0xFB => 'Floating-point values are not supported',
+                ($byte >> 5) === 7 => sprintf('Unrecognized simple value byte 0x%x', $byte),
+                default => sprintf('Unrecognized CBOR initial byte 0x%x', $byte),
+            };
+
+            yield "rejected 0x{$initialByte}" => [$initialByte, $message];
+        }
+    }
+
+    /**
+     * Nesting is bounded through map values too, not only array items — a map counts each of its
+     * keys and values as one level deeper, so 16 nested single-entry maps are the deepest accepted.
+     */
+    public function testDecodeBoundsNestingThroughMaps(): void
+    {
+        $atMaximumDepth = str_repeat('a1 00 ', 16) . '00';
+
+        $decoded = BytesReader::read(
+            self::bytesFromHex($atMaximumDepth),
+            static function (BytesReader $reader): mixed {
+                return CborDecoder::decode($reader);
+            },
+        );
+
+        self::assertSame([0 => [0 => [0 => [0 => [0 => [0 => [0 => [0 => [0 => [0 => [0 => [0 => [0 => [0 => [0 => [0 => 0]]]]]]]]]]]]]]]], $decoded);
+
+        $this->assertDecodeFails(str_repeat('a1 00 ', 17) . '00', 'Maximum CBOR nesting depth of 16 exceeded');
+    }
+
+    /**
+     * A map *key* counts towards the depth budget too, so an over-nested key is refused by the depth
+     * guard before the decoder ever gets to complain about its type.
+     */
+    public function testDecodeBoundsNestingThroughMapKeys(): void
+    {
+        $this->assertDecodeFails(
+            'a1 ' . str_repeat('81 ', 16) . '00 00',
+            'Maximum CBOR nesting depth of 16 exceeded',
+        );
+    }
+
     #[DataProvider('provideDecodeInvalid')]
     public function testDecodeInvalid(
+        string $data,
+        string $message,
+    ): void
+    {
+        $this->assertDecodeFails($data, $message);
+    }
+
+    private function assertDecodeFails(
         string $data,
         string $message,
     ): void
