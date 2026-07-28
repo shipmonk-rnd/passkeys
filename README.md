@@ -369,12 +369,12 @@ Coverage is enforced twice over: `shipmonk/coverage-guard` requires every method
 covered, and [Infection](https://infection.github.io/) then requires the tests to actually *detect*
 changes to the covered code, failing below the mutation score in `infection.json`.
 
-The score sits at ~99%, and the threshold a little below that. Some mutants cannot be killed
-because they are equivalent to the original — the redundant `=` padding in `Base64::urlDecode()`
-(`base64_decode()` accepts unpadded input), the `u64()` accumulator whose seed is shifted out of a
-64-bit integer — and others alter only an exception code nothing reads, or a defensive guard inside
-the `FakeAuthenticator` test double. The remaining margin absorbs the small differences in per-test
-coverage attribution between Xdebug and PCOV, which change which tests Infection runs per mutant.
+The score sits at ~99%, and the threshold a little below that. A few mutants cannot be killed
+because they are equivalent to the original — the `u64()` accumulator seed and loop index, whose
+mutated values are shifted out of a 64-bit integer before they can matter — while others alter only
+an exception code nothing reads, or a defensive guard inside the `FakeAuthenticator` test double.
+The remaining margin absorbs the small differences in per-test coverage attribution between Xdebug
+and PCOV, which change which tests Infection runs per mutant.
 
 CI runs all of the above plus `composer audit` on every push and pull request.
 
