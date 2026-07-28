@@ -9,8 +9,8 @@
         "text": "cache/infection.log"
     },
     "tmpDir": "cache/infection",
-    "minMsi": 99,
-    "minCoveredMsi": 99,
+    "minMsi": 98,
+    "minCoveredMsi": 98,
     "mutators": {
         "@default": true
     }

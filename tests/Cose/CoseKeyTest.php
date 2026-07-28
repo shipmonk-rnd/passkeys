@@ -139,6 +139,35 @@ final class CoseKeyTest extends CryptoTestCase
     }
 
     /**
+     * The RSA public exponent is a big-endian integer, so its parity is decided by its *last* byte.
+     * 0x0201 (513) is odd and perfectly valid despite starting with an even byte — reading the
+     * wrong end would reject it.
+     */
+    public function testRsaExponentParityIsReadFromItsLastByte(): void
+    {
+        $key = CoseKey::fromCborMap(self::cborMap([
+            1 => CoseRsaKey::KTY,
+            3 => CoseAlgorithmIdentifier::RS256,
+            -1 => str_pad('', 256, "\x01"),
+            -2 => "\x02\x01",
+        ]));
+
+        self::assertInstanceOf(CoseRsaKey::class, $key);
+
+        // The mirror image: an odd leading byte does not make an even exponent acceptable.
+        self::assertException(
+            CoseKeyException::class,
+            'RSA public exponent must be an odd integer greater than 1',
+            static fn () => CoseKey::fromCborMap(self::cborMap([
+                1 => CoseRsaKey::KTY,
+                3 => CoseAlgorithmIdentifier::RS256,
+                -1 => str_pad('', 256, "\x01"),
+                -2 => "\x01\x02",
+            ])),
+        );
+    }
+
+    /**
      * The RSA size ceilings are inclusive, so a modulus of exactly 8192 bits and an exponent of
      * exactly 64 bits are still accepted — one byte more is what gets rejected above.
      *

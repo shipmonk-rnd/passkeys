@@ -367,10 +367,14 @@ composer check:mutations # Infection mutation testing (needs Xdebug or PCOV)
 
 Coverage is enforced twice over: `shipmonk/coverage-guard` requires every method to be fully
 covered, and [Infection](https://infection.github.io/) then requires the tests to actually *detect*
-changes to the covered code, failing below the mutation score in `infection.json`. A handful of
-surviving mutants are equivalent to the original (e.g. the redundant `=` padding in
-`Base64::urlDecode()`, which `base64_decode()` does not need) or alter only an unread exception
-code; the threshold is set just below 100% to account for them.
+changes to the covered code, failing below the mutation score in `infection.json`.
+
+The score sits at ~99%, and the threshold a little below that. Some mutants cannot be killed
+because they are equivalent to the original — the redundant `=` padding in `Base64::urlDecode()`
+(`base64_decode()` accepts unpadded input), the `u64()` accumulator whose seed is shifted out of a
+64-bit integer — and others alter only an exception code nothing reads, or a defensive guard inside
+the `FakeAuthenticator` test double. The remaining margin absorbs the small differences in per-test
+coverage attribution between Xdebug and PCOV, which change which tests Infection runs per mutant.
 
 CI runs all of the above plus `composer audit` on every push and pull request.
 
