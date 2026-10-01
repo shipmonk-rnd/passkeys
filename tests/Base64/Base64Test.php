@@ -63,6 +63,16 @@ final class Base64Test extends PasskeysTestCase
         yield 'standard base64 plus' => ['+//+'];
         yield 'standard base64 padding' => ['Zm9vYmE='];
         yield 'invalid length (mod 4 == 1)' => ['a'];
+        // Whitespace is the one thing base64_decode() skips even in strict mode, so the alphabet
+        // check must be anchored at both ends — otherwise a leading space would slip through it.
+        yield 'leading whitespace' => [' AAA'];
+        yield 'trailing whitespace' => ['AAA '];
+        // A trailing newline is the subtle one: PCRE's `$` matches before it, so the check is
+        // anchored with `\z` to reject it here rather than further down as non-canonical.
+        yield 'trailing newline' => ["AAA\n"];
+        yield 'trailing newline after two chars' => ["AA\n"];
+        yield 'trailing carriage return' => ["AAA\r"];
+        yield 'embedded newline' => ["AA\nAA"];
     }
 
     /**

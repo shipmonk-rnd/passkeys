@@ -37,9 +37,14 @@ final class CborEncoderTest extends PasskeysTestCase
         yield 'inline max (23)' => [23, '17'];
         yield 'one-byte (24)' => [24, '1818'];
         yield 'one-byte (200)' => [200, '18c8'];
+        yield 'one-byte max (255)' => [255, '18ff'];
+        yield 'two-byte min (256)' => [256, '190100'];
         yield 'two-byte (1000)' => [1000, '1903e8'];
         yield 'two-byte max (65535)' => [65_535, '19ffff'];
+        yield 'four-byte min (65536)' => [65_536, '1a00010000'];
         yield 'four-byte (100000)' => [100_000, '1a000186a0'];
+        yield 'four-byte max (2^32-1)' => [4_294_967_295, '1affffffff'];
+        yield 'eight-byte min (2^32)' => [4_294_967_296, '1b0000000100000000'];
         yield 'eight-byte (5e9)' => [5_000_000_000, '1b000000012a05f200'];
         yield 'negative one' => [-1, '20'];
         yield 'negative (ES256 alg -7)' => [-7, '26'];

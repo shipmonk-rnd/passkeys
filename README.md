@@ -356,16 +356,27 @@ Signatures are verified through `ext-openssl` with the COSE algorithm identifier
 ## Development
 
 ```sh
-composer check          # all the checks below
-composer check:cs       # Code Sniffer
-composer fix:cs         # Code Sniffer auto-fix
-composer check:tests    # PHPUnit
-composer check:types    # PHPStan (level max)
-composer check:coverage # PHPUnit with coverage + coverage-guard (needs Xdebug or PCOV)
+composer check           # all the checks below
+composer check:cs        # Code Sniffer
+composer fix:cs          # Code Sniffer auto-fix
+composer check:tests     # PHPUnit
+composer check:types     # PHPStan (level max)
+composer check:coverage  # PHPUnit with coverage + coverage-guard (needs Xdebug or PCOV)
+composer check:mutations # Infection mutation testing (needs Xdebug or PCOV)
 ```
 
-CI runs the test suite with coverage enforcement (`shipmonk/coverage-guard`), PHPStan at level
-`max`, and `composer audit` on every push and pull request.
+Coverage is enforced twice over: `shipmonk/coverage-guard` requires every method to be fully
+covered, and [Infection](https://infection.github.io/) then requires the tests to actually *detect*
+changes to the covered code, failing below the mutation score in `infection.json`.
+
+The score sits at ~99%, and the threshold a little below that. A few mutants cannot be killed
+because they are equivalent to the original — the `u64()` accumulator seed and loop index, whose
+mutated values are shifted out of a 64-bit integer before they can matter — while others alter only
+an exception code nothing reads, or a defensive guard inside the `FakeAuthenticator` test double.
+The remaining margin absorbs the small differences in per-test coverage attribution between Xdebug
+and PCOV, which change which tests Infection runs per mutant.
+
+CI runs all of the above plus `composer audit` on every push and pull request.
 
 ## License
 

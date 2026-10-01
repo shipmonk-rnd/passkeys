@@ -21,6 +21,7 @@
         "doctrine/doctrine-bundle": "^3.2",
         "doctrine/orm": "^3.4",
         "ergebnis/composer-normalize": "^2.52",
+        "infection/infection": "^0.34.0",
         "phpstan/phpstan": "^2.2",
         "phpstan/phpstan-phpunit": "^2.0",
         "phpstan/phpstan-strict-rules": "^2.0",
@@ -47,6 +48,7 @@
         "allow-plugins": {
             "dealerdirect/phpcodesniffer-composer-installer": true,
             "ergebnis/composer-normalize": true,
+            "infection/extension-installer": true,
             "symfony/runtime": true
         }
     },
@@ -55,7 +57,8 @@
             "@check:composer",
             "@check:cs",
             "@check:types",
-            "@check:coverage"
+            "@check:coverage",
+            "@check:mutations"
         ],
         "check:composer": [
             "composer normalize --dry-run --no-update-lock",
@@ -67,6 +70,10 @@
             "coverage-guard check cache/clover.xml"
         ],
         "check:cs": "phpcs",
+        "check:mutations": [
+            "@putenv XDEBUG_MODE=coverage",
+            "infection --threads=max --no-interaction"
+        ],
         "check:tests": "phpunit",
         "check:types": "phpstan analyse -vv --ansi",
         "fix:cs": "phpcbf"
