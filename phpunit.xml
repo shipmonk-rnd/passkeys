@@ -8,9 +8,9 @@
     cacheDirectory="cache/phpunit"
     colors="true"
     displayDetailsOnAllIssues="true"
-    executionOrder="depends,defects"
     failOnAllIssues="true"
     requireCoverageMetadata="true"
+    resolveDependencies="true"
 >
     <testsuites>
         <testsuite name="default">
