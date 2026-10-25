@@ -44,7 +44,9 @@ use function parse_url;
 use function password_verify;
 use function session_regenerate_id;
 use function session_start;
+use const JSON_INVALID_UTF8_SUBSTITUTE;
 use const JSON_THROW_ON_ERROR;
+use const JSON_UNESCAPED_SLASHES;
 use const PHP_URL_PATH;
 
 require __DIR__ . '/../../vendor/autoload.php';
@@ -266,8 +268,13 @@ match ($path) {
 
         } catch (VerificationException $e) {
             // Log the reason, but answer every failure alike: the reasons tell a registered
-            // credential from an unknown one, which would help an attacker probe accounts.
-            error_log("Passkey sign-in failed: {$e->reason} ({$e->getMessage()})");
+            // credential from an unknown one, which would help an attacker probe accounts. The
+            // message holds client-supplied values (e.g. the origin), so JSON-encode it: a line
+            // break in it then cannot forge a log line.
+            error_log('Passkey sign-in failed: ' . json_encode(
+                ['reason' => $e->reason, 'message' => $e->getMessage()],
+                JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE,
+            ));
             respond(400, ['ok' => false, 'message' => 'Sign-in failed']);
         }
     })(),

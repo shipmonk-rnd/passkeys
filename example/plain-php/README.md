@@ -37,8 +37,9 @@ Then open <http://localhost:8000>:
   `signalAllAcceptedCredentials` payload so the browser prunes it from the credential provider;
   `/login/options` (usernameless) + `/login/verify` run passkey sign-in; `/me` and `/logout` back
   the session. Passkey ceremonies go through a `PasskeyFlow`; the password login, seeded accounts,
-  and session are the relying party's own concern. Failed passkey checks surface the
-  `VerificationException`'s `->reason`.
+  and session are the relying party's own concern. A failed passkey registration surfaces the
+  `VerificationException`'s `->reason`; a failed sign-in gets one generic error and the reason goes
+  to the server log (see the main README's username-enumeration hardening).
 - **`PasskeyStore.php`** — the library's `PasskeyStore` interface implemented over a SQLite
   database (`pdo_sqlite`, file `example/plain-php/passkeys.sqlite`): `users` (integer id PK,
   passkey_user_handle unique BLOB, email, `password_hash`) and `credentials` (credential_id PK,

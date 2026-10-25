@@ -50,8 +50,9 @@ final class PasskeyLoginController extends AbstractController
 
         } catch (VerificationException $e) {
             // Log the reason, but answer every failure alike: the reasons tell a registered
-            // credential from an unknown one, which would help an attacker probe accounts.
-            $this->logger->info('Passkey sign-in failed', ['reason' => $e->reason, 'message' => $e->getMessage()]);
+            // credential from an unknown one, which would help an attacker probe accounts. The
+            // message holds client-supplied values (e.g. the origin), so it stays in the context.
+            $this->logger->info('Passkey sign-in failed: {reason}', ['reason' => $e->reason, 'message' => $e->getMessage()]);
 
             return $this->json(['ok' => false, 'message' => 'Sign-in failed'], Response::HTTP_BAD_REQUEST);
         }

@@ -191,6 +191,25 @@ final class PasskeyFlowTest extends CryptoTestCase
         );
     }
 
+    /**
+     * A blank username field is no username: no account can have it, so the ceremony is the
+     * usernameless one — no decoy even with the hardening on, and a discoverable passkey signs in.
+     */
+    public function testEmptyUsernameIsUsernameless(): void
+    {
+        $flow = $this->hardenedFlowWithAlice();
+
+        $options = $flow->authenticationOptions('');
+
+        self::assertNull($options->allowCredentials);
+        $pending = $this->pending->pendingAuthentications[base64_encode($options->challenge)] ?? null;
+        self::assertNotNull($pending);
+        self::assertNull($pending->userHandle);
+
+        $result = $flow->authenticate($this->aliceAssertion($options->challenge));
+        self::assertSame(self::ALICE_HANDLE, $result->userHandle);
+    }
+
     public function testKnownUserWithoutPasskeysStaysPinned(): void
     {
         $flow = $this->flowWithAlice();
@@ -523,8 +542,8 @@ final class PasskeyFlowTest extends CryptoTestCase
 
     /**
      * Conforming clients report transports sorted and free of duplicates (WebAuthn §5.2.1). A stored
-     * list that is not — e.g. from an older client — is served in that canonical form, so a real
-     * descriptor never looks unlike a fabricated one.
+     * list that is not — e.g. from an older client — is served in that canonical form, so the order
+     * never tells a real descriptor from a fabricated one.
      */
     public function testDescriptorsServeStoredTransportsInCanonicalOrder(): void
     {

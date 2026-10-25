@@ -103,11 +103,22 @@ class PasskeyFlow
      * browser's `navigator.credentials.get()` (see {@see PublicKeyCredentialRequestOptions::toJson()}).
      *
      * @param string|null $username how the login form identified the account (email/username),
-     *     or null for the dedicated-button / conditional-mediation flow
+     *     or null for the dedicated-button / conditional-mediation flow; an empty string counts as
+     *     null. Normalize it the way your accounts store it (trim it, lower-case an email) first.
      */
     public function authenticationOptions(?string $username = null): PublicKeyCredentialRequestOptions
     {
-        $userHandle = $username === null ? null : $this->store->findUserHandleByUsername($username);
+        // An empty username (e.g. a blank email field) is no username: no account can have it.
+        $username = $username === '' ? null : $username;
+
+        // A supplied username always pins the ceremony. When no account has it, the pin is a fresh
+        // handle that belongs to no account, so every assertion fails exactly as it does for an
+        // account without passkeys — with the same store calls. Left unpinned, the ceremony would
+        // sign in the owner of any passkey, and tell anyone with an account which usernames do not
+        // exist (WebAuthn §14.6.2).
+        $userHandle = $username === null
+            ? null
+            : ($this->store->findUserHandleByUsername($username) ?? $this->generateUserHandle());
         $allowCredentials = $userHandle === null ? null : $this->credentialDescriptorsFor($userHandle);
 
         // Username-enumeration hardening (WebAuthn §14.6.2): when a username was supplied but produced
@@ -117,14 +128,6 @@ class PasskeyFlow
         // it only shapes the response — verification (keyed by the pinned user handle) is unchanged.
         if ($username !== null && $allowCredentials === null) {
             $allowCredentials = $this->fabricateAllowCredentials($username);
-        }
-
-        // A supplied username always pins the ceremony. When no account has it, the pin is a fresh
-        // handle that belongs to no account, so every assertion fails exactly as it does for an
-        // account without passkeys. Left unpinned, the ceremony would sign in the owner of any
-        // passkey — and tell anyone with an account which usernames do not exist (WebAuthn §14.6.2).
-        if ($username !== null && $userHandle === null) {
-            $userHandle = $this->generateUserHandle();
         }
 
         $challenge = $this->generateChallenge();
@@ -151,7 +154,8 @@ class PasskeyFlow
      * throws, so a passkey login endpoint reduces to one call and one catch. Answer every failure
      * with the same generic error and only log {@see VerificationException::$reason}: the reasons
      * differ between a real and a fabricated credential, and between account kinds, so echoing
-     * them would undo the username-enumeration hardening (WebAuthn §14.6.2).
+     * them would undo the username-enumeration hardening (WebAuthn §14.6.2). For the one
+     * exception, see {@see self::allAcceptedCredentialsSignal()}.
      *
      * @param string $responseJson raw request body containing the authentication response JSON
      *
@@ -352,9 +356,11 @@ class PasskeyFlow
      * a fresh one per ceremony, or a second passkey would enrol under a different identity and fork
      * the account (breaking `excludeCredentials` de-duplication and login).
      *
-     * {@see self::authenticationOptions()} also calls it to pin a ceremony for an unknown username
-     * to a handle that no account has, so an override must keep returning fresh, unpredictable
-     * values that never collide with an existing account's handle.
+     * {@see self::authenticationOptions()} also calls it, for unauthenticated requests too, to pin a
+     * ceremony for an unknown username to a handle that no account has. So an override must be
+     * cheap, have no side effects and not throw, and its values must never collide with an
+     * existing account's handle. If your handles have a fixed format (e.g. UUIDs), override it to
+     * return that format, so your {@see PasskeyStore} can look such a handle up like any other.
      *
      * @return string raw user handle bytes (64 bytes)
      */
@@ -380,7 +386,10 @@ class PasskeyFlow
      * The matching `signalUnknownCredential()` call needs no server-built payload: the browser
      * already holds the credential id it just used and your RP ID, so it can prune a single
      * unrecognised credential itself once {@see self::authenticate()} rejects it with
-     * {@see VerificationException::UNKNOWN_CREDENTIAL}.
+     * {@see VerificationException::UNKNOWN_CREDENTIAL}. Telling the page that reason is the one
+     * exception to the generic sign-in error, so do it only while
+     * {@see self::getEnumerationHardeningSecret()} is null: with the hardening on, the hint tells an
+     * attacker which `allowCredentials` entries are fabricated.
      *
      * @param string $userHandle raw user handle bytes
      */
@@ -445,7 +454,7 @@ class PasskeyFlow
 
     /**
      * Puts transports in the lexicographic, duplicate-free order conforming clients report them in
-     * (WebAuthn §5.2.1), so a stored descriptor has the same shape as a fabricated one whatever
+     * (WebAuthn §5.2.1), so stored and fabricated descriptors list them in the same order whatever
      * client registered the credential.
      *
      * @param list<string> $transports

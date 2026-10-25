@@ -118,6 +118,11 @@ same page:
   so every username returns the same response shape (see
   [Username-enumeration hardening](#username-enumeration-hardening)).
 
+In the two-step form, normalize the entered username the way your accounts store it (trim it,
+lower-case an email) before you pass it in; an empty string counts as no username. A username that
+matches no account — a typo included — gets a ceremony that every passkey fails, so after a failed
+sign-in, offer the usernameless "sign in with a passkey" button.
+
 ```php
 // POST /login/options
 $options = $flow->authenticationOptions($emailOrNull);
@@ -151,7 +156,10 @@ The flow owns no state; you implement two small interfaces:
   `findCredentialByCredentialId()` and `findUserEntityByUserHandle()` (the last only used by the
   [Signal API](#keeping-credential-providers-in-sync-signal-api)), plus the two writes
   `saveCredential()` and `updateCredential()`. Typically a thin repository over the same database
-  that holds your users.
+  that holds your users. `findCredentialsByUserHandle()` must return an empty list — never throw —
+  for a handle that belongs to no account: the two-step flow looks up a fresh `generateUserHandle()`
+  value for an unknown username. If your handles have a fixed format (e.g. UUIDs), override
+  `generateUserHandle()` to return that format.
 - **`ShipMonk\Passkeys\PendingCeremonyStore`** — the transient side: ceremonies started but not
   yet finished, keyed by challenge. Implement it on something browser-session-scoped (the PHP
   session, a short-TTL cache), never on durable storage. Its consume-on-read semantics make each
@@ -199,15 +207,19 @@ and message tell the cases apart: a forged signature over a real credential fail
 `credential_not_allowed` or `user_handle_mismatch`, depending on the account. Sending them back
 from `/login/verify` undoes the hardening — §14.6.2 asks that a failure because "the signature is
 invalid" looks the same as one because "no such user or credential is registered". Log them
-instead:
+instead (the message contains client-supplied values such as the origin, so keep it out of the log
+line itself):
 
 ```php
 } catch (VerificationException $e) {
-    $logger->info('Passkey sign-in failed', ['reason' => $e->reason, 'message' => $e->getMessage()]);
+    $logger->info('Passkey sign-in failed: {reason}', ['reason' => $e->reason, 'message' => $e->getMessage()]);
     http_response_code(400);
     echo json_encode(['message' => 'Sign-in failed']);
 }
 ```
+
+The one exception is the [Signal API](#keeping-credential-providers-in-sync-signal-api)'s
+unknown-credential hint, and only while the hardening is off.
 
 ### Keeping credential providers in sync (Signal API)
 
@@ -245,6 +257,13 @@ if (loginFailedAsUnknownCredential) {
     await PublicKeyCredential.signalUnknownCredential({ rpId, credentialId: credential.id });
 }
 ```
+
+Telling the page *why* a sign-in failed breaks the generic-error rule of
+[username-enumeration hardening](#username-enumeration-hardening): with
+`getEnumerationHardeningSecret()` set, an attacker could replay a listed credential id and learn
+from the hint whether it is fabricated. So send this hint only while the hardening is off. With it
+on, rely on `signalAllAcceptedCredentials()` after each successful sign-in, which prunes stale
+passkeys too.
 
 ## Examples
 

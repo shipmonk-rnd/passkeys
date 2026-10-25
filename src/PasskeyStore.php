@@ -31,9 +31,11 @@ interface PasskeyStore extends CredentialStore
 
     /**
      * Every credential registered to the given account — used to build `allowCredentials` /
-     * `excludeCredentials` and to enforce the former at verification. Return an empty list for a
-     * handle that belongs to no account: the flow passes one when a two-step login names an unknown
-     * username.
+     * `excludeCredentials` and to enforce the former at verification. The handle can belong to no
+     * account: when a two-step login names an unknown username, the flow pins the ceremony to a
+     * fresh {@see PasskeyFlow::generateUserHandle()} value and looks that up. Return an empty list
+     * for it and never throw — a failure only for unknown usernames would tell them apart. If your
+     * handles have a fixed format, override {@see PasskeyFlow::generateUserHandle()} to match it.
      *
      * @param string $userHandle raw user handle bytes
      * @return list<CredentialRecord>

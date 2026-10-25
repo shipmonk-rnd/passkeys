@@ -50,8 +50,9 @@ holds Symfony's cache); it is recreated on the next request.
   `PasskeyManageController` lists the account's passkeys, adds one to the *signed-in* account (pinned
   to it with `expectedUserHandle`), and removes one (returning a `signalAllAcceptedCredentials`
   payload so the browser prunes it); `PasskeyLoginController` runs usernameless passkey sign-in (`/login/passkey`);
-  `HomeController` serves the page and the `/me` + `/logout` session endpoints. Failed passkey checks
-  surface the `VerificationException`'s `->reason`.
+  `HomeController` serves the page and the `/me` + `/logout` session endpoints. A failed passkey
+  registration surfaces the `VerificationException`'s `->reason`; a failed sign-in gets one generic
+  error and the reason goes to the server log (see the main README's username-enumeration hardening).
 - **`src/Passkey/DoctrinePasskeyStore.php`** — the library's `PasskeyStore` over an
   `EntityManagerInterface`: `find` / `persist` / `remove` against the `User` and `PasskeyCredential`
   entities, converting to and from the library's `CredentialRecord` / `RegisteredPasskey` DTOs. It
