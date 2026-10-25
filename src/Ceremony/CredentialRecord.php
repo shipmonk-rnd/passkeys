@@ -6,7 +6,7 @@ use ShipMonk\Passkeys\Cose\CoseKey;
 
 /**
  * The persistent state a relying party stores for a registered credential, as described by the
- * {@link https://w3c.github.io/webauthn/#credential-record credential record} in WebAuthn §7.1
+ * {@link https://www.w3.org/TR/webauthn-3/#credential-record credential record} in WebAuthn §7.1
  * step 27. The library never persists this itself — the caller stores it after a successful
  * registration (see {@see RegistrationResult::toCredentialRecord()}) and hands it back, looked
  * up via a {@see CredentialStore}, on each authentication.

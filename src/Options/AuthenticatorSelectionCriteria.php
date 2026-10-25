@@ -9,7 +9,7 @@ use ShipMonk\Passkeys\Enum\UserVerificationRequirement;
 use stdClass;
 
 /**
- * @see https://w3c.github.io/webauthn/#dictdef-authenticatorselectioncriteria
+ * @see https://www.w3.org/TR/webauthn-3/#dictdef-authenticatorselectioncriteria
  * @api
  */
 final readonly class AuthenticatorSelectionCriteria implements JsonSerializable

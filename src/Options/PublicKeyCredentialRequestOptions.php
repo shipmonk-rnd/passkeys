@@ -12,10 +12,10 @@ use const JSON_THROW_ON_ERROR;
 
 /**
  * Options for an authentication ceremony, serializable to the
- * {@link https://w3c.github.io/webauthn/#dictdef-publickeycredentialrequestoptionsjson PublicKeyCredentialRequestOptionsJSON}
+ * {@link https://www.w3.org/TR/webauthn-3/#dictdef-publickeycredentialrequestoptionsjson PublicKeyCredentialRequestOptionsJSON}
  * form consumed by the browser.
  *
- * @see https://w3c.github.io/webauthn/#dictdef-publickeycredentialrequestoptions
+ * @see https://www.w3.org/TR/webauthn-3/#dictdef-publickeycredentialrequestoptions
  * @api
  */
 final readonly class PublicKeyCredentialRequestOptions implements JsonSerializable
@@ -24,7 +24,7 @@ final readonly class PublicKeyCredentialRequestOptions implements JsonSerializab
     /**
      * The recommended default ceremony timeout (§15.1: recommended range 300 000–600 000 ms).
      *
-     * @see https://w3c.github.io/webauthn/#sctn-timeout-recommended-range
+     * @see https://www.w3.org/TR/webauthn-3/#sctn-timeout-recommended-range
      */
     public const int RECOMMENDED_TIMEOUT = 300_000;
 
@@ -32,7 +32,7 @@ final readonly class PublicKeyCredentialRequestOptions implements JsonSerializab
      * @param string                                   $challenge        raw challenge bytes (e.g. from {@see \random_bytes()})
      * @param list<PublicKeyCredentialDescriptor>|null $allowCredentials
      * @param list<PublicKeyCredentialHint>|null       $hints
-     * @param array<string, mixed>|null                $extensions       client extension inputs in their JSON form ({@link https://w3c.github.io/webauthn/#dictdef-authenticationextensionsclientinputsjson AuthenticationExtensionsClientInputsJSON})
+     * @param array<string, mixed>|null                $extensions       client extension inputs in their JSON form ({@link https://www.w3.org/TR/webauthn-3/#dictdef-authenticationextensionsclientinputsjson AuthenticationExtensionsClientInputsJSON})
      */
     public function __construct(
         public string $challenge,

@@ -1,6 +1,6 @@
 # Passkeys for PHP
 
-A from-scratch, spec-compliant [WebAuthn](https://w3c.github.io/webauthn/) **passkey** library for PHP.
+A from-scratch, spec-compliant [WebAuthn Level 3](https://www.w3.org/TR/webauthn-3/) **passkey** library for PHP.
 
 - 🔑 **Easy-to-use:** wire four methods to four HTTP endpoints
 - 🔧 **Full control:** the low-level WebAuthn API is public too
@@ -193,7 +193,7 @@ per-account response *timing* and the credential *count* can still differ slight
 
 Passkey providers (iCloud Keychain, Google Password Manager, …) keep their own copy of a user's
 passkeys and the metadata shown for them. When your server's state drifts from theirs — a passkey
-deleted server-side, an account renamed — the [WebAuthn Signal API](https://w3c.github.io/webauthn/#sctn-signal-methods)
+deleted server-side, an account renamed — the [WebAuthn Signal API](https://www.w3.org/TR/webauthn-3/#sctn-signal-methods)
 lets you push corrections so the provider prunes stale passkeys and refreshes labels. The
 `signal*()` calls run in the browser; the flow builds the two payloads that need data only your
 server has:
@@ -350,7 +350,7 @@ Signatures are verified through `ext-openssl` with the COSE algorithm identifier
 | `-35`  | `CoseAlgorithmIdentifier::ES384` | ECDSA w/ SHA-384 (P-384) |
 | `-36`  | `CoseAlgorithmIdentifier::ES512` | ECDSA w/ SHA-512 (P-521) |
 | `-257` | `CoseAlgorithmIdentifier::RS256` | RSASSA-PKCS1-v1_5 w/ SHA-256 |
-| `-8`   | `CoseAlgorithmIdentifier::EdDSA` | EdDSA (restricted to Ed25519 per WebAuthn [§5.8.5](https://w3c.github.io/webauthn/#sctn-alg-identifier)) |
+| `-8`   | `CoseAlgorithmIdentifier::EdDSA` | EdDSA (restricted to Ed25519 per WebAuthn [§5.8.5](https://www.w3.org/TR/webauthn-3/#sctn-alg-identifier)) |
 | `-53`  | `CoseAlgorithmIdentifier::Ed448` | EdDSA w/ Ed448, fully specified (RFC 9864) |
 
 ## Development

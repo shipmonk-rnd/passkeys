@@ -5,7 +5,7 @@ namespace ShipMonk\Passkeys\Credential;
 /**
  * Base for the two authenticator responses returned by a credential.
  *
- * @see https://w3c.github.io/webauthn/#authenticatorresponse
+ * @see https://www.w3.org/TR/webauthn-3/#authenticatorresponse
  * @api
  */
 abstract readonly class AuthenticatorResponse

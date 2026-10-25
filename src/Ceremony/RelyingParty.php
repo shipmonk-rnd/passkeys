@@ -38,8 +38,8 @@ use function strlen;
  * is the actual anti-replay control (ECDSA low-S is not enforced, so assertion signature bytes
  * must not be used for replay de-duplication).
  *
- * @see https://w3c.github.io/webauthn/#sctn-registering-a-new-credential §7.1
- * @see https://w3c.github.io/webauthn/#sctn-verifying-assertion §7.2
+ * @see https://www.w3.org/TR/webauthn-3/#sctn-registering-a-new-credential §7.1
+ * @see https://www.w3.org/TR/webauthn-3/#sctn-verifying-assertion §7.2
  * @api
  */
 final class RelyingParty
@@ -49,12 +49,12 @@ final class RelyingParty
     private const string TYPE_GET = 'webauthn.get';
 
     /**
-     * {@link https://w3c.github.io/webauthn/#credential-id Credential IDs} are at most 1023 bytes (§7.1 step 25).
+     * {@link https://www.w3.org/TR/webauthn-3/#credential-id Credential IDs} are at most 1023 bytes (§7.1 step 25).
      */
     public const int MAX_CREDENTIAL_ID_LENGTH = 1023;
 
     /**
-     * The {@link https://w3c.github.io/webauthn/#credential-id credential ID definition} requires
+     * The {@link https://www.w3.org/TR/webauthn-3/#credential-id credential ID definition} requires
      * authenticators to emit at least 16 bytes (with ≥100 bits of entropy). §7.1 does not mandate
      * this check on the relying party, but a shorter ID can only come from a non-conforming or
      * malicious authenticator, so it is rejected fail-closed.

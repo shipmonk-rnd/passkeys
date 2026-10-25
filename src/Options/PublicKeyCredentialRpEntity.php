@@ -6,7 +6,7 @@ use JsonSerializable;
 use stdClass;
 
 /**
- * @see https://w3c.github.io/webauthn/#dictdef-publickeycredentialrpentity
+ * @see https://www.w3.org/TR/webauthn-3/#dictdef-publickeycredentialrpentity
  * @api
  */
 final readonly class PublicKeyCredentialRpEntity extends PublicKeyCredentialEntity implements JsonSerializable

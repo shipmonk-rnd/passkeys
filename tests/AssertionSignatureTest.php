@@ -15,7 +15,7 @@ use const OPENSSL_ALGO_SHA256;
 
 /**
  * Exercises the full authentication-assertion signature check end-to-end
- * (WebAuthn Level 3 §7.2 step 19): the signed message is
+ * (WebAuthn Level 3 §7.2 steps 20–21): the signed message is
  * {@code authenticatorData || SHA-256(clientDataJSON)}.
  */
 #[CoversNothing]

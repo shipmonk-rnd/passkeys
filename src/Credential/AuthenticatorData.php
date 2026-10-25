@@ -69,7 +69,7 @@ final readonly class AuthenticatorData
     }
 
     /**
-     * Whether the user was present (UP flag). {@see https://w3c.github.io/webauthn/#concept-user-present}
+     * Whether the user was present (UP flag). {@see https://www.w3.org/TR/webauthn-3/#concept-user-present}
      */
     public function isUserPresent(): bool
     {
@@ -77,7 +77,7 @@ final readonly class AuthenticatorData
     }
 
     /**
-     * Whether the user was verified (UV flag). {@see https://w3c.github.io/webauthn/#concept-user-verified}
+     * Whether the user was verified (UV flag). {@see https://www.w3.org/TR/webauthn-3/#concept-user-verified}
      */
     public function isUserVerified(): bool
     {
@@ -85,7 +85,7 @@ final readonly class AuthenticatorData
     }
 
     /**
-     * Whether the credential is backup eligible (BE flag). {@see https://w3c.github.io/webauthn/#backup-eligible}
+     * Whether the credential is backup eligible (BE flag). {@see https://www.w3.org/TR/webauthn-3/#backup-eligible}
      */
     public function isBackupEligible(): bool
     {
@@ -93,7 +93,7 @@ final readonly class AuthenticatorData
     }
 
     /**
-     * Whether the credential is currently backed up (BS flag). {@see https://w3c.github.io/webauthn/#backup-state}
+     * Whether the credential is currently backed up (BS flag). {@see https://www.w3.org/TR/webauthn-3/#backup-state}
      */
     public function isBackupState(): bool
     {

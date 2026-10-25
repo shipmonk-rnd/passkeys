@@ -7,7 +7,7 @@ use ShipMonk\Passkeys\Json\JsonObject;
 use ShipMonk\Passkeys\Json\JsonObjectException;
 
 /**
- * @see https://w3c.github.io/webauthn/#authenticatorassertionresponse
+ * @see https://www.w3.org/TR/webauthn-3/#authenticatorassertionresponse
  * @api
  */
 final readonly class AuthenticatorAssertionResponse extends AuthenticatorResponse

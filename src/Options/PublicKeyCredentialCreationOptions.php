@@ -11,10 +11,10 @@ use const JSON_THROW_ON_ERROR;
 
 /**
  * Options for a registration ceremony, serializable to the
- * {@link https://w3c.github.io/webauthn/#dictdef-publickeycredentialcreationoptionsjson PublicKeyCredentialCreationOptionsJSON}
+ * {@link https://www.w3.org/TR/webauthn-3/#dictdef-publickeycredentialcreationoptionsjson PublicKeyCredentialCreationOptionsJSON}
  * form consumed by the browser.
  *
- * @see https://w3c.github.io/webauthn/#dictdef-publickeycredentialcreationoptions
+ * @see https://www.w3.org/TR/webauthn-3/#dictdef-publickeycredentialcreationoptions
  * @api
  */
 final readonly class PublicKeyCredentialCreationOptions implements JsonSerializable
@@ -23,7 +23,7 @@ final readonly class PublicKeyCredentialCreationOptions implements JsonSerializa
     /**
      * The recommended default ceremony timeout (§15.1: recommended range 300 000–600 000 ms).
      *
-     * @see https://w3c.github.io/webauthn/#sctn-timeout-recommended-range
+     * @see https://www.w3.org/TR/webauthn-3/#sctn-timeout-recommended-range
      */
     public const int RECOMMENDED_TIMEOUT = 300_000;
 
@@ -32,7 +32,7 @@ final readonly class PublicKeyCredentialCreationOptions implements JsonSerializa
      * @param list<PublicKeyCredentialParameters>      $pubKeyCredParams
      * @param list<PublicKeyCredentialDescriptor>|null $excludeCredentials
      * @param list<PublicKeyCredentialHint>|null       $hints
-     * @param array<string, mixed>|null                $extensions         client extension inputs in their JSON form ({@link https://w3c.github.io/webauthn/#dictdef-authenticationextensionsclientinputsjson AuthenticationExtensionsClientInputsJSON})
+     * @param array<string, mixed>|null                $extensions         client extension inputs in their JSON form ({@link https://www.w3.org/TR/webauthn-3/#dictdef-authenticationextensionsclientinputsjson AuthenticationExtensionsClientInputsJSON})
      */
     public function __construct(
         public PublicKeyCredentialRpEntity $rp,
