@@ -111,11 +111,17 @@ same page:
   user via its user handle;
 - a **two-step login form** (email first): pass the entered username. If the account is known, the
   ceremony is pinned to it — an assertion by any other user's credential is rejected. An unknown
-  username always leaves the ceremony unpinned; by default it also gets the usernameless empty
-  `allowCredentials`, so a non-existent account and one without passkeys look alike. A *known*
-  account with passkeys still stands out through its non-empty `allowCredentials`; override
-  `getEnumerationHardeningSecret()` to close that leak too, so every username returns the same
-  response shape (see [Policy knobs](#policy-knobs)).
+  username pins the ceremony too, to a fresh handle that belongs to no account, and by default
+  gets the usernameless empty `allowCredentials` — so a non-existent account and one without
+  passkeys look and fail alike. A *known* account with passkeys still stands out through its
+  non-empty `allowCredentials`; override `getEnumerationHardeningSecret()` to close that leak too,
+  so every username returns the same response shape (see
+  [Username-enumeration hardening](#username-enumeration-hardening)).
+
+In the two-step form, normalize the entered username the way your accounts store it (trim it,
+lower-case an email) before you pass it in, and pass `null` for a blank field. A username that
+matches no account — a typo included — gets a ceremony that every passkey fails, so after a failed
+sign-in, offer the usernameless "sign in with a passkey" button.
 
 ```php
 // POST /login/options
@@ -130,7 +136,8 @@ try {
         // The signature counter did not increase — a clone signal, not proof. Apply your risk policy.
     }
 } catch (VerificationException $e) {
-    // malformed input, an expired/replayed challenge, a failed check — all end up here
+    // malformed input, an expired/replayed challenge, a failed check — all end up here.
+    // Log $e->reason, but answer every failure with the same generic error (see below).
 }
 ```
 
@@ -149,7 +156,10 @@ The flow owns no state; you implement two small interfaces:
   `findCredentialByCredentialId()` and `findUserEntityByUserHandle()` (the last only used by the
   [Signal API](#keeping-credential-providers-in-sync-signal-api)), plus the two writes
   `saveCredential()` and `updateCredential()`. Typically a thin repository over the same database
-  that holds your users.
+  that holds your users. `findCredentialsByUserHandle()` must return an empty list — never throw —
+  for a handle that belongs to no account: the two-step flow looks up a fresh `generateUserHandle()`
+  value for an unknown username. If your handles have a fixed format (e.g. UUIDs), override
+  `generateUserHandle()` to return that format.
 - **`ShipMonk\Passkeys\PendingCeremonyStore`** — the transient side: ceremonies started but not
   yet finished, keyed by challenge. Implement it on something browser-session-scoped (the PHP
   session, a short-TTL cache), never on durable storage. Its consume-on-read semantics make each
@@ -184,10 +194,32 @@ final class MyFlow extends PasskeyFlow
 }
 ```
 
-The decoy only shapes the options response; verification is untouched, so a ceremony for a
-non-existent account still fails closed. It equalizes the response, not every side channel — the
-per-account response *timing* and the credential *count* can still differ slightly; override
+The decoy only shapes the options response; verification is untouched. A ceremony for a
+non-existent account is pinned to a handle that belongs to no account, so it fails exactly like one
+for an account without passkeys — even when an attacker answers it with a valid passkey of their
+own account. It equalizes the response, not every side channel — the per-account response
+*timing* and the credential *count* can still differ slightly; override
 `fabricateAllowCredentials()` if you need to narrow those too.
+
+**Answer every failed sign-in with the same generic error.** The `VerificationException` reason
+and message tell the cases apart: a forged signature over a real credential fails with
+`invalid_signature`, the decoy id with `unknown_credential`, and a passkey of another account with
+`credential_not_allowed` or `user_handle_mismatch`, depending on the account. Sending them back
+from `/login/verify` undoes the hardening — §14.6.2 asks that a failure because "the signature is
+invalid" looks the same as one because "no such user or credential is registered". Log them
+instead (the message contains client-supplied values such as the origin, so keep it out of the log
+line itself):
+
+```php
+} catch (VerificationException $e) {
+    $logger->info('Passkey sign-in failed: {reason}', ['reason' => $e->reason, 'message' => $e->getMessage()]);
+    http_response_code(400);
+    echo json_encode(['message' => 'Sign-in failed']);
+}
+```
+
+The one exception is the [Signal API](#keeping-credential-providers-in-sync-signal-api)'s
+unknown-credential hint, and only while the hardening is off.
 
 ### Keeping credential providers in sync (Signal API)
 
@@ -225,6 +257,13 @@ if (loginFailedAsUnknownCredential) {
     await PublicKeyCredential.signalUnknownCredential({ rpId, credentialId: credential.id });
 }
 ```
+
+Telling the page *why* a sign-in failed breaks the generic-error rule of
+[username-enumeration hardening](#username-enumeration-hardening): with
+`getEnumerationHardeningSecret()` set, an attacker could replay a listed credential id and learn
+from the hint whether it is fabricated. So send this hint only while the hardening is off. With it
+on, rely on `signalAllAcceptedCredentials()` after each successful sign-in, which prunes stale
+passkeys too.
 
 ## Examples
 
