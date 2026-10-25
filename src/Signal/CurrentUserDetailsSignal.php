@@ -15,14 +15,14 @@ use const JSON_THROW_ON_ERROR;
  *
  * {@see \ShipMonk\Passkeys\PasskeyFlow::currentUserDetailsSignal()} builds it and documents when to send it.
  *
- * @see https://w3c.github.io/webauthn/#sctn-signalCurrentUserDetails
+ * @see https://www.w3.org/TR/webauthn-3/#sctn-signalCurrentUserDetails
  * @api
  */
 final readonly class CurrentUserDetailsSignal implements JsonSerializable
 {
 
     /**
-     * @param string $rpId        the {@link https://w3c.github.io/webauthn/#rp-id RP ID} the credentials are scoped to
+     * @param string $rpId        the {@link https://www.w3.org/TR/webauthn-3/#rp-id RP ID} the credentials are scoped to
      * @param string $userId      raw user handle bytes
      * @param string $name        the account's current human-readable identifier (email/username)
      * @param string $displayName the account's current friendly label

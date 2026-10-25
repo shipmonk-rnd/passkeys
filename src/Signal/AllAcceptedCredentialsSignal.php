@@ -18,14 +18,14 @@ use const JSON_THROW_ON_ERROR;
  *
  * {@see \ShipMonk\Passkeys\PasskeyFlow::allAcceptedCredentialsSignal()} builds it and documents when to send it.
  *
- * @see https://w3c.github.io/webauthn/#sctn-signalAllAcceptedCredentials
+ * @see https://www.w3.org/TR/webauthn-3/#sctn-signalAllAcceptedCredentials
  * @api
  */
 final readonly class AllAcceptedCredentialsSignal implements JsonSerializable
 {
 
     /**
-     * @param string       $rpId                     the {@link https://w3c.github.io/webauthn/#rp-id RP ID} the credentials are scoped to
+     * @param string       $rpId                     the {@link https://www.w3.org/TR/webauthn-3/#rp-id RP ID} the credentials are scoped to
      * @param string       $userId                   raw user handle bytes
      * @param list<string> $allAcceptedCredentialIds raw credential id bytes for every credential still accepted for the user
      */

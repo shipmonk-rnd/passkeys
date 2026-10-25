@@ -10,12 +10,12 @@ use ShipMonk\Passkeys\Json\JsonObjectException;
 
 /**
  * The credential returned by the browser's `navigator.credentials` API, in its JSON form
- * ({@link https://w3c.github.io/webauthn/#dictdef-registrationresponsejson RegistrationResponseJSON} /
- * {@link https://w3c.github.io/webauthn/#dictdef-authenticationresponsejson AuthenticationResponseJSON}).
+ * ({@link https://www.w3.org/TR/webauthn-3/#dictdef-registrationresponsejson RegistrationResponseJSON} /
+ * {@link https://www.w3.org/TR/webauthn-3/#dictdef-authenticationresponsejson AuthenticationResponseJSON}).
  *
  * @template T of AuthenticatorResponse
  *
- * @see https://w3c.github.io/webauthn/#iface-pkcredential
+ * @see https://www.w3.org/TR/webauthn-3/#iface-pkcredential
  * @api
  */
 final readonly class PublicKeyCredential

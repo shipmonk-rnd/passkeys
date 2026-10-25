@@ -12,7 +12,7 @@ use ShipMonk\Passkeys\Cose\CoseKey;
 use ShipMonk\Passkeys\RegisteredPasskey;
 
 /**
- * A registered passkey — the {@link https://w3c.github.io/webauthn/#credential-record credential
+ * A registered passkey — the {@link https://www.w3.org/TR/webauthn-3/#credential-record credential
  * record} of WebAuthn §7.1 step 27 as a Doctrine entity. It converts to and from the library's
  * {@see CredentialRecord}, which is all a {@see \ShipMonk\Passkeys\PasskeyFlow} sees. The credential
  * id and the public key are plain Doctrine `binary` columns (raw bytes); the public key round-trips

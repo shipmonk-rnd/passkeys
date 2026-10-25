@@ -12,7 +12,7 @@ use ShipMonk\Passkeys\Json\JsonObject;
 use ShipMonk\Passkeys\Json\JsonObjectException;
 
 /**
- * @see https://w3c.github.io/webauthn/#authenticatorattestationresponse
+ * @see https://www.w3.org/TR/webauthn-3/#authenticatorattestationresponse
  * @api
  */
 final readonly class AuthenticatorAttestationResponse extends AuthenticatorResponse

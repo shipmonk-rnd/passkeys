@@ -24,7 +24,7 @@ use const JSON_THROW_ON_ERROR;
  * Acceptance test that walks a full WebAuthn ceremony for every supported algorithm using
  * real cryptographic material: an authenticator's outputs are assembled into spec-shaped,
  * browser-style JSON, fed through the public parsers, and the resulting COSE key + assertion
- * are checked with {@see CoseKey::verify()} exactly as a relying party would (§7.2 step 19).
+ * are checked with {@see CoseKey::verify()} exactly as a relying party would (§7.2 step 21).
  *
  * Unlike the unit tests it exercises no piece in isolation — it proves the whole plumbing
  * composes: base64url boundaries, the CBOR/COSE decode inside attested credential data, the

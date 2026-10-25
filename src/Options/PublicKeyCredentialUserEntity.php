@@ -9,14 +9,14 @@ use stdClass;
 use function strlen;
 
 /**
- * @see https://w3c.github.io/webauthn/#dictdef-publickeycredentialuserentityjson
+ * @see https://www.w3.org/TR/webauthn-3/#dictdef-publickeycredentialuserentityjson
  * @api
  */
 final readonly class PublicKeyCredentialUserEntity extends PublicKeyCredentialEntity implements JsonSerializable
 {
 
     /**
-     * The {@link https://w3c.github.io/webauthn/#user-handle user handle} must be 1 to 64 bytes.
+     * The {@link https://www.w3.org/TR/webauthn-3/#user-handle user handle} must be 1 to 64 bytes.
      */
     public const int MAX_ID_LENGTH = 64;
 

@@ -9,7 +9,7 @@ use ShipMonk\Passkeys\Json\JsonObjectException;
 /**
  * The client data collected by the browser, parsed from `clientDataJSON`.
  *
- * @see https://w3c.github.io/webauthn/#dictionary-client-data
+ * @see https://www.w3.org/TR/webauthn-3/#dictionary-client-data
  * @api
  */
 final readonly class CollectedClientData
