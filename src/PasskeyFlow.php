@@ -102,15 +102,13 @@ class PasskeyFlow
      * {@see self::rememberPendingAuthentication()}, and returns the options to hand to the
      * browser's `navigator.credentials.get()` (see {@see PublicKeyCredentialRequestOptions::toJson()}).
      *
-     * @param string|null $username how the login form identified the account (email/username),
-     *     or null for the dedicated-button / conditional-mediation flow; an empty string counts as
-     *     null. Normalize it the way your accounts store it (trim it, lower-case an email) first.
+     * @param non-empty-string|null $username how the login form identified the account
+     *     (email/username), or null for the dedicated-button / conditional-mediation flow — also
+     *     for a blank field. Normalize it the way your accounts store it (trim it, lower-case an
+     *     email) first.
      */
     public function authenticationOptions(?string $username = null): PublicKeyCredentialRequestOptions
     {
-        // An empty username (e.g. a blank email field) is no username: no account can have it.
-        $username = $username === '' ? null : $username;
-
         // A supplied username always pins the ceremony. When no account has it, the pin is a fresh
         // handle that belongs to no account, so every assertion fails exactly as it does for an
         // account without passkeys — with the same store calls. Left unpinned, the ceremony would
@@ -580,6 +578,7 @@ class PasskeyFlow
      * — e.g. a different credential-id length, transports, or more than one entry. Keep transports
      * in lexicographic order: clients report them that way, and the flow serves stored ones so.
      *
+     * @param non-empty-string $username
      * @return list<PublicKeyCredentialDescriptor>|null
      *
      * @throws InvalidArgumentException if a configured secret is shorter than 16 bytes

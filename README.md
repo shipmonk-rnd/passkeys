@@ -119,7 +119,7 @@ same page:
   [Username-enumeration hardening](#username-enumeration-hardening)).
 
 In the two-step form, normalize the entered username the way your accounts store it (trim it,
-lower-case an email) before you pass it in; an empty string counts as no username. A username that
+lower-case an email) before you pass it in, and pass `null` for a blank field. A username that
 matches no account — a typo included — gets a ceremony that every passkey fails, so after a failed
 sign-in, offer the usernameless "sign in with a passkey" button.
 

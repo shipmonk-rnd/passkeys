@@ -191,25 +191,6 @@ final class PasskeyFlowTest extends CryptoTestCase
         );
     }
 
-    /**
-     * A blank username field is no username: no account can have it, so the ceremony is the
-     * usernameless one — no decoy even with the hardening on, and a discoverable passkey signs in.
-     */
-    public function testEmptyUsernameIsUsernameless(): void
-    {
-        $flow = $this->hardenedFlowWithAlice();
-
-        $options = $flow->authenticationOptions('');
-
-        self::assertNull($options->allowCredentials);
-        $pending = $this->pending->pendingAuthentications[base64_encode($options->challenge)] ?? null;
-        self::assertNotNull($pending);
-        self::assertNull($pending->userHandle);
-
-        $result = $flow->authenticate($this->aliceAssertion($options->challenge));
-        self::assertSame(self::ALICE_HANDLE, $result->userHandle);
-    }
-
     public function testKnownUserWithoutPasskeysStaysPinned(): void
     {
         $flow = $this->flowWithAlice();

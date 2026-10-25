@@ -25,6 +25,7 @@ interface PasskeyStore extends CredentialStore
      * Maps a login-form identifier (email/username) to the account's user handle, or null when no
      * such account exists. Only consulted for the two-step flow.
      *
+     * @param non-empty-string $username
      * @return string|null raw user handle bytes
      */
     public function findUserHandleByUsername(string $username): ?string;
