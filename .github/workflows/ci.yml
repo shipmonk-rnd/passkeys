@@ -19,6 +19,7 @@ jobs:
         php-version:
           - '8.4'
           - '8.5'
+          - '8.6'
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -28,6 +29,10 @@ jobs:
         with:
           php-version: ${{ matrix.php-version }}
           coverage: pcov
+
+      - name: Resolve dependencies as on PHP 8.5 (not all of them allow PHP 8.6 yet)
+        if: matrix.php-version == '8.6'
+        run: composer config --global platform.php 8.5.99
 
       - name: Install dependencies
         run: composer install --no-interaction --no-progress
