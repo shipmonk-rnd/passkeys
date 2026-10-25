@@ -31,7 +31,9 @@ interface PasskeyStore extends CredentialStore
 
     /**
      * Every credential registered to the given account — used to build `allowCredentials` /
-     * `excludeCredentials` and to enforce the former at verification.
+     * `excludeCredentials` and to enforce the former at verification. Return an empty list for a
+     * handle that belongs to no account: the flow passes one when a two-step login names an unknown
+     * username.
      *
      * @param string $userHandle raw user handle bytes
      * @return list<CredentialRecord>

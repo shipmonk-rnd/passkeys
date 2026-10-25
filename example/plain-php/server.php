@@ -34,6 +34,7 @@ use ShipMonk\Passkeys\Ceremony\VerificationException;
 use ShipMonk\Passkeys\Json\JsonObject;
 use ShipMonk\Passkeys\Json\JsonObjectException;
 use ShipMonk\Passkeys\PasskeyFlow;
+use function error_log;
 use function file_get_contents;
 use function header;
 use function http_response_code;
@@ -264,7 +265,10 @@ match ($path) {
             respond(200, ['ok' => true, 'email' => $user['email'] ?? 'unknown']);
 
         } catch (VerificationException $e) {
-            respond(400, ['ok' => false, 'reason' => $e->reason, 'message' => $e->getMessage()]);
+            // Log the reason, but answer every failure alike: the reasons tell a registered
+            // credential from an unknown one, which would help an attacker probe accounts.
+            error_log("Passkey sign-in failed: {$e->reason} ({$e->getMessage()})");
+            respond(400, ['ok' => false, 'message' => 'Sign-in failed']);
         }
     })(),
 

@@ -3,6 +3,7 @@
 namespace ShipMonk\PasskeysSymfonyDemo\Controller;
 
 use LogicException;
+use Psr\Log\LoggerInterface;
 use ShipMonk\Passkeys\Ceremony\VerificationException;
 use ShipMonk\Passkeys\PasskeyFlow;
 use ShipMonk\PasskeysSymfonyDemo\Account\UserSession;
@@ -26,6 +27,7 @@ final class PasskeyLoginController extends AbstractController
         private readonly UserSession $userSession,
         private readonly DoctrinePasskeyStore $store,
         private readonly PasskeyFlow $flow,
+        private readonly LoggerInterface $logger,
     )
     {
     }
@@ -47,7 +49,11 @@ final class PasskeyLoginController extends AbstractController
             return $this->json(['ok' => true, 'email' => $user->getEmail()]);
 
         } catch (VerificationException $e) {
-            return $this->json(['ok' => false, 'reason' => $e->reason, 'message' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
+            // Log the reason, but answer every failure alike: the reasons tell a registered
+            // credential from an unknown one, which would help an attacker probe accounts.
+            $this->logger->info('Passkey sign-in failed', ['reason' => $e->reason, 'message' => $e->getMessage()]);
+
+            return $this->json(['ok' => false, 'message' => 'Sign-in failed'], Response::HTTP_BAD_REQUEST);
         }
     }
 

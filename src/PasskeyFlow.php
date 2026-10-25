@@ -28,10 +28,13 @@ use ShipMonk\Passkeys\Options\PublicKeyCredentialUserEntity;
 use ShipMonk\Passkeys\Signal\AllAcceptedCredentialsSignal;
 use ShipMonk\Passkeys\Signal\CurrentUserDetailsSignal;
 use function array_map;
+use function array_unique;
 use function hash_equals;
 use function hash_hmac;
 use function random_bytes;
+use function sort;
 use function strlen;
+use const SORT_STRING;
 
 /**
  * A high-level, passkey-only login flow on top of the {@see RelyingParty} façade: construct it
@@ -46,13 +49,13 @@ use function strlen;
  *  2. A two-step login form (username/email first, password or passkey second): pass the entered
  *     username. If the account is known, the options list its credentials in `allowCredentials`
  *     and the ceremony is pinned to that account — an assertion by any other user's credential is
- *     rejected. An unknown username always leaves the ceremony unpinned; by default it also gets
- *     the usernameless empty `allowCredentials`, so a non-existent account and a known one without
- *     passkeys look alike — but a *known* account with passkeys still stands out through its
- *     non-empty list. Override {@see self::getEnumerationHardeningSecret()} to close that gap: a
- *     username with no passkeys is then served a stable fabricated descriptor indistinguishable
- *     from a real one, so every username yields the same response shape (the ceremony stays
- *     unpinned regardless; WebAuthn §14.6.2).
+ *     rejected. An unknown username pins the ceremony too, to a fresh handle that belongs to no
+ *     account, and by default gets the usernameless empty `allowCredentials` — so a non-existent
+ *     account and a known one without passkeys look and fail alike. A *known* account with
+ *     passkeys still stands out through its non-empty list. Override
+ *     {@see self::getEnumerationHardeningSecret()} to close that gap: a username with no passkeys
+ *     is then served a stable fabricated descriptor indistinguishable from a real one, so every
+ *     username yields the same response shape (WebAuthn §14.6.2).
  *
  * Because both flows can run concurrently in one browser session (conditional mediation starts at
  * page load, a button click starts another ceremony), pending ceremonies are keyed by challenge:
@@ -111,10 +114,17 @@ class PasskeyFlow
         // no real descriptors — the account does not exist, or exists but has no passkeys — substitute
         // a stable, plausible fabricated descriptor so this response is indistinguishable from that of
         // an account that does have passkeys. A no-op unless getEnumerationHardeningSecret() is set;
-        // it only shapes the response — verification (below, keyed by the pinned user handle) is
-        // unchanged, so a ceremony for a non-existent account still fails closed.
+        // it only shapes the response — verification (keyed by the pinned user handle) is unchanged.
         if ($username !== null && $allowCredentials === null) {
             $allowCredentials = $this->fabricateAllowCredentials($username);
+        }
+
+        // A supplied username always pins the ceremony. When no account has it, the pin is a fresh
+        // handle that belongs to no account, so every assertion fails exactly as it does for an
+        // account without passkeys. Left unpinned, the ceremony would sign in the owner of any
+        // passkey — and tell anyone with an account which usernames do not exist (WebAuthn §14.6.2).
+        if ($username !== null && $userHandle === null) {
+            $userHandle = $this->generateUserHandle();
         }
 
         $challenge = $this->generateChallenge();
@@ -138,7 +148,10 @@ class PasskeyFlow
      * On success the returned result identifies the authenticated user
      * ({@see AuthenticationResult::$userHandle}); establishing their session is the caller's job.
      * Anything else — malformed input, an unknown or already-used challenge, a failed check —
-     * throws, so a passkey login endpoint reduces to one call and one catch.
+     * throws, so a passkey login endpoint reduces to one call and one catch. Answer every failure
+     * with the same generic error and only log {@see VerificationException::$reason}: the reasons
+     * differ between a real and a fabricated credential, and between account kinds, so echoing
+     * them would undo the username-enumeration hardening (WebAuthn §14.6.2).
      *
      * @param string $responseJson raw request body containing the authentication response JSON
      *
@@ -339,6 +352,10 @@ class PasskeyFlow
      * a fresh one per ceremony, or a second passkey would enrol under a different identity and fork
      * the account (breaking `excludeCredentials` de-duplication and login).
      *
+     * {@see self::authenticationOptions()} also calls it to pin a ceremony for an unknown username
+     * to a handle that no account has, so an override must keep returning fresh, unpredictable
+     * values that never collide with an existing account's handle.
+     *
      * @return string raw user handle bytes (64 bytes)
      */
     public function generateUserHandle(): string
@@ -420,10 +437,26 @@ class PasskeyFlow
             static fn (CredentialRecord $credential) => new PublicKeyCredentialDescriptor(
                 PublicKeyCredentialType::PUBLIC_KEY,
                 $credential->credentialId,
-                $credential->transports,
+                $credential->transports === null ? null : self::canonicalTransports($credential->transports),
             ),
             $credentials,
         );
+    }
+
+    /**
+     * Puts transports in the lexicographic, duplicate-free order conforming clients report them in
+     * (WebAuthn §5.2.1), so a stored descriptor has the same shape as a fabricated one whatever
+     * client registered the credential.
+     *
+     * @param list<string> $transports
+     * @return list<string>
+     */
+    private static function canonicalTransports(array $transports): array
+    {
+        $canonical = array_unique($transports);
+        sort($canonical, SORT_STRING);
+
+        return $canonical;
     }
 
     // --- Policy defaults: sensible for passkeys, override to taste ------------------------------
@@ -535,7 +568,8 @@ class PasskeyFlow
      * mitigation off — when no secret is configured.
      *
      * Override to better match your real descriptors when the defaults are distinguishable from them
-     * — e.g. a different credential-id length, transports, or more than one entry.
+     * — e.g. a different credential-id length, transports, or more than one entry. Keep transports
+     * in lexicographic order: clients report them that way, and the flow serves stored ones so.
      *
      * @return list<PublicKeyCredentialDescriptor>|null
      *
@@ -557,7 +591,7 @@ class PasskeyFlow
             new PublicKeyCredentialDescriptor(
                 PublicKeyCredentialType::PUBLIC_KEY,
                 hash_hmac('sha256', $username, $secret, binary: true),
-                [AuthenticatorTransport::INTERNAL, AuthenticatorTransport::HYBRID],
+                [AuthenticatorTransport::HYBRID, AuthenticatorTransport::INTERNAL],
             ),
         ];
     }

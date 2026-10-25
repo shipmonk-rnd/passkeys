@@ -144,7 +144,7 @@ final class PasskeyFlowTest extends CryptoTestCase
         self::assertNotNull($options->allowCredentials);
         self::assertCount(1, $options->allowCredentials);
         self::assertSame(self::ALICE_CREDENTIAL_ID, $options->allowCredentials[0]->id);
-        self::assertSame(['internal', 'hybrid'], $options->allowCredentials[0]->transports);
+        self::assertSame(['hybrid', 'internal'], $options->allowCredentials[0]->transports);
         self::assertSame(self::ALICE_HANDLE, $this->pending->pendingAuthentications[base64_encode($options->challenge)]->userHandle ?? null);
 
         $result = $flow->authenticate($this->aliceAssertion($options->challenge));
@@ -168,20 +168,27 @@ final class PasskeyFlowTest extends CryptoTestCase
         );
     }
 
-    public function testUnknownUsernameFallsBackToUsernamelessOptions(): void
+    public function testUnknownUsernamePinsCeremonyToNoAccount(): void
     {
         $flow = $this->flowWithAlice();
 
         $options = $flow->authenticationOptions('nobody@example.com');
 
+        // The options look like those of an account without passkeys…
         self::assertNull($options->allowCredentials);
+
+        // …and so does the ceremony: it is pinned to a fresh handle that belongs to no account, so
+        // even a valid passkey of an existing account cannot complete it. Left unpinned, it would
+        // sign alice in — and tell anyone with an account that nobody@example.com does not exist.
         $pending = $this->pending->pendingAuthentications[base64_encode($options->challenge)] ?? null;
         self::assertNotNull($pending);
-        self::assertNull($pending->userHandle);
-
-        // A discoverable passkey of an existing account still signs in.
-        $result = $flow->authenticate($this->aliceAssertion($options->challenge));
-        self::assertSame(self::ALICE_HANDLE, $result->userHandle);
+        self::assertNotNull($pending->userHandle);
+        self::assertNotSame(self::ALICE_HANDLE, $pending->userHandle);
+        $this->assertAuthenticationFails(
+            VerificationException::USER_HANDLE_MISMATCH,
+            $flow,
+            $this->aliceAssertion($options->challenge),
+        );
     }
 
     public function testKnownUserWithoutPasskeysStaysPinned(): void
@@ -212,16 +219,19 @@ final class PasskeyFlowTest extends CryptoTestCase
         self::assertNotNull($options->allowCredentials);
         self::assertCount(1, $options->allowCredentials);
         self::assertSame(PublicKeyCredentialType::PUBLIC_KEY, $options->allowCredentials[0]->type);
-        self::assertSame(['internal', 'hybrid'], $options->allowCredentials[0]->transports);
+        // Lexicographic, as conforming clients report transports (WebAuthn §5.2.1) — any other
+        // order would give the decoy away.
+        self::assertSame(['hybrid', 'internal'], $options->allowCredentials[0]->transports);
         self::assertSame(
             hash_hmac('sha256', 'nobody@example.com', self::HARDENING_SECRET, true),
             $options->allowCredentials[0]->id,
         );
 
-        // The pending ceremony still carries no user handle, so nothing about the account is implied.
+        // The ceremony is pinned to a handle of no account, never left open to any passkey.
         $pending = $this->pending->pendingAuthentications[base64_encode($options->challenge)] ?? null;
         self::assertNotNull($pending);
-        self::assertNull($pending->userHandle);
+        self::assertNotNull($pending->userHandle);
+        self::assertNotSame(self::ALICE_HANDLE, $pending->userHandle);
     }
 
     public function testHardeningFabricationIsStablePerUsernameAndUnlikeRealIds(): void
@@ -262,17 +272,18 @@ final class PasskeyFlowTest extends CryptoTestCase
     {
         $flow = $this->hardenedFlowWithAlice();
 
-        // A username with no account yields an unpinned ceremony (no user handle) plus a fabricated
-        // decoy descriptor — the §14.6.2 mitigation shaping only the options response.
+        // A username with no account yields a ceremony pinned to a handle of no account plus a
+        // fabricated decoy descriptor — the §14.6.2 mitigation shaping only the options response.
         $options = $flow->authenticationOptions('ghost@example.com');
         $pending = $this->pending->pendingAuthentications[base64_encode($options->challenge)] ?? null;
         self::assertNotNull($pending);
-        self::assertNull($pending->userHandle);
+        self::assertNotNull($pending->userHandle);
 
         // Completing that ceremony proves the decoy only shapes the options and never lets a login
-        // through: the ceremony being unpinned, the allow-list check is skipped and the credential
-        // lookup runs first — so the fabricated descriptor id (never registered for anyone) fails
-        // closed with UNKNOWN_CREDENTIAL before any signature/authenticator-data content is inspected.
+        // through: the pinned handle has no credentials, so the allow-list check is skipped and the
+        // credential lookup runs first — so the fabricated descriptor id (never registered for
+        // anyone) fails closed with UNKNOWN_CREDENTIAL before any signature/authenticator-data
+        // content is inspected.
         $this->assertAuthenticationFails(
             VerificationException::UNKNOWN_CREDENTIAL,
             $flow,
@@ -286,6 +297,41 @@ final class PasskeyFlowTest extends CryptoTestCase
 
         // Nothing was persisted for the ghost account — the flow failed closed.
         self::assertSame([], $this->store->updatedCredentials);
+    }
+
+    /**
+     * A username with no account and an account without passkeys must not only get the same
+     * options but also fail the same way — whether the attacker answers with a passkey of their own
+     * account or replays the fabricated credential id (WebAuthn §14.6.2).
+     */
+    public function testHardeningFailsAlikeForUnknownAndPasskeylessAccounts(): void
+    {
+        $flow = $this->hardenedFlowWithAlice();
+        $this->store->addUser('carol@example.com', 'carol-handle-0003');
+
+        $failures = [];
+
+        foreach (['nobody@example.com', 'carol@example.com'] as $username) {
+            $ownPasskey = $flow->authenticationOptions($username);
+            $decoy = $flow->authenticationOptions($username);
+
+            $failures[$username] = [
+                $this->authenticationFailure($flow, $this->aliceAssertion($ownPasskey->challenge)),
+                $this->authenticationFailure(
+                    $flow,
+                    self::assertionBody($this->privateKey, $decoy->challenge, $this->onlyAllowCredentialId($decoy), self::ALICE_HANDLE),
+                ),
+            ];
+        }
+
+        self::assertSame(
+            [
+                [VerificationException::USER_HANDLE_MISMATCH, 'Credential does not belong to the identified user'],
+                [VerificationException::UNKNOWN_CREDENTIAL, 'Credential is not registered'],
+            ],
+            $failures['nobody@example.com'],
+        );
+        self::assertSame($failures['nobody@example.com'], $failures['carol@example.com']);
     }
 
     public function testHardeningKeepsRealCredentialsForKnownUserWithPasskeys(): void
@@ -472,7 +518,27 @@ final class PasskeyFlowTest extends CryptoTestCase
         self::assertNotNull($options->excludeCredentials);
         self::assertCount(1, $options->excludeCredentials);
         self::assertSame(self::ALICE_CREDENTIAL_ID, $options->excludeCredentials[0]->id);
-        self::assertSame(['internal', 'hybrid'], $options->excludeCredentials[0]->transports);
+        self::assertSame(['hybrid', 'internal'], $options->excludeCredentials[0]->transports);
+    }
+
+    /**
+     * Conforming clients report transports sorted and free of duplicates (WebAuthn §5.2.1). A stored
+     * list that is not — e.g. from an older client — is served in that canonical form, so a real
+     * descriptor never looks unlike a fabricated one.
+     */
+    public function testDescriptorsServeStoredTransportsInCanonicalOrder(): void
+    {
+        $flow = $this->createFlow();
+        $this->store->addUser(self::ALICE, self::ALICE_HANDLE);
+        $this->store->addCredential($this->record(self::ALICE_CREDENTIAL_ID, self::ALICE_HANDLE, $this->coseEntries, ['usb', 'internal', 'hybrid', 'usb']));
+        $this->store->addCredential($this->record(self::BOB_CREDENTIAL_ID, self::ALICE_HANDLE, $this->coseEntries, null));
+
+        $options = $flow->authenticationOptions(self::ALICE);
+
+        self::assertNotNull($options->allowCredentials);
+        self::assertCount(2, $options->allowCredentials);
+        self::assertSame(['hybrid', 'internal', 'usb'], $options->allowCredentials[0]->transports);
+        self::assertNull($options->allowCredentials[1]->transports);
     }
 
     public function testGenerateUserHandleReturnsFreshRandomBytes(): void
@@ -818,6 +884,23 @@ final class PasskeyFlowTest extends CryptoTestCase
         }
     }
 
+    /**
+     * @return array{string, string} the failure's reason and message
+     */
+    private function authenticationFailure(
+        PasskeyFlow $flow,
+        string $body,
+    ): array
+    {
+        try {
+            $flow->authenticate($body);
+            self::fail('Expected authentication to fail');
+
+        } catch (VerificationException $e) {
+            return [$e->reason, $e->getMessage()];
+        }
+    }
+
     private function assertRegistrationFails(
         string $reason,
         PasskeyFlow $flow,
@@ -1020,11 +1103,13 @@ final class PasskeyFlowTest extends CryptoTestCase
 
     /**
      * @param array<int, int|string> $coseEntries
+     * @param list<string>|null      $transports
      */
     private function record(
         string $credentialId,
         string $userHandle,
         array $coseEntries,
+        ?array $transports = ['internal', 'hybrid'],
     ): CredentialRecord
     {
         return new CredentialRecord(
@@ -1035,7 +1120,7 @@ final class PasskeyFlowTest extends CryptoTestCase
             uvInitialized: true,
             backupEligible: false,
             backupState: false,
-            transports: ['internal', 'hybrid'],
+            transports: $transports,
         );
     }
 
