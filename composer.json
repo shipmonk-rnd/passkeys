@@ -15,7 +15,7 @@
         "php-64bit": "*",
         "ext-openssl": "*",
         "ext-sodium": "*",
-        "lib-openssl": ">=3.0"
+        "lib-openssl": ">=1.1.1"
     },
     "require-dev": {
         "ext-pdo": "*",

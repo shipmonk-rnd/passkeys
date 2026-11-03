@@ -17,7 +17,7 @@ is public but considered [low-level API](#low-level-api).
 ## Requirements
 
 - **64-bit PHP 8.1+**
-- `ext-openssl` built with **OpenSSL 3.0+** (ECDSA and RSA signatures; loading Ed25519 keys)
+- `ext-openssl` built with **OpenSSL 1.1.1+** (ECDSA and RSA signatures; loading Ed25519 keys)
 - `ext-sodium` (Ed25519 signatures; `ext-openssl` cannot verify EdDSA before PHP 8.4)
 
 ## Installation
