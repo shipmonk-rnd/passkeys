@@ -5,6 +5,8 @@ namespace ShipMonk\Passkeys\Credential;
 use ShipMonk\Passkeys\Base64\InvalidBase64Exception;
 use ShipMonk\Passkeys\Json\JsonObject;
 use ShipMonk\Passkeys\Json\JsonObjectException;
+use function str_starts_with;
+use function substr;
 
 /**
  * The client data collected by the browser, parsed from `clientDataJSON`.
@@ -37,7 +39,10 @@ final readonly class CollectedClientData
     public static function fromBytes(string $clientDataJSON): self
     {
         try {
-            $object = JsonObject::fromString($clientDataJSON);
+            // WebAuthn §7.1 / §7.2 UTF-8 decoding consumes one leading BOM for parsing only.
+            // The response retains the original bytes, including the BOM, for signature hashing.
+            $json = str_starts_with($clientDataJSON, "\xEF\xBB\xBF") ? substr($clientDataJSON, 3) : $clientDataJSON;
+            $object = JsonObject::fromString($json);
 
             return new self(
                 $object->getString('type'),
