@@ -63,7 +63,7 @@ abstract readonly class CoseKey
      * Reconstructs a key previously produced by {@see self::toBytes()} — for loading a stored
      * credential's public key. The inverse of {@see self::toBytes()}.
      *
-     * @throws CoseKeyException on malformed input (not a single, complete COSE_Key CBOR map)
+     * @throws CoseKeyException on malformed input or rejected key material
      */
     public static function fromBytes(string $bytes): CoseKey
     {

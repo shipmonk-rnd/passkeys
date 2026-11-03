@@ -3,6 +3,7 @@
 namespace ShipMonk\Passkeys\Ceremony;
 
 use ShipMonk\Passkeys\Cbor\CborMapException;
+use ShipMonk\Passkeys\Cose\CoseEc2Key;
 use ShipMonk\Passkeys\Cose\CoseKey;
 use ShipMonk\Passkeys\Cose\CoseKeyLoadException;
 use ShipMonk\Passkeys\Credential\AttestationObject;
@@ -238,6 +239,12 @@ final class RelyingParty
                     VerificationException::INVALID_ATTESTATION_STATEMENT,
                     "Attestation statement for format 'none' must be an empty map",
                 );
+            }
+
+            // No signature is checked for `none`, so EC point validation must run explicitly.
+            // Edwards encoding / small-order checks already ran during COSE import.
+            if ($credentialPublicKey instanceof CoseEc2Key) {
+                $credentialPublicKey->validatePublicPoint();
             }
 
             return RegistrationResult::ATTESTATION_NONE;

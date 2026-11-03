@@ -419,9 +419,8 @@ final class RelyingPartyTest extends CryptoTestCase
 
     public function testRegistrationRejectsUnusableAttestedKey(): void
     {
-        // Same off-curve key trick as {@see testAuthenticationRejectsUnusableStoredKey}: the all-zero
-        // P-256 point parses as COSE and passes the algorithm allow-list, but OpenSSL refuses to load
-        // it when the self-attestation signature is checked.
+        // The all-zero P-256 point parses as COSE and passes the algorithm allow-list, but must
+        // fail native point validation with both statement-less and self-attested registration.
         $coseEntries = [
             1 => 2,
             3 => CoseAlgorithmIdentifier::ES256,
@@ -435,11 +434,13 @@ final class RelyingPartyTest extends CryptoTestCase
             [CborTestEncoder::textString('sig'), CborTestEncoder::byteString('irrelevant')],
         ]);
 
-        $this->assertRegistrationFails(
-            VerificationException::UNUSABLE_CREDENTIAL_KEY,
-            self::registrationCredential($coseEntries, fmt: 'packed', attStmtOverride: $attStmt),
-            'Attested credential key is unusable: %s',
-        );
+        foreach (['none', 'packed'] as $fmt) {
+            $this->assertRegistrationFails(
+                VerificationException::UNUSABLE_CREDENTIAL_KEY,
+                self::registrationCredential($coseEntries, fmt: $fmt, attStmtOverride: $fmt === 'packed' ? $attStmt : null),
+                'Attested credential key is unusable: %s',
+            );
+        }
     }
 
     public function testRegistrationRejectsPackedSelfAttestationWithBadSignature(): void

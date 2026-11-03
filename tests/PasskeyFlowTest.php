@@ -5,12 +5,15 @@ namespace ShipMonk\PasskeysTests;
 use InvalidArgumentException;
 use OpenSSLAsymmetricKey;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProviderExternal;
 use ShipMonk\Passkeys\Base64\Base64;
 use ShipMonk\Passkeys\Ceremony\CredentialRecord;
 use ShipMonk\Passkeys\Ceremony\RegistrationResult;
 use ShipMonk\Passkeys\Ceremony\VerificationException;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
 use ShipMonk\Passkeys\Cose\CoseKey;
+use ShipMonk\Passkeys\Cose\CoseKeyException;
+use ShipMonk\Passkeys\Cose\CoseKeyLoadException;
 use ShipMonk\Passkeys\Credential\AuthenticatorData;
 use ShipMonk\Passkeys\Enum\AuthenticatorAttachment;
 use ShipMonk\Passkeys\Enum\AuthenticatorTransport;
@@ -27,6 +30,7 @@ use ShipMonk\Passkeys\PendingCeremonyStore;
 use ShipMonk\Passkeys\PendingRegistration;
 use ShipMonk\Passkeys\RegisteredPasskey;
 use ShipMonk\PasskeysTests\Cbor\CborTestEncoder;
+use ShipMonk\PasskeysTests\Cose\CoseKeyMaterialTest;
 use function array_map;
 use function base64_encode;
 use function chr;
@@ -614,6 +618,75 @@ final class PasskeyFlowTest extends CryptoTestCase
 
         $this->assertRegistrationFails(VerificationException::MALFORMED_RESPONSE, $flow, 'not json', message: 'Malformed registration response: %s');
         $this->assertRegistrationFails(VerificationException::MALFORMED_RESPONSE, $flow, '{}', message: 'Malformed registration response: %s');
+    }
+
+    /**
+     * `none` carries no signature, so key-material checks must run before a credential is saved.
+     *
+     * @param array<int, int|string> $entries
+     */
+    #[DataProviderExternal(CoseKeyMaterialTest::class, 'provideRejectedKeyMaterial')]
+    public function testRegistrationRejectsKeyMaterialBeforePersisting(
+        string $message,
+        array $entries,
+    ): void
+    {
+        $flow = new class (self::RP_ID, 'Example', [self::ORIGIN], $this->store, $this->pending) extends PasskeyFlow {
+
+            protected function getAllowedAlgorithms(): array
+            {
+                return [CoseAlgorithmIdentifier::EdDSA, CoseAlgorithmIdentifier::Ed448];
+            }
+
+        };
+        $options = $flow->registrationOptions(self::DAVE_HANDLE, self::DAVE);
+
+        try {
+            $flow->register($this->registrationBody($options->challenge, coseEntries: $entries));
+            self::fail('Expected key material to be rejected');
+
+        } catch (VerificationException $e) {
+            self::assertSame(VerificationException::MALFORMED_RESPONSE, $e->reason);
+            $cause = $e->getPrevious()?->getPrevious();
+            self::assertInstanceOf(CoseKeyException::class, $cause);
+            self::assertSame($message, $cause->getMessage());
+        }
+
+        self::assertSame([], $this->store->savedPasskeys);
+    }
+
+    /**
+     * @param array<int, int|string> $entries
+     */
+    #[DataProviderExternal(CoseKeyMaterialTest::class, 'provideRejectedEcPoints')]
+    public function testNoneRegistrationRejectsOffCurveEcPointsBeforePersisting(
+        string $message,
+        array $entries,
+    ): void
+    {
+        // Offer all three EC algorithms so the point check, not the algorithm allow-list, fails.
+        $flow = new class (self::RP_ID, 'Example', [self::ORIGIN], $this->store, $this->pending) extends PasskeyFlow {
+
+            protected function getAllowedAlgorithms(): array
+            {
+                return [CoseAlgorithmIdentifier::ES256, CoseAlgorithmIdentifier::ES384, CoseAlgorithmIdentifier::ES512];
+            }
+
+        };
+        $options = $flow->registrationOptions(self::DAVE_HANDLE, self::DAVE);
+
+        try {
+            $flow->register($this->registrationBody($options->challenge, coseEntries: $entries));
+            self::fail('Expected off-curve point to be rejected');
+
+        } catch (VerificationException $e) {
+            self::assertSame(VerificationException::UNUSABLE_CREDENTIAL_KEY, $e->reason);
+            $cause = $e->getPrevious();
+            self::assertInstanceOf(CoseKeyLoadException::class, $cause);
+            self::assertSame($message, $cause->getMessage());
+        }
+
+        self::assertSame([], $this->store->savedPasskeys);
     }
 
     public function testPendingRegistrationsAndAuthenticationsAreSeparate(): void
