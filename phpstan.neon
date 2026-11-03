@@ -42,11 +42,10 @@ parameters:
       enabled: false
 
   ignoreErrors:
-    # PHP 8.1 has no asymmetric visibility (`public private(set)`): these properties carry
+    # PHP 8.1 has no asymmetric visibility (`public private(set)`): these test-store properties carry
     # @phpstan-readonly-allow-private-mutation instead, which this rule does not recognise.
     - identifier: shipmonk.publicPropertyNotReadonly
       paths:
-        - src/Testing/FakePasskey.php
         - tests/InMemoryPasskeyStore.php
         - tests/InMemoryPendingCeremonyStore.php
     - identifier: missingType.checkedException
