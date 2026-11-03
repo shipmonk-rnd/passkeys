@@ -4,7 +4,9 @@ namespace ShipMonk\Passkeys\Der;
 
 use LogicException;
 use function array_slice;
+use function base64_encode;
 use function chr;
+use function chunk_split;
 use function explode;
 use function implode;
 use function ltrim;
@@ -15,9 +17,9 @@ use function strlen;
 
 /**
  * A minimal DER encoder, scoped to what the library needs in order to hand a COSE key to ext-openssl
- * as a SubjectPublicKeyInfo ({@see \ShipMonk\Passkeys\Cose\CoseEc2Key}, {@see \ShipMonk\Passkeys\Cose\CoseRsaKey}):
- * INTEGER, BIT STRING, NULL, OBJECT IDENTIFIER and SEQUENCE, each with a definite length in its
- * shortest form.
+ * as a SubjectPublicKeyInfo ({@see \ShipMonk\Passkeys\Cose\CoseKey::verify()}): INTEGER, BIT STRING,
+ * NULL, OBJECT IDENTIFIER and SEQUENCE, each with a definite length in its shortest form, plus the
+ * PEM text form that ext-openssl loads.
  *
  * @see https://www.itu.int/rec/T-REC-X.690 X.690 §8 (encoding rules) and §10 (DER restrictions)
  * @internal an implementation detail of the PHP 8.1 support, not covered by the backward-compatibility promise
@@ -94,6 +96,20 @@ final class DerEncoder
     public static function encodeSequence(string ...$elements): string
     {
         return self::encode(0x30, implode('', $elements));
+    }
+
+    /**
+     * PEM text form of DER bytes, e.g. with the label "PUBLIC KEY": Base64 in lines of 64
+     * characters between the BEGIN and END lines (RFC 7468 §2).
+     */
+    public static function toPem(
+        string $label,
+        string $der,
+    ): string
+    {
+        return "-----BEGIN {$label}-----\n"
+            . chunk_split(base64_encode($der), 64, "\n")
+            . "-----END {$label}-----\n";
     }
 
     /**

@@ -2,10 +2,12 @@
 
 namespace ShipMonk\Passkeys\Cose;
 
+use OpenSSLAsymmetricKey;
 use ShipMonk\Passkeys\Cbor\CborEncoder;
 use ShipMonk\Passkeys\Cbor\CborMap;
 use ShipMonk\Passkeys\Cbor\CborMapException;
 use ShipMonk\Passkeys\Der\DerEncoder;
+use function openssl_pkey_get_public;
 use function strlen;
 use const OPENSSL_ALGO_SHA256;
 use const OPENSSL_ALGO_SHA384;
@@ -129,12 +131,14 @@ final class CoseEc2Key extends CoseKey
         ]);
     }
 
-    public function verify(
-        string $message,
-        string $signature,
-    ): bool
+    protected function toOpenSslPublicKey(): OpenSSLAsymmetricKey|false
     {
-        return self::verifyWithOpenSsl($this->toDerSubjectPublicKeyInfo(), self::ALGORITHMS[$this->alg][3], $message, $signature);
+        return openssl_pkey_get_public(DerEncoder::toPem('PUBLIC KEY', $this->toDerSubjectPublicKeyInfo()));
+    }
+
+    protected function getOpenSslAlgorithm(): int
+    {
+        return self::ALGORITHMS[$this->alg][3];
     }
 
     /**

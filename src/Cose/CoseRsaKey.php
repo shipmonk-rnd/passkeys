@@ -2,12 +2,14 @@
 
 namespace ShipMonk\Passkeys\Cose;
 
+use OpenSSLAsymmetricKey;
 use ShipMonk\Passkeys\Cbor\CborEncoder;
 use ShipMonk\Passkeys\Cbor\CborMap;
 use ShipMonk\Passkeys\Cbor\CborMapException;
 use ShipMonk\Passkeys\Der\DerEncoder;
 use function in_array;
 use function ltrim;
+use function openssl_pkey_get_public;
 use function ord;
 use function strlen;
 use function substr;
@@ -135,13 +137,14 @@ final class CoseRsaKey extends CoseKey
         ]);
     }
 
-    public function verify(
-        string $message,
-        string $signature,
-    ): bool
+    protected function toOpenSslPublicKey(): OpenSSLAsymmetricKey|false
     {
-        // RS256 is the only supported RSA algorithm
-        return self::verifyWithOpenSsl($this->toDerSubjectPublicKeyInfo(), OPENSSL_ALGO_SHA256, $message, $signature);
+        return openssl_pkey_get_public(DerEncoder::toPem('PUBLIC KEY', $this->toDerSubjectPublicKeyInfo()));
+    }
+
+    protected function getOpenSslAlgorithm(): int
+    {
+        return OPENSSL_ALGO_SHA256; // RS256 is the only supported RSA algorithm
     }
 
     /**
