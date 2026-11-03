@@ -13,7 +13,7 @@ namespace ShipMonk\Passkeys;
  *
  * @api
  */
-final readonly class PendingAuthentication
+final class PendingAuthentication
 {
 
     /**
@@ -21,8 +21,8 @@ final readonly class PendingAuthentication
      * @param string|null $userHandle raw user handle bytes when the ceremony is pinned to an already-identified user — for a username with no account, a fresh handle that belongs to no account; null for a usernameless (discoverable-credential) ceremony
      */
     public function __construct(
-        public string $challenge,
-        public ?string $userHandle,
+        public readonly string $challenge,
+        public readonly ?string $userHandle,
     )
     {
     }

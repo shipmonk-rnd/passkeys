@@ -10,6 +10,11 @@ use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
  * passkey, exposed so tests can assert against it (or mess with it — e.g. sign with the private
  * key directly to build a tampered response).
  *
+ * Before PHP 8.4, ext-openssl cannot sign with an EdDSA (Ed25519) private key. To sign with one
+ * there, export it with {@see \openssl_pkey_export()}: its PKCS#8 DER ends with the 32-byte seed,
+ * which {@see \sodium_crypto_sign_seed_keypair()} turns into the secret key for
+ * {@see \sodium_crypto_sign_detached()}.
+ *
  * @api
  */
 final class FakePasskey

@@ -13,7 +13,7 @@ use ShipMonk\Passkeys\Cose\CoseKeyException;
 /**
  * @api
  */
-final readonly class AttestedCredentialData
+final class AttestedCredentialData
 {
 
     /**
@@ -21,9 +21,9 @@ final readonly class AttestedCredentialData
      * @param string $credentialId raw credential id bytes
      */
     private function __construct(
-        public string $aaGuid,
-        public string $credentialId,
-        public CoseKey $credentialPublicKey,
+        public readonly string $aaGuid,
+        public readonly string $credentialId,
+        public readonly CoseKey $credentialPublicKey,
     )
     {
     }

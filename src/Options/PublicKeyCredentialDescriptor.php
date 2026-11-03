@@ -11,7 +11,7 @@ use stdClass;
  * @see https://www.w3.org/TR/webauthn-3/#dictdef-publickeycredentialdescriptorjson
  * @api
  */
-final readonly class PublicKeyCredentialDescriptor implements JsonSerializable
+final class PublicKeyCredentialDescriptor implements JsonSerializable
 {
 
     /**
@@ -21,9 +21,9 @@ final readonly class PublicKeyCredentialDescriptor implements JsonSerializable
      *              unknown values
      */
     public function __construct(
-        public PublicKeyCredentialType $type,
-        public string $id,
-        public ?array $transports = null,
+        public readonly PublicKeyCredentialType $type,
+        public readonly string $id,
+        public readonly ?array $transports = null,
     )
     {
     }

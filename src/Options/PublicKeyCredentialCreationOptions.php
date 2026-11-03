@@ -17,7 +17,7 @@ use const JSON_THROW_ON_ERROR;
  * @see https://www.w3.org/TR/webauthn-3/#dictdef-publickeycredentialcreationoptions
  * @api
  */
-final readonly class PublicKeyCredentialCreationOptions implements JsonSerializable
+final class PublicKeyCredentialCreationOptions implements JsonSerializable
 {
 
     /**
@@ -25,7 +25,7 @@ final readonly class PublicKeyCredentialCreationOptions implements JsonSerializa
      *
      * @see https://www.w3.org/TR/webauthn-3/#sctn-timeout-recommended-range
      */
-    public const int RECOMMENDED_TIMEOUT = 300_000;
+    public const RECOMMENDED_TIMEOUT = 300_000;
 
     /**
      * @param string                                   $challenge          raw challenge bytes (e.g. from {@see \random_bytes()})
@@ -35,15 +35,15 @@ final readonly class PublicKeyCredentialCreationOptions implements JsonSerializa
      * @param array<string, mixed>|null                $extensions         client extension inputs in their JSON form ({@link https://www.w3.org/TR/webauthn-3/#dictdef-authenticationextensionsclientinputsjson AuthenticationExtensionsClientInputsJSON})
      */
     public function __construct(
-        public PublicKeyCredentialRpEntity $rp,
-        public PublicKeyCredentialUserEntity $user,
-        public string $challenge,
-        public array $pubKeyCredParams,
-        public ?int $timeout = self::RECOMMENDED_TIMEOUT,
-        public ?array $excludeCredentials = null,
-        public ?AuthenticatorSelectionCriteria $authenticatorSelection = null,
-        public ?array $hints = null,
-        public ?array $extensions = null,
+        public readonly PublicKeyCredentialRpEntity $rp,
+        public readonly PublicKeyCredentialUserEntity $user,
+        public readonly string $challenge,
+        public readonly array $pubKeyCredParams,
+        public readonly ?int $timeout = self::RECOMMENDED_TIMEOUT,
+        public readonly ?array $excludeCredentials = null,
+        public readonly ?AuthenticatorSelectionCriteria $authenticatorSelection = null,
+        public readonly ?array $hints = null,
+        public readonly ?array $extensions = null,
     )
     {
     }

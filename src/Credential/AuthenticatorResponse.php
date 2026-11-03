@@ -8,7 +8,7 @@ namespace ShipMonk\Passkeys\Credential;
  * @see https://www.w3.org/TR/webauthn-3/#authenticatorresponse
  * @api
  */
-abstract readonly class AuthenticatorResponse
+abstract class AuthenticatorResponse
 {
 
     /**
@@ -16,7 +16,7 @@ abstract readonly class AuthenticatorResponse
      *     kept verbatim because hashes and signatures are computed over these exact bytes
      */
     protected function __construct(
-        public string $clientDataJSON,
+        public readonly string $clientDataJSON,
     )
     {
     }

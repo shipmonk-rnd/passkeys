@@ -13,10 +13,12 @@ use ShipMonk\Passkeys\Cose\CoseKey;
 use ShipMonk\Passkeys\Cose\CoseOkpKey;
 use ShipMonk\Passkeys\Cose\CoseRsaKey;
 use ShipMonk\Passkeys\Credential\AuthenticatorData;
+use ShipMonk\Passkeys\Der\DerEncoder;
 use ShipMonk\Passkeys\Json\JsonObject;
 use ShipMonk\Passkeys\Json\JsonObjectException;
 use function array_map;
 use function array_reverse;
+use function base64_decode;
 use function chr;
 use function hash;
 use function in_array;
@@ -25,23 +27,30 @@ use function is_int;
 use function is_string;
 use function json_encode;
 use function openssl_error_string;
+use function openssl_pkey_export;
 use function openssl_pkey_get_details;
+use function openssl_pkey_get_private;
 use function openssl_pkey_new;
 use function openssl_sign;
 use function pack;
 use function parse_url;
+use function preg_replace;
 use function random_bytes;
+use function sodium_crypto_sign_detached;
+use function sodium_crypto_sign_publickey;
+use function sodium_crypto_sign_secretkey;
+use function sodium_crypto_sign_seed_keypair;
 use function str_pad;
 use function strlen;
+use function substr;
 use const JSON_THROW_ON_ERROR;
 use const OPENSSL_ALGO_SHA256;
 use const OPENSSL_ALGO_SHA384;
 use const OPENSSL_ALGO_SHA512;
 use const OPENSSL_KEYTYPE_EC;
-use const OPENSSL_KEYTYPE_ED25519;
-use const OPENSSL_KEYTYPE_ED448;
 use const OPENSSL_KEYTYPE_RSA;
 use const PHP_URL_HOST;
+use const SODIUM_CRYPTO_SIGN_SEEDBYTES;
 use const STR_PAD_LEFT;
 
 /**
@@ -85,7 +94,13 @@ use const STR_PAD_LEFT;
 final class FakeAuthenticator
 {
 
-    public const string AAGUID = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+    public const AAGUID = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+
+    /**
+     * DER encoding of an Ed25519 PKCS#8 PrivateKeyInfo up to the 32-byte seed that ends it:
+     * version 0, algorithm id-Ed25519 (1.3.101.112), and the OCTET STRING wrapping the seed (RFC 8410 §7).
+     */
+    private const ED25519_PKCS8_PREFIX = "\x30\x2e\x02\x01\x00\x30\x05\x06\x03\x2b\x65\x70\x04\x22\x04\x20";
 
     /**
      * @var list<FakePasskey>
@@ -318,7 +333,7 @@ final class FakeAuthenticator
     {
         return match ($this->algorithm) {
             CoseAlgorithmIdentifier::RS256 => $this->generateRsaKeyPair($this->algorithm),
-            CoseAlgorithmIdentifier::EdDSA, CoseAlgorithmIdentifier::Ed448 => $this->generateOkpKeyPair($this->algorithm),
+            CoseAlgorithmIdentifier::EdDSA => $this->generateEd25519KeyPair($this->algorithm),
             CoseAlgorithmIdentifier::ES256, CoseAlgorithmIdentifier::ES384, CoseAlgorithmIdentifier::ES512 => $this->generateEc2KeyPair($this->algorithm),
         };
     }
@@ -346,25 +361,29 @@ final class FakeAuthenticator
     }
 
     /**
-     * @param CoseAlgorithmIdentifier::EdDSA|CoseAlgorithmIdentifier::Ed448 $algorithm
+     * Before PHP 8.4, ext-openssl can load an Ed25519 key, but cannot generate one or sign with it.
+     * So the private key is a random seed wrapped in PKCS#8 for {@see \openssl_pkey_get_private()},
+     * and ext-sodium derives the public key from the seed (and the signatures, in {@see self::sign()}).
+     *
+     * @param CoseAlgorithmIdentifier::EdDSA $algorithm
      * @return array{OpenSSLAsymmetricKey, string}
      */
-    private function generateOkpKeyPair(int $algorithm): array
+    private function generateEd25519KeyPair(int $algorithm): array
     {
-        [$keyType, $detailsGroup, $crv] = match ($algorithm) {
-            CoseAlgorithmIdentifier::Ed448 => [OPENSSL_KEYTYPE_ED448, 'ed448', CoseOkpKey::CRV_ED448],
-            CoseAlgorithmIdentifier::EdDSA => [OPENSSL_KEYTYPE_ED25519, 'ed25519', CoseOkpKey::CRV_ED25519],
-        };
+        $seed = random_bytes(SODIUM_CRYPTO_SIGN_SEEDBYTES);
+        $key = openssl_pkey_get_private(DerEncoder::toPem('PRIVATE KEY', self::ED25519_PKCS8_PREFIX . $seed));
 
-        $key = self::newKey(['private_key_type' => $keyType]);
+        if ($key === false) {
+            throw new LogicException('Failed to load an Ed25519 private key: ' . openssl_error_string());
+        }
 
         return [
             $key,
             self::coseMap([
                 CoseKey::LABEL_KTY => CoseOkpKey::KTY,
                 CoseKey::LABEL_ALG => $algorithm,
-                CoseOkpKey::LABEL_CRV => $crv,
-                CoseOkpKey::LABEL_X => self::keyDetail($key, $detailsGroup, 'pub_key'),
+                CoseOkpKey::LABEL_CRV => CoseOkpKey::CRV_ED25519,
+                CoseOkpKey::LABEL_X => sodium_crypto_sign_publickey(sodium_crypto_sign_seed_keypair($seed)),
             ]),
         ];
     }
@@ -407,11 +426,16 @@ final class FakeAuthenticator
         int $algorithm,
     ): string
     {
+        if ($algorithm === CoseAlgorithmIdentifier::EdDSA) {
+            $keyPair = sodium_crypto_sign_seed_keypair(self::ed25519Seed($privateKey));
+
+            return sodium_crypto_sign_detached($message, sodium_crypto_sign_secretkey($keyPair));
+        }
+
         $digest = match ($algorithm) {
             CoseAlgorithmIdentifier::ES256, CoseAlgorithmIdentifier::RS256 => OPENSSL_ALGO_SHA256,
             CoseAlgorithmIdentifier::ES384 => OPENSSL_ALGO_SHA384,
             CoseAlgorithmIdentifier::ES512 => OPENSSL_ALGO_SHA512,
-            CoseAlgorithmIdentifier::EdDSA, CoseAlgorithmIdentifier::Ed448 => 0,
         };
 
         if (!openssl_sign($message, $signature, $privateKey, $digest) || !is_string($signature)) {
@@ -419,6 +443,28 @@ final class FakeAuthenticator
         }
 
         return $signature;
+    }
+
+    /**
+     * Recovers the seed of an Ed25519 private key from its PKCS#8 export, the inverse of
+     * {@see self::generateEd25519KeyPair()}.
+     *
+     * @return non-empty-string
+     */
+    private static function ed25519Seed(OpenSSLAsymmetricKey $privateKey): string
+    {
+        if (!openssl_pkey_export($privateKey, $pem) || !is_string($pem)) {
+            throw new LogicException('Failed to export the private key: ' . openssl_error_string());
+        }
+
+        $der = base64_decode(preg_replace('~-----[^-]+-----|\s~', '', $pem) ?? '', true);
+        $seed = substr((string) $der, strlen(self::ED25519_PKCS8_PREFIX));
+
+        if ($der !== self::ED25519_PKCS8_PREFIX . $seed || strlen($seed) !== SODIUM_CRYPTO_SIGN_SEEDBYTES) {
+            throw new LogicException('The private key is not an Ed25519 key');
+        }
+
+        return $seed;
     }
 
     /**

@@ -9,7 +9,7 @@ use stdClass;
  * @see https://www.w3.org/TR/webauthn-3/#dictdef-publickeycredentialrpentity
  * @api
  */
-final readonly class PublicKeyCredentialRpEntity extends PublicKeyCredentialEntity implements JsonSerializable
+final class PublicKeyCredentialRpEntity extends PublicKeyCredentialEntity implements JsonSerializable
 {
 
     /**
@@ -18,7 +18,7 @@ final readonly class PublicKeyCredentialRpEntity extends PublicKeyCredentialEnti
      */
     public function __construct(
         string $name,
-        public ?string $id = null,
+        public readonly ?string $id = null,
     )
     {
         parent::__construct($name);

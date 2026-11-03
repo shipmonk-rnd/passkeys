@@ -11,6 +11,9 @@ use ShipMonk\Passkeys\Cbor\InvalidCborException;
 use function implode;
 use function openssl_error_string;
 use function openssl_verify;
+use function sodium_crypto_sign_verify_detached;
+use function strlen;
+use const SODIUM_CRYPTO_SIGN_BYTES;
 
 /**
  * A COSE_Key as used by WebAuthn credential public keys.
@@ -21,24 +24,24 @@ use function openssl_verify;
  * @see https://www.rfc-editor.org/rfc/rfc9053.html key type / algorithm parameters
  * @api
  */
-abstract readonly class CoseKey
+abstract class CoseKey
 {
 
     /**
      * Common COSE key label: key type (kty).
      */
-    public const int LABEL_KTY = 1;
+    public const LABEL_KTY = 1;
 
     /**
      * Common COSE key label: algorithm (alg).
      */
-    public const int LABEL_ALG = 3;
+    public const LABEL_ALG = 3;
 
     /**
      * @param TAlg $alg
      */
     protected function __construct(
-        public int $alg,
+        public readonly int $alg,
     )
     {
     }
@@ -84,13 +87,14 @@ abstract readonly class CoseKey
     abstract public function toBytes(): string;
 
     /**
-     * Verifies a signature over $message against this public key using ext-openssl.
+     * Verifies a signature over $message against this public key using ext-openssl, or
+     * ext-sodium for EdDSA.
      *
      * For ECDSA algorithms the signature is expected in the ASN.1 DER form
      * (Ecdsa-Sig-Value) produced by authenticators; for RSASSA-PKCS1-v1_5 it is the
-     * raw signature; for EdDSA it is the raw Ed25519 (64-byte) or Ed448 (114-byte)
-     * signature. All are what
-     * {@see \openssl_verify()} consumes directly (EdDSA requires OpenSSL 3.0 / PHP 8.4).
+     * raw signature; for EdDSA it is the raw Ed25519 (64-byte) signature. The first two
+     * are what {@see \openssl_verify()} consumes directly, the last one is what
+     * {@see \sodium_crypto_sign_verify_detached()} consumes.
      *
      * @see https://www.rfc-editor.org/rfc/rfc9053.html signature algorithms
      * @throws CoseKeyLoadException if OpenSSL rejects the key material
@@ -108,7 +112,18 @@ abstract readonly class CoseKey
             throw new CoseKeyLoadException('Failed to load public key: ' . $this->getOpenSslErrors());
         }
 
-        $result = openssl_verify($message, $signature, $publicKey, $this->getOpenSslAlgorithm());
+        $algorithm = $this->getOpenSslAlgorithm();
+
+        // Before PHP 8.4, ext-openssl can load an EdDSA key but cannot verify with it, so libsodium
+        // verifies OKP keys (Ed25519 is the only supported curve) against the raw public key. It
+        // throws on a signature of the wrong length; like any other malformed signature, that is a
+        // verification failure, not an exception.
+        if ($this instanceof CoseOkpKey) {
+            return strlen($signature) === SODIUM_CRYPTO_SIGN_BYTES
+                && sodium_crypto_sign_verify_detached($signature, $message, $this->x);
+        }
+
+        $result = openssl_verify($message, $signature, $publicKey, $algorithm);
 
         // 1 = verified; 0 = signature does not match; -1 = malformed signature or an
         // OpenSSL error. A caller cannot tell attacker-supplied garbage apart from a
@@ -117,9 +132,10 @@ abstract readonly class CoseKey
     }
 
     /**
-     * Builds an ext-openssl public key handle for this key by constructing it directly from
-     * its parameters via {@see \openssl_pkey_new()}, the form consumed by {@see \openssl_verify()}
-     * in {@see self::verify()}. Returns false if OpenSSL rejects the key material.
+     * Builds an ext-openssl public key handle for this key by loading its DER-encoded
+     * SubjectPublicKeyInfo via {@see \openssl_pkey_get_public()}, the form consumed by
+     * {@see \openssl_verify()} in {@see self::verify()}. Returns false if OpenSSL rejects the key
+     * material.
      */
     abstract protected function toOpenSslPublicKey(): OpenSSLAsymmetricKey|false;
 

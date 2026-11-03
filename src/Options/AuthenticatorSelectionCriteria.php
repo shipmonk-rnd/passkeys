@@ -12,14 +12,14 @@ use stdClass;
  * @see https://www.w3.org/TR/webauthn-3/#dictdef-authenticatorselectioncriteria
  * @api
  */
-final readonly class AuthenticatorSelectionCriteria implements JsonSerializable
+final class AuthenticatorSelectionCriteria implements JsonSerializable
 {
 
     public function __construct(
-        public ?AuthenticatorAttachment $authenticatorAttachment = null,
-        public ?ResidentKeyRequirement $residentKey = null,
-        public ?bool $requireResidentKey = null,
-        public ?UserVerificationRequirement $userVerification = null,
+        public readonly ?AuthenticatorAttachment $authenticatorAttachment = null,
+        public readonly ?ResidentKeyRequirement $residentKey = null,
+        public readonly ?bool $requireResidentKey = null,
+        public readonly ?UserVerificationRequirement $userVerification = null,
     )
     {
     }

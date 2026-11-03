@@ -18,7 +18,7 @@ use const JSON_THROW_ON_ERROR;
  * @see https://www.w3.org/TR/webauthn-3/#sctn-signalCurrentUserDetails
  * @api
  */
-final readonly class CurrentUserDetailsSignal implements JsonSerializable
+final class CurrentUserDetailsSignal implements JsonSerializable
 {
 
     /**
@@ -28,10 +28,10 @@ final readonly class CurrentUserDetailsSignal implements JsonSerializable
      * @param string $displayName the account's current friendly label
      */
     public function __construct(
-        public string $rpId,
-        public string $userId,
-        public string $name,
-        public string $displayName,
+        public readonly string $rpId,
+        public readonly string $userId,
+        public readonly string $name,
+        public readonly string $displayName,
     )
     {
     }

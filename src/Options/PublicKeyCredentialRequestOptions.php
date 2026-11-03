@@ -18,7 +18,7 @@ use const JSON_THROW_ON_ERROR;
  * @see https://www.w3.org/TR/webauthn-3/#dictdef-publickeycredentialrequestoptions
  * @api
  */
-final readonly class PublicKeyCredentialRequestOptions implements JsonSerializable
+final class PublicKeyCredentialRequestOptions implements JsonSerializable
 {
 
     /**
@@ -26,7 +26,7 @@ final readonly class PublicKeyCredentialRequestOptions implements JsonSerializab
      *
      * @see https://www.w3.org/TR/webauthn-3/#sctn-timeout-recommended-range
      */
-    public const int RECOMMENDED_TIMEOUT = 300_000;
+    public const RECOMMENDED_TIMEOUT = 300_000;
 
     /**
      * @param string                                   $challenge        raw challenge bytes (e.g. from {@see \random_bytes()})
@@ -35,13 +35,13 @@ final readonly class PublicKeyCredentialRequestOptions implements JsonSerializab
      * @param array<string, mixed>|null                $extensions       client extension inputs in their JSON form ({@link https://www.w3.org/TR/webauthn-3/#dictdef-authenticationextensionsclientinputsjson AuthenticationExtensionsClientInputsJSON})
      */
     public function __construct(
-        public string $challenge,
-        public ?int $timeout = self::RECOMMENDED_TIMEOUT,
-        public ?string $rpId = null,
-        public ?array $allowCredentials = null,
-        public ?UserVerificationRequirement $userVerification = null,
-        public ?array $hints = null,
-        public ?array $extensions = null,
+        public readonly string $challenge,
+        public readonly ?int $timeout = self::RECOMMENDED_TIMEOUT,
+        public readonly ?string $rpId = null,
+        public readonly ?array $allowCredentials = null,
+        public readonly ?UserVerificationRequirement $userVerification = null,
+        public readonly ?array $hints = null,
+        public readonly ?array $extensions = null,
     )
     {
     }

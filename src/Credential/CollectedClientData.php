@@ -14,18 +14,18 @@ use function substr;
  * @see https://www.w3.org/TR/webauthn-3/#dictionary-client-data
  * @api
  */
-final readonly class CollectedClientData
+final class CollectedClientData
 {
 
     /**
      * @param string $challenge raw challenge bytes (base64url-decoded from the JSON member)
      */
     private function __construct(
-        private string $type,
-        private string $challenge,
-        private string $origin,
-        private ?string $topOrigin,
-        private ?bool $crossOrigin,
+        private readonly string $type,
+        private readonly string $challenge,
+        private readonly string $origin,
+        private readonly ?string $topOrigin,
+        private readonly ?bool $crossOrigin,
     )
     {
     }

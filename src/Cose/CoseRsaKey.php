@@ -2,17 +2,14 @@
 
 namespace ShipMonk\Passkeys\Cose;
 
-use LogicException;
 use OpenSSLAsymmetricKey;
 use ShipMonk\Passkeys\Cbor\CborEncoder;
 use ShipMonk\Passkeys\Cbor\CborMap;
 use ShipMonk\Passkeys\Cbor\CborMapException;
+use ShipMonk\Passkeys\Der\DerEncoder;
 use function in_array;
-use function is_string;
 use function ltrim;
-use function openssl_pkey_get_details;
 use function openssl_pkey_get_public;
-use function openssl_pkey_new;
 use function ord;
 use function strlen;
 use function substr;
@@ -26,48 +23,53 @@ use const OPENSSL_ALGO_SHA256;
  * @see https://www.rfc-editor.org/rfc/rfc8230.html#section-4 RSA key parameters
  * @api
  */
-final readonly class CoseRsaKey extends CoseKey
+final class CoseRsaKey extends CoseKey
 {
 
     /**
      * Key type value for RSA keys.
      */
-    public const int KTY = 3;
+    public const KTY = 3;
 
     /**
      * RSA key label: modulus (n).
      */
-    public const int LABEL_N = -1;
+    public const LABEL_N = -1;
 
     /**
      * RSA key label: public exponent (e).
      */
-    public const int LABEL_E = -2;
+    public const LABEL_E = -2;
+
+    /**
+     * OID for rsaEncryption (RFC 8017 App. C / RFC 3279 §2.3.1).
+     */
+    private const OID_RSA_ENCRYPTION = '1.2.840.113549.1.1.1';
 
     /**
      * Algorithms that use an RSA key.
      */
-    private const array ALGORITHMS = [
+    private const ALGORITHMS = [
         CoseAlgorithmIdentifier::RS256,
     ];
 
     /**
      * Minimum accepted modulus size in bytes (2048 bits; RFC 8230 §6.1).
      */
-    private const int MIN_MODULUS_BYTES = 256;
+    private const MIN_MODULUS_BYTES = 256;
 
     /**
      * Maximum accepted modulus size in bytes (8192 bits). A "none"-format registration stores
      * the key without any signature proving possession, so without a ceiling an enrollee could
      * persist an oversized modulus that makes every later verification disproportionately slow.
      */
-    private const int MAX_MODULUS_BYTES = 1_024;
+    private const MAX_MODULUS_BYTES = 1_024;
 
     /**
      * Maximum accepted public exponent size in bytes (64 bits). Verification cost also grows
      * with the exponent size, and real-world keys use small exponents (typically 65537).
      */
-    private const int MAX_EXPONENT_BYTES = 8;
+    private const MAX_EXPONENT_BYTES = 8;
 
     /**
      * @param value-of<self::ALGORITHMS> $alg
@@ -76,8 +78,8 @@ final readonly class CoseRsaKey extends CoseKey
      */
     private function __construct(
         int $alg,
-        public string $n,
-        public string $e,
+        public readonly string $n,
+        public readonly string $e,
     )
     {
         parent::__construct($alg);
@@ -137,37 +139,33 @@ final readonly class CoseRsaKey extends CoseKey
 
     protected function toOpenSslPublicKey(): OpenSSLAsymmetricKey|false
     {
-        // Unlike EC2 and OKP, openssl_pkey_new() cannot build a public-only RSA key: it
-        // requires a private exponent d and always flags the result private, which
-        // openssl_verify() then refuses. So build a throwaway key with an empty, unused d
-        // (openssl_pkey_new() only requires d to be present; solely n and e feed the
-        // exported public key) and hand OpenSSL's own re-exported public key to
-        // openssl_pkey_get_public(), which yields a usable public key.
-        $throwawayKey = openssl_pkey_new([
-            'rsa' => [
-                'n' => $this->n,
-                'e' => $this->e,
-                'd' => '',
-            ],
-        ]);
-
-        if ($throwawayKey === false) {
-            throw new LogicException('openssl_pkey_new() unexpectedly failed to build an RSA key');
-        }
-
-        $details = openssl_pkey_get_details($throwawayKey);
-        $publicKeyPem = $details === false ? null : ($details['key'] ?? null);
-
-        if (!is_string($publicKeyPem)) {
-            throw new LogicException('Failed to export the public key of a freshly built RSA key');
-        }
-
-        return openssl_pkey_get_public($publicKeyPem);
+        return openssl_pkey_get_public(DerEncoder::toPem('PUBLIC KEY', $this->toDerSubjectPublicKeyInfo()));
     }
 
     protected function getOpenSslAlgorithm(): int
     {
         return OPENSSL_ALGO_SHA256; // RS256 is the only supported RSA algorithm
+    }
+
+    /**
+     * Encodes this key as a DER SubjectPublicKeyInfo (RFC 3279 §2.3.1): an RSAPublicKey under
+     * rsaEncryption with NULL parameters.
+     */
+    private function toDerSubjectPublicKeyInfo(): string
+    {
+        // RSAPublicKey ::= SEQUENCE { modulus INTEGER, publicExponent INTEGER } (RFC 8017 App. A.1.1).
+        $rsaPublicKey = DerEncoder::encodeSequence(
+            DerEncoder::encodeUnsignedInt($this->n),
+            DerEncoder::encodeUnsignedInt($this->e),
+        );
+
+        return DerEncoder::encodeSequence(
+            DerEncoder::encodeSequence(
+                DerEncoder::encodeObjectIdentifier(self::OID_RSA_ENCRYPTION),
+                DerEncoder::encodeNull(),
+            ),
+            DerEncoder::encodeBitString($rsaPublicKey),
+        );
     }
 
 }

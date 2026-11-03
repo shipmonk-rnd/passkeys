@@ -15,6 +15,7 @@ use ShipMonk\PasskeysTests\CryptoTestCase;
 use function chr;
 use function openssl_pkey_get_public;
 use function ord;
+use function str_repeat;
 use function substr;
 use const OPENSSL_ALGO_SHA256;
 
@@ -26,7 +27,7 @@ use const OPENSSL_ALGO_SHA256;
 final class CoseKeyVerifyTest extends CryptoTestCase
 {
 
-    private const string MESSAGE = 'authenticatorData||clientDataHash 0123456789abcdef';
+    private const MESSAGE = 'authenticatorData||clientDataHash 0123456789abcdef';
 
     /**
      * @param CoseAlgorithmIdentifier::* $alg
@@ -75,7 +76,6 @@ final class CoseKeyVerifyTest extends CryptoTestCase
         yield 'ES512' => [CoseAlgorithmIdentifier::ES512];
         yield 'RS256' => [CoseAlgorithmIdentifier::RS256];
         yield 'EdDSA' => [CoseAlgorithmIdentifier::EdDSA];
-        yield 'Ed448' => [CoseAlgorithmIdentifier::Ed448];
     }
 
     public function testThrowsWhenPublicKeyCannotBeLoaded(): void
@@ -128,11 +128,11 @@ final class CoseKeyVerifyTest extends CryptoTestCase
      */
     private static function unloadableKey(bool $logOpenSslError = false): CoseKey
     {
-        return new readonly class (CoseAlgorithmIdentifier::ES256, $logOpenSslError) extends CoseKey {
+        return new class (CoseAlgorithmIdentifier::ES256, $logOpenSslError) extends CoseKey {
 
             public function __construct(
                 int $alg,
-                private bool $logOpenSslError,
+                private readonly bool $logOpenSslError,
             )
             {
                 parent::__construct($alg);
@@ -162,7 +162,8 @@ final class CoseKeyVerifyTest extends CryptoTestCase
 
     /**
      * A malformed signature is a verification failure (false), never an exception —
-     * regardless of whether OpenSSL reports it as 0 (RSA/EdDSA) or -1 (ECDSA DER parse).
+     * regardless of whether OpenSSL reports it as 0 (RSA) or -1 (ECDSA DER parse), or libsodium
+     * refuses it for its length (EdDSA).
      */
     /**
      * @param CoseAlgorithmIdentifier::* $alg
@@ -201,6 +202,25 @@ final class CoseKeyVerifyTest extends CryptoTestCase
         $tampered = $signature;
         $tampered[0] = chr(ord($tampered[0]) ^ 0x01);
         self::assertFalse($coseKey->verify('', $tampered));
+    }
+
+    /**
+     * An Ed25519 public key of small order (here the identity point) makes a trivial signature
+     * (R = identity, S = 0) "verify" for any message under cofactored or lenient verification —
+     * OpenSSL accepts it. libsodium rejects small-order keys, and EdDSA verification must go through it.
+     */
+    public function testRejectsEd25519SmallOrderKey(): void
+    {
+        $identityPoint = "\x01" . str_repeat("\x00", 31);
+
+        $coseKey = CoseKey::fromCborMap(self::cborMap([
+            1 => CoseOkpKey::KTY,
+            3 => CoseAlgorithmIdentifier::EdDSA,
+            -1 => CoseOkpKey::CRV_ED25519,
+            -2 => $identityPoint,
+        ]));
+
+        self::assertFalse($coseKey->verify('any message', $identityPoint . str_repeat("\x00", 32)));
     }
 
 }
