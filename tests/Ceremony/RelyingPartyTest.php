@@ -420,7 +420,7 @@ final class RelyingPartyTest extends CryptoTestCase
     public function testRegistrationRejectsUnusableAttestedKey(): void
     {
         // The all-zero P-256 point parses as COSE and passes the algorithm allow-list, but must
-        // fail native point validation with both statement-less and self-attested registration.
+        // fail point validation before attestation dispatch, including for unsupported formats.
         $coseEntries = [
             1 => 2,
             3 => CoseAlgorithmIdentifier::ES256,
@@ -434,7 +434,7 @@ final class RelyingPartyTest extends CryptoTestCase
             [CborTestEncoder::textString('sig'), CborTestEncoder::byteString('irrelevant')],
         ]);
 
-        foreach (['none', 'packed'] as $fmt) {
+        foreach (['none', 'packed', 'fido-u2f'] as $fmt) {
             $this->assertRegistrationFails(
                 VerificationException::UNUSABLE_CREDENTIAL_KEY,
                 self::registrationCredential($coseEntries, fmt: $fmt, attStmtOverride: $fmt === 'packed' ? $attStmt : null),

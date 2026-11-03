@@ -14,6 +14,8 @@ use ShipMonk\PasskeysTests\Cbor\CborTestEncoder;
 use ShipMonk\PasskeysTests\CryptoTestCase;
 use function bin2hex;
 use function chr;
+use function openssl_error_string;
+use function openssl_pkey_get_public;
 use function ord;
 use function str_repeat;
 use function strlen;
@@ -23,6 +25,10 @@ use function strlen;
 #[CoversClass(CoseOkpKey::class)]
 final class CoseKeyMaterialTest extends CryptoTestCase
 {
+
+    // P-256 generator coordinates from SEC 2 v2 §2.4.2.
+    private const string P256_BASE_POINT_X = '6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296';
+    private const string P256_BASE_POINT_Y = '4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5';
 
     /**
      * Both enrollment's map import and stored-key deserialization must reject these keys.
@@ -50,6 +56,53 @@ final class CoseKeyMaterialTest extends CryptoTestCase
     {
         $key = CoseEc2Key::fromCborMap(self::cborMap($entries));
         self::assertException(CoseKeyLoadException::class, $message, $key->validatePublicPoint(...));
+        self::assertFalse(openssl_error_string());
+    }
+
+    public function testPointValidationClearsStaleOpenSslErrors(): void
+    {
+        $key = CoseEc2Key::fromCborMap(self::cborMap([
+            1 => CoseEc2Key::KTY,
+            3 => CoseAlgorithmIdentifier::ES256,
+            -1 => CoseEc2Key::CRV_P256,
+            -2 => self::bytesFromHex(self::P256_BASE_POINT_X),
+            -3 => self::bytesFromHex(self::P256_BASE_POINT_Y),
+        ]));
+
+        self::assertFalse(openssl_pkey_get_public('not a key at all'));
+        $key->validatePublicPoint();
+        self::assertFalse(openssl_error_string());
+    }
+
+    public function testPointValidationDoesNotReportStaleOpenSslErrors(): void
+    {
+        $key = CoseEc2Key::fromCborMap(self::cborMap([
+            1 => CoseEc2Key::KTY,
+            3 => CoseAlgorithmIdentifier::ES256,
+            -1 => CoseEc2Key::CRV_P256,
+            -2 => str_repeat("\x00", 32),
+            -3 => str_repeat("\x00", 32),
+        ]));
+
+        try {
+            $key->validatePublicPoint();
+            self::fail('Expected an invalid public point');
+
+        } catch (CoseKeyLoadException $e) {
+            $message = $e->getMessage();
+        }
+
+        self::assertFalse(openssl_pkey_get_public('not a key at all'));
+
+        try {
+            $key->validatePublicPoint();
+            self::fail('Expected an invalid public point');
+
+        } catch (CoseKeyLoadException $e) {
+            self::assertSame($message, $e->getMessage());
+        }
+
+        self::assertFalse(openssl_error_string());
     }
 
     public function testAcceptsGeneratedEcPoints(): void
@@ -72,11 +125,25 @@ final class CoseKeyMaterialTest extends CryptoTestCase
 
             foreach ([0, 1] as $coordinate) {
                 yield "EC2 {$crv}, off-curve coordinates {$coordinate}" => [
-                    "EC2 curve {$crv} has invalid public point",
+                    "EC2 curve {$crv} has invalid public point: error:%a",
                     [1 => CoseEc2Key::KTY, 3 => $alg, -1 => $crv, -2 => str_repeat(chr($coordinate), $length), -3 => str_repeat(chr($coordinate), $length)],
                 ];
             }
         }
+
+        $y = self::bytesFromHex(self::P256_BASE_POINT_Y);
+        $y[31] = $y[31] ^ "\x01";
+
+        yield 'P-256 generator with one changed y bit' => [
+            'EC2 curve 1 has invalid public point: error:%a',
+            [
+                1 => CoseEc2Key::KTY,
+                3 => CoseAlgorithmIdentifier::ES256,
+                -1 => CoseEc2Key::CRV_P256,
+                -2 => self::bytesFromHex(self::P256_BASE_POINT_X),
+                -3 => $y,
+            ],
+        ];
     }
 
     /**
@@ -139,8 +206,9 @@ final class CoseKeyMaterialTest extends CryptoTestCase
     }
 
     /**
-     * R = the RFC 8032 base point, S = 1: no secret is used. With these weak keys OpenSSL 3.5.9
-     * accepts the same public signature for different messages. Import must fail before verify.
+     * R = the RFC 8032 base point, S = 1: no secret is used. Review probes showed OpenSSL 3.5.9
+     * accepting these public signatures under weak keys. This regression checks that import
+     * rejects the keys, independently of whether the installed OpenSSL accepts the signatures.
      *
      * @param CoseAlgorithmIdentifier::* $alg
      * @param CoseOkpKey::CRV_*          $crv

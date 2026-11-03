@@ -115,7 +115,7 @@ final readonly class CoseEc2Key extends CoseKey
     }
 
     /**
-     * Checks the public point before accepting a registration without an attestation signature.
+     * Checks the public point before accepting a registration, independently of its attestation.
      * PHP's EC import passes x/y through EC_POINT_set_affine_coordinates(), which checks curve
      * membership. This guarantee is specific to EC affine import, not key loading in general.
      * Signature verification uses the same native import, so also checks the point.
@@ -125,9 +125,14 @@ final readonly class CoseEc2Key extends CoseKey
      */
     public function validatePublicPoint(): void
     {
+        $this->clearOpenSslErrors();
+
         if ($this->toOpenSslPublicKey() === false) {
-            throw new CoseKeyLoadException("EC2 curve {$this->crv} has invalid public point");
+            throw new CoseKeyLoadException("EC2 curve {$this->crv} has invalid public point: " . $this->getOpenSslErrors());
         }
+
+        // OpenSSL can leave errors queued even after a successful public-only EC import.
+        $this->clearOpenSslErrors();
     }
 
     public function toBytes(): string

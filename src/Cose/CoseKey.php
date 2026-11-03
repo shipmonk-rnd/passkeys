@@ -129,7 +129,7 @@ abstract readonly class CoseKey
      */
     abstract protected function getOpenSslAlgorithm(): int;
 
-    private function getOpenSslErrors(): string
+    protected function getOpenSslErrors(): string
     {
         $errors = [];
 
@@ -140,7 +140,7 @@ abstract readonly class CoseKey
         return implode('; ', $errors);
     }
 
-    private function clearOpenSslErrors(): void
+    protected function clearOpenSslErrors(): void
     {
         self::getOpenSslErrors();
     }

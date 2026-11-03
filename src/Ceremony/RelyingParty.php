@@ -167,6 +167,12 @@ final class RelyingParty
             );
         }
 
+        // Credential key validity is independent of the attestation format.
+        // Edwards encoding / small-order checks already ran during COSE import.
+        if ($publicKey instanceof CoseEc2Key) {
+            $publicKey->validatePublicPoint();
+        }
+
         // §7.1 steps 21–24: verify the attestation statement. `none` carries no statement; `packed`
         // self attestation is verified against the credential public key itself. Formats that need
         // an X.509 trust path are rejected fail-closed until the attestation layer lands.
@@ -239,12 +245,6 @@ final class RelyingParty
                     VerificationException::INVALID_ATTESTATION_STATEMENT,
                     "Attestation statement for format 'none' must be an empty map",
                 );
-            }
-
-            // No signature is checked for `none`, so EC point validation must run explicitly.
-            // Edwards encoding / small-order checks already ran during COSE import.
-            if ($credentialPublicKey instanceof CoseEc2Key) {
-                $credentialPublicKey->validatePublicPoint();
             }
 
             return RegistrationResult::ATTESTATION_NONE;

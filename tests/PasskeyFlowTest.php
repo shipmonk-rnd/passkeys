@@ -683,7 +683,7 @@ final class PasskeyFlowTest extends CryptoTestCase
             self::assertSame(VerificationException::UNUSABLE_CREDENTIAL_KEY, $e->reason);
             $cause = $e->getPrevious();
             self::assertInstanceOf(CoseKeyLoadException::class, $cause);
-            self::assertSame($message, $cause->getMessage());
+            self::assertStringMatchesFormat($message, $cause->getMessage());
         }
 
         self::assertSame([], $this->store->savedPasskeys);
