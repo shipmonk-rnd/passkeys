@@ -18,7 +18,7 @@ engine, response parsing, COSE/CBOR primitives) is public but considered
 ## Requirements
 
 - PHP **8.1+**
-- `ext-openssl` (ECDSA and RSA signatures)
+- `ext-openssl` built with OpenSSL **1.1.1+** (ECDSA and RSA signatures; loading Ed25519 keys)
 - `ext-sodium` (Ed25519 signatures; `ext-openssl` cannot verify EdDSA before PHP 8.4)
 
 ## Installation
