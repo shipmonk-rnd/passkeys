@@ -37,7 +37,7 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --no-progress
 
-      # Runs composer normalize --dry-run (needs the installed plugin, hence after install)
+      # Runs composer-normalizer --dry-run (needs the installed tool, hence after install)
       # and composer validate --strict.
       - name: Validate composer.json
         run: composer check:composer
