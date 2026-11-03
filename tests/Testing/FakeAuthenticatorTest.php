@@ -9,6 +9,8 @@ use ShipMonk\Passkeys\Base64\Base64;
 use ShipMonk\Passkeys\Ceremony\VerificationException;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
 use ShipMonk\Passkeys\Enum\AuthenticatorAttachment;
+use ShipMonk\Passkeys\Enum\PublicKeyCredentialType;
+use ShipMonk\Passkeys\Options\PublicKeyCredentialDescriptor;
 use ShipMonk\Passkeys\PasskeyFlow;
 use ShipMonk\Passkeys\PasskeyStore;
 use ShipMonk\Passkeys\PendingCeremonyStore;
@@ -103,7 +105,8 @@ final class FakeAuthenticatorTest extends PasskeysTestCase
         yield 'Ed448' => [CoseAlgorithmIdentifier::Ed448];
     }
 
-    public function testAllowCredentialsPinsThePasskeyChoice(): void
+    #[DataProvider('provideDiscoverableAllowLists')]
+    public function testAllowCredentialsPinsThePasskeyChoice(bool $emptyAllowList): void
     {
         $flow = $this->createFlow();
         $authenticator = new FakeAuthenticator(origin: self::ORIGIN);
@@ -113,13 +116,60 @@ final class FakeAuthenticatorTest extends PasskeysTestCase
         $flow->register($authenticator->createPasskey($flow->registrationOptions(self::ALICE_HANDLE, self::ALICE)->toJson()));
         $flow->register($authenticator->createPasskey($flow->registrationOptions(self::BOB_HANDLE, self::BOB)->toJson()));
 
-        // Without an allow-list the most recently created passkey (bob's) is used…
-        $usernameless = $flow->authenticate($authenticator->authenticate($flow->authenticationOptions()->toJson()));
+        $otherRpFlow = new PasskeyFlow('other.example.com', 'Other RP', [self::ORIGIN], $this->store, $this->pending);
+        $authenticator->createPasskey($otherRpFlow->registrationOptions(self::ALICE_HANDLE, self::ALICE)->toJson());
+
+        $options = $flow->authenticationOptions()->jsonSerialize();
+
+        if ($emptyAllowList) {
+            $options->allowCredentials = [];
+        }
+
+        // An omitted or empty allow-list selects the newest passkey for this RP (bob's).
+        $usernameless = $flow->authenticate($authenticator->authenticate(json_encode($options, JSON_THROW_ON_ERROR)));
         self::assertSame(self::BOB_HANDLE, $usernameless->userHandle);
 
-        // …while alice's pinned two-step options make the authenticator pick her passkey.
+        // A non-empty allow-list still pins the selection to alice's passkey.
         $pinned = $flow->authenticate($authenticator->authenticate($flow->authenticationOptions(self::ALICE)->toJson()));
         self::assertSame(self::ALICE_HANDLE, $pinned->userHandle);
+    }
+
+    /**
+     * @return iterable<string, array{bool}>
+     */
+    public static function provideDiscoverableAllowLists(): iterable
+    {
+        yield 'omitted allowCredentials' => [false];
+        yield 'empty allowCredentials' => [true];
+    }
+
+    public function testRefusesAssertionForUnusableAllowedCredential(): void
+    {
+        $flow = $this->createFlow();
+        $authenticator = new FakeAuthenticator(origin: self::ORIGIN);
+        $this->store->addUser(self::ALICE, self::ALICE_HANDLE);
+
+        $flow->register($authenticator->createPasskey($flow->registrationOptions(self::ALICE_HANDLE, self::ALICE)->toJson()));
+
+        $options = $flow->authenticationOptions(self::ALICE)->jsonSerialize();
+        $options->rpId = 'other.example.com';
+
+        // Even an explicitly allowed credential cannot be used for a different RP.
+        self::assertException(
+            LogicException::class,
+            '%aNotAllowedError%a',
+            static fn () => $authenticator->authenticate(json_encode($options, JSON_THROW_ON_ERROR)),
+        );
+
+        $options->rpId = self::RP_ID;
+        $options->allowCredentials = [new PublicKeyCredentialDescriptor(PublicKeyCredentialType::PUBLIC_KEY, 'unknown-credential')];
+
+        // A credential for the correct RP must also be in a non-empty allow-list.
+        self::assertException(
+            LogicException::class,
+            '%aNotAllowedError%a',
+            static fn () => $authenticator->authenticate(json_encode($options, JSON_THROW_ON_ERROR)),
+        );
     }
 
     public function testRefusesCreationForExcludedCredential(): void

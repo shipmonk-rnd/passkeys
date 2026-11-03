@@ -194,7 +194,7 @@ final class FakeAuthenticator
      * Emulates `navigator.credentials.get()`: parses the
      * {@see \ShipMonk\Passkeys\Options\PublicKeyCredentialRequestOptions} JSON, picks the passkey
      * to assert with — the most recently created one scoped to the RP ID and, when
-     * `allowCredentials` is present, listed in it (like a real client, `NotAllowedError` when it
+     * `allowCredentials` is non-empty, listed in it (like a real client, `NotAllowedError` when it
      * holds none) — increments its signature counter, signs, and returns the authentication
      * response JSON to post to your verify endpoint.
      *
@@ -206,10 +206,9 @@ final class FakeAuthenticator
             $options = JsonObject::fromString($requestOptionsJson);
             $challenge = $options->getString('challenge');
             $rpId = $options->getOptionalString('rpId') ?? $this->originHost();
-            $allowList = $options->getOptionalObjectList('allowCredentials');
-            $allowedIds = $allowList === null ? null : array_map(
+            $allowedIds = array_map(
                 static fn (JsonObject $descriptor) => $descriptor->getBytes('id'),
-                $allowList,
+                $options->getOptionalObjectList('allowCredentials') ?? [],
             );
 
         } catch (InvalidBase64Exception | JsonObjectException $e) {
@@ -252,15 +251,15 @@ final class FakeAuthenticator
     // --- Authenticator internals -----------------------------------------------------------------
 
     /**
-     * @param list<string>|null $allowedIds
+     * @param list<string> $allowedIds
      */
     private function selectPasskey(
         string $rpId,
-        ?array $allowedIds,
+        array $allowedIds,
     ): FakePasskey
     {
         foreach (array_reverse($this->passkeys) as $passkey) {
-            if ($passkey->rpId === $rpId && ($allowedIds === null || in_array($passkey->credentialId, $allowedIds, true))) {
+            if ($passkey->rpId === $rpId && ($allowedIds === [] || in_array($passkey->credentialId, $allowedIds, true))) {
                 return $passkey;
             }
         }
