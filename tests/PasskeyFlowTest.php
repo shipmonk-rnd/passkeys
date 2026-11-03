@@ -56,33 +56,36 @@ use const JSON_THROW_ON_ERROR;
 final class PasskeyFlowTest extends CryptoTestCase
 {
 
-    private const string RP_ID = 'example.com';
-    private const string ORIGIN = 'https://example.com';
+    private const RP_ID = 'example.com';
+    private const ORIGIN = 'https://example.com';
 
-    private const string ALICE = 'alice@example.com';
-    private const string ALICE_HANDLE = 'alice-handle-0001';
-    private const string ALICE_CREDENTIAL_ID = "\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a";
-    private const string BOB_HANDLE = 'bob-handle-000002';
-    private const string BOB_CREDENTIAL_ID = "\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b";
-    private const string DAVE = 'dave@example.com';
-    private const string DAVE_HANDLE = 'dave-handle-00004';
-    private const string NEW_CREDENTIAL_ID = "\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d";
-    private const string AAGUID = "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10";
+    private const ALICE = 'alice@example.com';
+    private const ALICE_HANDLE = 'alice-handle-0001';
+    private const ALICE_CREDENTIAL_ID = "\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a";
+    private const BOB_HANDLE = 'bob-handle-000002';
+    private const BOB_CREDENTIAL_ID = "\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b";
+    private const DAVE = 'dave@example.com';
+    private const DAVE_HANDLE = 'dave-handle-00004';
+    private const NEW_CREDENTIAL_ID = "\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d";
+    private const AAGUID = "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10";
 
-    private const string HARDENING_SECRET = 'enumeration-hardening-secret-32b!';
+    private const HARDENING_SECRET = 'enumeration-hardening-secret-32b!';
 
-    private const string FIXED_CHALLENGE = 'a-fixed-32-byte-challenge-value!';
-    private const string EMBEDDER_ORIGIN = 'https://embedder.example';
-    private const string DECOY_CREDENTIAL_ID = "\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e";
+    private const FIXED_CHALLENGE = 'a-fixed-32-byte-challenge-value!';
+    private const EMBEDDER_ORIGIN = 'https://embedder.example';
+    private const DECOY_CREDENTIAL_ID = "\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e\x0e";
 
-    private const int FLAGS_UP_UV = AuthenticatorData::FLAG_USER_PRESENT | AuthenticatorData::FLAG_USER_VERIFIED;
+    private const FLAGS_UP_UV = AuthenticatorData::FLAG_USER_PRESENT | AuthenticatorData::FLAG_USER_VERIFIED;
 
     /**
      * @var array<int, int|string>
      */
     private array $coseEntries;
 
-    private OpenSSLAsymmetricKey $privateKey;
+    /**
+     * @var OpenSSLAsymmetricKey|non-empty-string
+     */
+    private OpenSSLAsymmetricKey|string $privateKey;
 
     private InMemoryPasskeyStore $store;
 
@@ -1197,9 +1200,11 @@ final class PasskeyFlowTest extends CryptoTestCase
     /**
      * Builds the raw request body a browser would post after `navigator.credentials.get()` —
      * the `PublicKeyCredential.toJSON()` output — signed live with the given key (ES256).
+     *
+     * @param OpenSSLAsymmetricKey|non-empty-string $privateKey
      */
     private static function assertionBody(
-        OpenSSLAsymmetricKey $privateKey,
+        OpenSSLAsymmetricKey|string $privateKey,
         string $challenge,
         string $credentialId,
         string $userHandle,

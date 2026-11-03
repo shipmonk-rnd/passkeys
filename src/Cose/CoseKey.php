@@ -2,14 +2,16 @@
 
 namespace ShipMonk\Passkeys\Cose;
 
-use OpenSSLAsymmetricKey;
 use ShipMonk\Passkeys\Binary\BytesReader;
 use ShipMonk\Passkeys\Binary\BytesReaderException;
 use ShipMonk\Passkeys\Cbor\CborMap;
 use ShipMonk\Passkeys\Cbor\CborMapException;
 use ShipMonk\Passkeys\Cbor\InvalidCborException;
+use function base64_encode;
+use function chunk_split;
 use function implode;
 use function openssl_error_string;
+use function openssl_pkey_get_public;
 use function openssl_verify;
 
 /**
@@ -21,24 +23,24 @@ use function openssl_verify;
  * @see https://www.rfc-editor.org/rfc/rfc9053.html key type / algorithm parameters
  * @api
  */
-abstract readonly class CoseKey
+abstract class CoseKey
 {
 
     /**
      * Common COSE key label: key type (kty).
      */
-    public const int LABEL_KTY = 1;
+    public const LABEL_KTY = 1;
 
     /**
      * Common COSE key label: algorithm (alg).
      */
-    public const int LABEL_ALG = 3;
+    public const LABEL_ALG = 3;
 
     /**
      * @param TAlg $alg
      */
     protected function __construct(
-        public int $alg,
+        public readonly int $alg,
     )
     {
     }
@@ -84,31 +86,45 @@ abstract readonly class CoseKey
     abstract public function toBytes(): string;
 
     /**
-     * Verifies a signature over $message against this public key using ext-openssl.
+     * Verifies a signature over $message against this public key.
      *
      * For ECDSA algorithms the signature is expected in the ASN.1 DER form
      * (Ecdsa-Sig-Value) produced by authenticators; for RSASSA-PKCS1-v1_5 it is the
-     * raw signature; for EdDSA it is the raw Ed25519 (64-byte) or Ed448 (114-byte)
-     * signature. All are what
-     * {@see \openssl_verify()} consumes directly (EdDSA requires OpenSSL 3.0 / PHP 8.4).
+     * raw signature; for EdDSA it is the raw Ed25519 (64-byte) signature.
      *
      * @see https://www.rfc-editor.org/rfc/rfc9053.html signature algorithms
+     * @throws CoseKeyLoadException if the key material cannot be loaded
+     */
+    abstract public function verify(
+        string $message,
+        string $signature,
+    ): bool;
+
+    /**
+     * Verifies a signature with ext-openssl against a public key given as a DER-encoded
+     * SubjectPublicKeyInfo (RFC 5280 §4.1.2.7), the one public-key form that
+     * {@see \openssl_pkey_get_public()} loads on every supported PHP version.
+     *
+     * @param int $algorithm the OpenSSL message-digest algorithm (an OPENSSL_ALGO_* constant)
+     *
      * @throws CoseKeyLoadException if OpenSSL rejects the key material
      */
-    final public function verify(
+    final protected static function verifyWithOpenSsl(
+        string $subjectPublicKeyInfo,
+        int $algorithm,
         string $message,
         string $signature,
     ): bool
     {
-        $this->clearOpenSslErrors(); // Discard any stale entries so a failure below reports only this call's errors.
+        self::clearOpenSslErrors(); // Discard any stale entries so a failure below reports only this call's errors.
 
-        $publicKey = $this->toOpenSslPublicKey();
+        $publicKey = openssl_pkey_get_public(self::toPem($subjectPublicKeyInfo));
 
         if ($publicKey === false) {
-            throw new CoseKeyLoadException('Failed to load public key: ' . $this->getOpenSslErrors());
+            throw new CoseKeyLoadException('Failed to load public key: ' . self::getOpenSslErrors());
         }
 
-        $result = openssl_verify($message, $signature, $publicKey, $this->getOpenSslAlgorithm());
+        $result = openssl_verify($message, $signature, $publicKey, $algorithm);
 
         // 1 = verified; 0 = signature does not match; -1 = malformed signature or an
         // OpenSSL error. A caller cannot tell attacker-supplied garbage apart from a
@@ -116,20 +132,14 @@ abstract readonly class CoseKey
         return $result === 1;
     }
 
-    /**
-     * Builds an ext-openssl public key handle for this key by constructing it directly from
-     * its parameters via {@see \openssl_pkey_new()}, the form consumed by {@see \openssl_verify()}
-     * in {@see self::verify()}. Returns false if OpenSSL rejects the key material.
-     */
-    abstract protected function toOpenSslPublicKey(): OpenSSLAsymmetricKey|false;
+    private static function toPem(string $der): string
+    {
+        return "-----BEGIN PUBLIC KEY-----\n"
+            . chunk_split(base64_encode($der), 64, "\n")
+            . "-----END PUBLIC KEY-----\n";
+    }
 
-    /**
-     * The OpenSSL message-digest algorithm to verify with — an OPENSSL_ALGO_* constant,
-     * or 0 for pure signature schemes (EdDSA), which take no separate digest.
-     */
-    abstract protected function getOpenSslAlgorithm(): int;
-
-    private function getOpenSslErrors(): string
+    private static function getOpenSslErrors(): string
     {
         $errors = [];
 
@@ -140,7 +150,7 @@ abstract readonly class CoseKey
         return implode('; ', $errors);
     }
 
-    private function clearOpenSslErrors(): void
+    private static function clearOpenSslErrors(): void
     {
         self::getOpenSslErrors();
     }

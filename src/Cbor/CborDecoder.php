@@ -34,7 +34,7 @@ final class CborDecoder
      * legitimate input; it exists solely to stop a maliciously deep value from exhausting the
      * stack — unbounded recursion would crash the process with a fatal error rather than throw.
      */
-    private const int MAX_DEPTH = 16;
+    private const MAX_DEPTH = 16;
 
     /**
      * @throws InvalidCborException

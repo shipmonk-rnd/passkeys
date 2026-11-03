@@ -12,7 +12,7 @@ namespace ShipMonk\Passkeys;
  *
  * @api
  */
-final readonly class PendingRegistration
+final class PendingRegistration
 {
 
     /**
@@ -23,9 +23,9 @@ final readonly class PendingRegistration
      *      checks when {@see PasskeyFlow::register()} finishes this ceremony
      */
     public function __construct(
-        public string $challenge,
-        public string $userHandle,
-        public bool $conditionalMediation,
+        public readonly string $challenge,
+        public readonly string $userHandle,
+        public readonly bool $conditionalMediation,
     )
     {
     }

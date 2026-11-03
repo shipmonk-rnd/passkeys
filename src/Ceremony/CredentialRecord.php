@@ -13,7 +13,7 @@ use ShipMonk\Passkeys\Cose\CoseKey;
  *
  * @api
  */
-final readonly class CredentialRecord
+final class CredentialRecord
 {
 
     /**
@@ -22,14 +22,14 @@ final readonly class CredentialRecord
      * @param list<string>|null $transports   as reported by the client at registration
      */
     public function __construct(
-        public string $credentialId,
-        public CoseKey $publicKey,
-        public int $signCount,
-        public string $userHandle,
-        public bool $uvInitialized,
-        public bool $backupEligible,
-        public bool $backupState,
-        public ?array $transports = null,
+        public readonly string $credentialId,
+        public readonly CoseKey $publicKey,
+        public readonly int $signCount,
+        public readonly string $userHandle,
+        public readonly bool $uvInitialized,
+        public readonly bool $backupEligible,
+        public readonly bool $backupState,
+        public readonly ?array $transports = null,
     )
     {
     }

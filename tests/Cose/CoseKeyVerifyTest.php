@@ -2,7 +2,6 @@
 
 namespace ShipMonk\PasskeysTests\Cose;
 
-use OpenSSLAsymmetricKey;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
@@ -13,10 +12,12 @@ use ShipMonk\Passkeys\Cose\CoseOkpKey;
 use ShipMonk\Passkeys\Cose\CoseRsaKey;
 use ShipMonk\PasskeysTests\CryptoTestCase;
 use function chr;
-use function openssl_pkey_get_public;
+use function openssl_decrypt;
 use function ord;
+use function str_repeat;
 use function substr;
 use const OPENSSL_ALGO_SHA256;
+use const OPENSSL_RAW_DATA;
 
 #[CoversClass(CoseKey::class)]
 #[CoversClass(CoseEc2Key::class)]
@@ -26,7 +27,7 @@ use const OPENSSL_ALGO_SHA256;
 final class CoseKeyVerifyTest extends CryptoTestCase
 {
 
-    private const string MESSAGE = 'authenticatorData||clientDataHash 0123456789abcdef';
+    private const MESSAGE = 'authenticatorData||clientDataHash 0123456789abcdef';
 
     /**
      * @param CoseAlgorithmIdentifier::* $alg
@@ -75,27 +76,15 @@ final class CoseKeyVerifyTest extends CryptoTestCase
         yield 'ES512' => [CoseAlgorithmIdentifier::ES512];
         yield 'RS256' => [CoseAlgorithmIdentifier::RS256];
         yield 'EdDSA' => [CoseAlgorithmIdentifier::EdDSA];
-        yield 'Ed448' => [CoseAlgorithmIdentifier::Ed448];
-    }
-
-    public function testThrowsWhenPublicKeyCannotBeLoaded(): void
-    {
-        $key = self::unloadableKey();
-
-        self::assertException(
-            CoseKeyLoadException::class,
-            'Failed to load public key%A',
-            static fn () => $key->verify('x', 'y'),
-        );
     }
 
     /**
      * Whatever OpenSSL logged while rejecting the key material is what the exception has to report,
      * so the cause of the load failure is not lost.
      */
-    public function testReportsTheOpenSslErrorsBehindALoadFailure(): void
+    public function testThrowsWhenPublicKeyCannotBeLoaded(): void
     {
-        $key = self::unloadableKey(logOpenSslError: true);
+        $key = self::unloadableKey();
 
         self::assertException(
             CoseKeyLoadException::class,
@@ -112,39 +101,39 @@ final class CoseKeyVerifyTest extends CryptoTestCase
     {
         $key = self::unloadableKey();
 
-        // Leave a stale entry in the queue, the way any earlier failed OpenSSL call would.
-        self::assertFalse(openssl_pkey_get_public('not a key at all'));
+        // Leave a stale entry in the queue, the way any earlier failed OpenSSL call would; a key
+        // load never logs this one ("bad decrypt").
+        $zeros = str_repeat("\x00", 16);
+        self::assertFalse(openssl_decrypt($zeros, 'aes-128-cbc', $zeros, OPENSSL_RAW_DATA, $zeros));
 
-        self::assertException(
-            CoseKeyLoadException::class,
-            'Failed to load public key: ',
-            static fn () => $key->verify('x', 'y'),
-        );
+        try {
+            $key->verify('x', 'y');
+            self::fail('The unloadable key was loaded');
+
+        } catch (CoseKeyLoadException $e) {
+            self::assertStringStartsWith('Failed to load public key: error:', $e->getMessage());
+            self::assertStringNotContainsString('bad decrypt', $e->getMessage());
+        }
     }
 
     /**
-     * A key whose material OpenSSL refuses to load, optionally logging a real error to the queue
-     * on the way — the two shapes a load failure takes in practice.
+     * A key whose SubjectPublicKeyInfo OpenSSL refuses to load.
      */
-    private static function unloadableKey(bool $logOpenSslError = false): CoseKey
+    private static function unloadableKey(): CoseKey
     {
-        return new readonly class (CoseAlgorithmIdentifier::ES256, $logOpenSslError) extends CoseKey {
+        return new class (CoseAlgorithmIdentifier::ES256) extends CoseKey {
 
-            public function __construct(
-                int $alg,
-                private bool $logOpenSslError,
-            )
+            public function __construct(int $alg)
             {
                 parent::__construct($alg);
             }
 
-            protected function toOpenSslPublicKey(): OpenSSLAsymmetricKey|false
+            public function verify(
+                string $message,
+                string $signature,
+            ): bool
             {
-                if ($this->logOpenSslError) {
-                    openssl_pkey_get_public('not a key at all');
-                }
-
-                return false;
+                return self::verifyWithOpenSsl("\x00\x01\x02", OPENSSL_ALGO_SHA256, $message, $signature);
             }
 
             public function toBytes(): string
@@ -152,17 +141,13 @@ final class CoseKeyVerifyTest extends CryptoTestCase
                 return "\x00\x01\x02";
             }
 
-            protected function getOpenSslAlgorithm(): int
-            {
-                return OPENSSL_ALGO_SHA256;
-            }
-
         };
     }
 
     /**
      * A malformed signature is a verification failure (false), never an exception —
-     * regardless of whether OpenSSL reports it as 0 (RSA/EdDSA) or -1 (ECDSA DER parse).
+     * regardless of whether OpenSSL reports it as 0 (RSA) or -1 (ECDSA DER parse), or libsodium
+     * refuses it for its length (EdDSA).
      */
     /**
      * @param CoseAlgorithmIdentifier::* $alg

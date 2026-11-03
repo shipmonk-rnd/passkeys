@@ -9,6 +9,7 @@ use ShipMonk\Passkeys\Cose\CoseKey;
 use ShipMonk\Passkeys\Cose\CoseOkpKey;
 use ShipMonk\Passkeys\Cose\CoseRsaKey;
 use function array_key_exists;
+use function base64_decode;
 use function implode;
 use function is_array;
 use function is_string;
@@ -16,29 +17,34 @@ use function openssl_error_string;
 use function openssl_pkey_get_details;
 use function openssl_pkey_new;
 use function openssl_sign;
+use function preg_replace;
+use function sodium_crypto_sign_detached;
+use function sodium_crypto_sign_keypair;
+use function sodium_crypto_sign_publickey;
+use function sodium_crypto_sign_secretkey;
 use function str_pad;
 use const OPENSSL_ALGO_SHA256;
 use const OPENSSL_ALGO_SHA384;
 use const OPENSSL_ALGO_SHA512;
 use const OPENSSL_KEYTYPE_EC;
-use const OPENSSL_KEYTYPE_ED25519;
-use const OPENSSL_KEYTYPE_ED448;
 use const OPENSSL_KEYTYPE_RSA;
 use const STR_PAD_LEFT;
 
 /**
- * Base class for tests that need real OpenSSL key material paired with the
- * equivalent parsed {@see CoseKey}.
+ * Base class for tests that need real key material paired with the equivalent parsed {@see CoseKey}.
+ *
+ * Private keys are ext-openssl keys, except for EdDSA: ext-openssl cannot sign with EdDSA keys before
+ * PHP 8.4, so an Ed25519 private key is the 64-byte libsodium secret key.
  */
 abstract class CryptoTestCase extends PasskeysTestCase
 {
 
     /**
      * Generates a fresh key pair for the given COSE algorithm and returns both the
-     * parsed COSE public key and the OpenSSL private key (for signing in tests).
+     * parsed COSE public key and the private key (for signing in tests).
      *
      * @param CoseAlgorithmIdentifier::* $alg
-     * @return array{CoseKey, OpenSSLAsymmetricKey}
+     * @return array{CoseKey, OpenSSLAsymmetricKey|non-empty-string}
      */
     protected static function generateCoseKeyPair(int $alg): array
     {
@@ -48,12 +54,12 @@ abstract class CryptoTestCase extends PasskeysTestCase
     }
 
     /**
-     * Generates a fresh key pair and returns the OpenSSL private key together with the
+     * Generates a fresh key pair and returns the private key together with the
      * integer-keyed COSE map entries describing its public key — the same shape an
      * authenticator embeds in attested credential data.
      *
      * @param CoseAlgorithmIdentifier::* $alg
-     * @return array{OpenSSLAsymmetricKey, array<int, int|string>}
+     * @return array{OpenSSLAsymmetricKey|non-empty-string, array<int, int|string>}
      */
     protected static function generateKeyAndCoseEntries(int $alg): array
     {
@@ -69,27 +75,15 @@ abstract class CryptoTestCase extends PasskeysTestCase
             ]];
         }
 
-        $crv = match ($alg) {
-            // WebAuthn §5.8.5 pins the generic EdDSA identifier to Ed25519
-            CoseAlgorithmIdentifier::EdDSA => CoseOkpKey::CRV_ED25519,
-            CoseAlgorithmIdentifier::Ed448 => CoseOkpKey::CRV_ED448,
-            default => null,
-        };
+        if ($alg === CoseAlgorithmIdentifier::EdDSA) {
+            $keyPair = sodium_crypto_sign_keypair();
 
-        if ($crv !== null) {
-            [$keyType, $detailsField] = match ($crv) {
-                CoseOkpKey::CRV_ED25519 => [OPENSSL_KEYTYPE_ED25519, 'ed25519'],
-                CoseOkpKey::CRV_ED448 => [OPENSSL_KEYTYPE_ED448, 'ed448'],
-            };
-
-            $privateKey = self::generateKey(['private_key_type' => $keyType]);
-            $details = self::keyDetails($privateKey);
-
-            return [$privateKey, [
+            return [sodium_crypto_sign_secretkey($keyPair), [
                 1 => CoseOkpKey::KTY,
                 3 => $alg,
-                -1 => $crv,
-                -2 => self::stringField($details, $detailsField, 'pub_key'),
+                // WebAuthn §5.8.5 pins the generic EdDSA identifier to Ed25519
+                -1 => CoseOkpKey::CRV_ED25519,
+                -2 => sodium_crypto_sign_publickey($keyPair),
             ]];
         }
 
@@ -108,37 +102,36 @@ abstract class CryptoTestCase extends PasskeysTestCase
     }
 
     /**
-     * Signs a message with the OpenSSL private key using the digest the given COSE algorithm
+     * Signs a message with the private key using the digest the given COSE algorithm
      * mandates, producing exactly the signature encoding {@see \ShipMonk\Passkeys\Cose\CoseKey::verify()}
      * expects (ASN.1 DER for ECDSA, raw PKCS#1 for RSA, raw 64-byte for Ed25519).
      *
-     * @param CoseAlgorithmIdentifier::* $alg
+     * @param OpenSSLAsymmetricKey|non-empty-string $privateKey
+     * @param CoseAlgorithmIdentifier::*            $alg
      */
     protected static function sign(
-        OpenSSLAsymmetricKey $privateKey,
+        OpenSSLAsymmetricKey|string $privateKey,
         string $message,
         int $alg,
     ): string
     {
-        if (!openssl_sign($message, $signature, $privateKey, self::opensslDigest($alg)) || !is_string($signature)) {
+        if (is_string($privateKey)) {
+            // EdDSA is a pure signature scheme (no prehash)
+            return sodium_crypto_sign_detached($message, $privateKey);
+        }
+
+        $digest = match ($alg) {
+            CoseAlgorithmIdentifier::ES256, CoseAlgorithmIdentifier::RS256 => OPENSSL_ALGO_SHA256,
+            CoseAlgorithmIdentifier::ES384 => OPENSSL_ALGO_SHA384,
+            CoseAlgorithmIdentifier::ES512 => OPENSSL_ALGO_SHA512,
+            CoseAlgorithmIdentifier::EdDSA => self::fail('An EdDSA private key is a libsodium secret key'),
+        };
+
+        if (!openssl_sign($message, $signature, $privateKey, $digest) || !is_string($signature)) {
             self::fail('Failed to sign: ' . openssl_error_string());
         }
 
         return $signature;
-    }
-
-    /**
-     * @param CoseAlgorithmIdentifier::* $alg
-     */
-    protected static function opensslDigest(int $alg): int
-    {
-        return match ($alg) {
-            CoseAlgorithmIdentifier::ES256, CoseAlgorithmIdentifier::RS256 => OPENSSL_ALGO_SHA256,
-            CoseAlgorithmIdentifier::ES384 => OPENSSL_ALGO_SHA384,
-            CoseAlgorithmIdentifier::ES512 => OPENSSL_ALGO_SHA512,
-            // EdDSA is a pure signature scheme (no prehash)
-            CoseAlgorithmIdentifier::EdDSA, CoseAlgorithmIdentifier::Ed448 => 0,
-        };
     }
 
     /**
@@ -205,6 +198,18 @@ abstract class CryptoTestCase extends PasskeysTestCase
         }
 
         return $value;
+    }
+
+    protected static function pemToDer(string $pem): string
+    {
+        $base64 = preg_replace('~-----(?:BEGIN|END)[^-]+-----|\s+~', '', $pem) ?? '';
+        $der = base64_decode($base64, strict: true);
+
+        if ($der === false) {
+            self::fail('Failed to decode PEM');
+        }
+
+        return $der;
     }
 
 }

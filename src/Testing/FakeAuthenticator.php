@@ -31,6 +31,10 @@ use function openssl_sign;
 use function pack;
 use function parse_url;
 use function random_bytes;
+use function sodium_crypto_sign_detached;
+use function sodium_crypto_sign_keypair;
+use function sodium_crypto_sign_publickey;
+use function sodium_crypto_sign_secretkey;
 use function str_pad;
 use function strlen;
 use const JSON_THROW_ON_ERROR;
@@ -38,8 +42,6 @@ use const OPENSSL_ALGO_SHA256;
 use const OPENSSL_ALGO_SHA384;
 use const OPENSSL_ALGO_SHA512;
 use const OPENSSL_KEYTYPE_EC;
-use const OPENSSL_KEYTYPE_ED25519;
-use const OPENSSL_KEYTYPE_ED448;
 use const OPENSSL_KEYTYPE_RSA;
 use const PHP_URL_HOST;
 use const STR_PAD_LEFT;
@@ -85,7 +87,7 @@ use const STR_PAD_LEFT;
 final class FakeAuthenticator
 {
 
-    public const string AAGUID = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+    public const AAGUID = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
     /**
      * @var list<FakePasskey>
@@ -312,13 +314,13 @@ final class FakeAuthenticator
      * Generates a fresh key pair for the configured algorithm and returns the private key together
      * with the CBOR-encoded COSE public key, as an authenticator embeds it in attested credential data.
      *
-     * @return array{OpenSSLAsymmetricKey, string}
+     * @return array{OpenSSLAsymmetricKey|non-empty-string, string}
      */
     private function generateKeyPair(): array
     {
         return match ($this->algorithm) {
             CoseAlgorithmIdentifier::RS256 => $this->generateRsaKeyPair($this->algorithm),
-            CoseAlgorithmIdentifier::EdDSA, CoseAlgorithmIdentifier::Ed448 => $this->generateOkpKeyPair($this->algorithm),
+            CoseAlgorithmIdentifier::EdDSA => $this->generateEd25519KeyPair($this->algorithm),
             CoseAlgorithmIdentifier::ES256, CoseAlgorithmIdentifier::ES384, CoseAlgorithmIdentifier::ES512 => $this->generateEc2KeyPair($this->algorithm),
         };
     }
@@ -346,25 +348,23 @@ final class FakeAuthenticator
     }
 
     /**
-     * @param CoseAlgorithmIdentifier::EdDSA|CoseAlgorithmIdentifier::Ed448 $algorithm
-     * @return array{OpenSSLAsymmetricKey, string}
+     * Ext-openssl cannot sign with EdDSA keys before PHP 8.4, so the Ed25519 key pair comes from
+     * ext-sodium; its private half is the 64-byte libsodium secret key.
+     *
+     * @param CoseAlgorithmIdentifier::EdDSA $algorithm
+     * @return array{non-empty-string, string}
      */
-    private function generateOkpKeyPair(int $algorithm): array
+    private function generateEd25519KeyPair(int $algorithm): array
     {
-        [$keyType, $detailsGroup, $crv] = match ($algorithm) {
-            CoseAlgorithmIdentifier::Ed448 => [OPENSSL_KEYTYPE_ED448, 'ed448', CoseOkpKey::CRV_ED448],
-            CoseAlgorithmIdentifier::EdDSA => [OPENSSL_KEYTYPE_ED25519, 'ed25519', CoseOkpKey::CRV_ED25519],
-        };
-
-        $key = self::newKey(['private_key_type' => $keyType]);
+        $keyPair = sodium_crypto_sign_keypair();
 
         return [
-            $key,
+            sodium_crypto_sign_secretkey($keyPair),
             self::coseMap([
                 CoseKey::LABEL_KTY => CoseOkpKey::KTY,
                 CoseKey::LABEL_ALG => $algorithm,
-                CoseOkpKey::LABEL_CRV => $crv,
-                CoseOkpKey::LABEL_X => self::keyDetail($key, $detailsGroup, 'pub_key'),
+                CoseOkpKey::LABEL_CRV => CoseOkpKey::CRV_ED25519,
+                CoseOkpKey::LABEL_X => sodium_crypto_sign_publickey($keyPair),
             ]),
         ];
     }
@@ -399,19 +399,24 @@ final class FakeAuthenticator
      * Signs a message with the digest the given COSE algorithm mandates, producing exactly the
      * signature encoding WebAuthn expects (ASN.1 DER for ECDSA, raw PKCS#1 for RSA, raw for EdDSA).
      *
-     * @param CoseAlgorithmIdentifier::* $algorithm
+     * @param OpenSSLAsymmetricKey|non-empty-string $privateKey an ext-openssl key, or the libsodium secret key of an Ed25519 key pair
+     * @param CoseAlgorithmIdentifier::*            $algorithm
      */
     private static function sign(
-        OpenSSLAsymmetricKey $privateKey,
+        OpenSSLAsymmetricKey|string $privateKey,
         string $message,
         int $algorithm,
     ): string
     {
+        if (is_string($privateKey)) {
+            return sodium_crypto_sign_detached($message, $privateKey);
+        }
+
         $digest = match ($algorithm) {
             CoseAlgorithmIdentifier::ES256, CoseAlgorithmIdentifier::RS256 => OPENSSL_ALGO_SHA256,
             CoseAlgorithmIdentifier::ES384 => OPENSSL_ALGO_SHA384,
             CoseAlgorithmIdentifier::ES512 => OPENSSL_ALGO_SHA512,
-            CoseAlgorithmIdentifier::EdDSA, CoseAlgorithmIdentifier::Ed448 => 0,
+            CoseAlgorithmIdentifier::EdDSA => throw new LogicException('An EdDSA key pair holds a libsodium secret key'),
         };
 
         if (!openssl_sign($message, $signature, $privateKey, $digest) || !is_string($signature)) {

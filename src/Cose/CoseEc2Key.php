@@ -2,11 +2,10 @@
 
 namespace ShipMonk\Passkeys\Cose;
 
-use OpenSSLAsymmetricKey;
 use ShipMonk\Passkeys\Cbor\CborEncoder;
 use ShipMonk\Passkeys\Cbor\CborMap;
 use ShipMonk\Passkeys\Cbor\CborMapException;
-use function openssl_pkey_new;
+use ShipMonk\Passkeys\Der\DerEncoder;
 use function strlen;
 use const OPENSSL_ALGO_SHA256;
 use const OPENSSL_ALGO_SHA384;
@@ -20,54 +19,59 @@ use const OPENSSL_ALGO_SHA512;
  * @see https://www.rfc-editor.org/rfc/rfc9053.html#section-7.1 EC2 key parameters
  * @api
  */
-final readonly class CoseEc2Key extends CoseKey
+final class CoseEc2Key extends CoseKey
 {
 
     /**
      * Key type value for EC2 keys.
      */
-    public const int KTY = 2;
+    public const KTY = 2;
 
     /**
      * COSE curve identifier: NIST P-256.
      */
-    public const int CRV_P256 = 1;
+    public const CRV_P256 = 1;
 
     /**
      * COSE curve identifier: NIST P-384.
      */
-    public const int CRV_P384 = 2;
+    public const CRV_P384 = 2;
 
     /**
      * COSE curve identifier: NIST P-521.
      */
-    public const int CRV_P521 = 3;
+    public const CRV_P521 = 3;
 
     /**
      * EC2 key label: curve (crv).
      */
-    public const int LABEL_CRV = -1;
+    public const LABEL_CRV = -1;
 
     /**
      * EC2 key label: x-coordinate.
      */
-    public const int LABEL_X = -2;
+    public const LABEL_X = -2;
 
     /**
      * EC2 key label: y-coordinate.
      */
-    public const int LABEL_Y = -3;
+    public const LABEL_Y = -3;
+
+    /**
+     * OID for id-ecPublicKey (RFC 5480 §2.1.1).
+     */
+    private const OID_EC_PUBLIC_KEY = '1.2.840.10045.2.1';
 
     /**
      * Maps each supported algorithm to its mandated curve, coordinate length in bytes,
-     * OpenSSL curve name, and OpenSSL message-digest algorithm.
+     * curve OID, and OpenSSL message-digest algorithm.
      *
      * @see https://www.rfc-editor.org/rfc/rfc9053.html#section-2.1 ECDSA
      */
-    private const array ALGORITHMS = [
-        CoseAlgorithmIdentifier::ES256 => [self::CRV_P256, 32, 'prime256v1', OPENSSL_ALGO_SHA256],
-        CoseAlgorithmIdentifier::ES384 => [self::CRV_P384, 48, 'secp384r1', OPENSSL_ALGO_SHA384],
-        CoseAlgorithmIdentifier::ES512 => [self::CRV_P521, 66, 'secp521r1', OPENSSL_ALGO_SHA512],
+    private const ALGORITHMS = [
+        CoseAlgorithmIdentifier::ES256 => [self::CRV_P256, 32, '1.2.840.10045.3.1.7', OPENSSL_ALGO_SHA256],
+        CoseAlgorithmIdentifier::ES384 => [self::CRV_P384, 48, '1.3.132.0.34', OPENSSL_ALGO_SHA384],
+        CoseAlgorithmIdentifier::ES512 => [self::CRV_P521, 66, '1.3.132.0.35', OPENSSL_ALGO_SHA512],
     ];
 
     /**
@@ -78,9 +82,9 @@ final readonly class CoseEc2Key extends CoseKey
      */
     private function __construct(
         int $alg,
-        public int $crv,
-        public string $x,
-        public string $y,
+        public readonly int $crv,
+        public readonly string $x,
+        public readonly string $y,
     )
     {
         parent::__construct($alg);
@@ -125,20 +129,32 @@ final readonly class CoseEc2Key extends CoseKey
         ]);
     }
 
-    protected function toOpenSslPublicKey(): OpenSSLAsymmetricKey|false
+    public function verify(
+        string $message,
+        string $signature,
+    ): bool
     {
-        return openssl_pkey_new([
-            'ec' => [
-                'curve_name' => self::ALGORITHMS[$this->alg][2],
-                'x' => $this->x,
-                'y' => $this->y,
-            ],
-        ]);
+        return self::verifyWithOpenSsl($this->toDerSubjectPublicKeyInfo(), self::ALGORITHMS[$this->alg][3], $message, $signature);
     }
 
-    protected function getOpenSslAlgorithm(): int
+    /**
+     * Encodes this key as a DER SubjectPublicKeyInfo (RFC 5480 §2): an uncompressed point
+     * under id-ecPublicKey with the named curve as its parameter. Unlike
+     * {@see \openssl_pkey_new()} with raw coordinates (on PHP 8.1 its result is flagged private,
+     * so {@see \openssl_verify()} refuses it), this loads as a public key on every PHP version.
+     */
+    private function toDerSubjectPublicKeyInfo(): string
     {
-        return self::ALGORITHMS[$this->alg][3];
+        // Uncompressed point: 0x04 || X || Y (RFC 5480 §2.2).
+        $point = "\x04" . $this->x . $this->y;
+
+        return DerEncoder::encodeSequence(
+            DerEncoder::encodeSequence(
+                DerEncoder::encodeObjectIdentifier(self::OID_EC_PUBLIC_KEY),
+                DerEncoder::encodeObjectIdentifier(self::ALGORITHMS[$this->alg][2]),
+            ),
+            DerEncoder::encodeBitString($point),
+        );
     }
 
 }

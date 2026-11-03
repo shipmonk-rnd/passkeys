@@ -11,27 +11,28 @@
         "webauthn"
     ],
     "require": {
-        "php": ">=8.4",
-        "ext-openssl": "*"
+        "php": ">=8.1",
+        "ext-openssl": "*",
+        "ext-sodium": "*"
     },
     "require-dev": {
         "ext-pdo": "*",
         "ext-pdo_sqlite": "*",
-        "doctrine/dbal": "^4.5",
-        "doctrine/doctrine-bundle": "^3.3.3",
+        "doctrine/dbal": "^4.2.5",
+        "doctrine/doctrine-bundle": "^2.19 || ^3.3.3",
         "doctrine/orm": "^3.7.5",
-        "infection/infection": "^0.35.8",
+        "infection/infection": "^0.28.1 || ^0.35.8",
         "phpstan/phpstan": "^2.3.2",
         "phpstan/phpstan-phpunit": "^2.1.1",
         "phpstan/phpstan-strict-rules": "^2.1",
-        "phpunit/phpunit": "^13.4.3",
+        "phpunit/phpunit": "^10.5.63 || ^13.4.3",
         "shipmonk/coding-standard": "^0.3.0",
         "shipmonk/composer-normalizer": "^0.1.0",
         "shipmonk/coverage-guard": "^1.2.0",
         "shipmonk/dead-code-detector": "^1.4.2",
         "shipmonk/phpstan-rules": "^4.4.1",
-        "symfony/framework-bundle": "^8.1.9",
-        "symfony/runtime": "^8.1.9"
+        "symfony/framework-bundle": "^6.4.49 || ^8.1.9",
+        "symfony/runtime": "^6.4.41 || ^8.1.9"
     },
     "autoload": {
         "psr-4": {

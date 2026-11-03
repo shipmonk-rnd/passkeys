@@ -13,8 +13,10 @@ use ShipMonk\Passkeys\Ceremony\RegistrationResult;
 use ShipMonk\Passkeys\Ceremony\RelyingParty;
 use ShipMonk\Passkeys\Ceremony\VerificationException;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
+use ShipMonk\Passkeys\Cose\CoseKeyException;
 use ShipMonk\Passkeys\Credential\AuthenticatorAssertionResponse;
 use ShipMonk\Passkeys\Credential\AuthenticatorAttestationResponse;
+use ShipMonk\Passkeys\Credential\MalformedDataException;
 use ShipMonk\Passkeys\Credential\PublicKeyCredential;
 use ShipMonk\Passkeys\Json\JsonObject;
 use ShipMonk\PasskeysTests\Ceremony\InMemoryCredentialStore;
@@ -50,14 +52,14 @@ use function substr;
 final class SpecTestVectorsTest extends PasskeysTestCase
 {
 
-    private const string RP_ID = 'example.org';
-    private const string ORIGIN = 'https://example.org';
-    private const string TOP_ORIGIN = 'https://example.com';
+    private const RP_ID = 'example.org';
+    private const ORIGIN = 'https://example.org';
+    private const TOP_ORIGIN = 'https://example.com';
 
     /**
      * The vectors carry no user handle; the relying party assigns one at registration.
      */
-    private const string USER_HANDLE = 'spec-vector-user';
+    private const USER_HANDLE = 'spec-vector-user';
 
     /**
      * @param CoseAlgorithmIdentifier::* $alg
@@ -80,15 +82,7 @@ final class SpecTestVectorsTest extends PasskeysTestCase
         $relyingParty = new RelyingParty();
 
         // --- Registration ceremony (§7.1) against the vector's frozen outputs. ---
-        $credential = PublicKeyCredential::fromRegistrationResponseJson(self::jsonObject([
-            'id' => Base64::urlEncode($credentialId),
-            'rawId' => Base64::urlEncode($credentialId),
-            'type' => 'public-key',
-            'response' => [
-                'clientDataJSON' => Base64::urlEncode(self::hexField($registration, 'clientDataJSON')),
-                'attestationObject' => Base64::urlEncode(self::hexField($registration, 'attestationObject')),
-            ],
-        ]));
+        $credential = self::registrationCredential($registration);
 
         $registrationExpectations = new RegistrationExpectations(
             challenge: self::hexField($registration, 'challenge'),
@@ -176,7 +170,26 @@ final class SpecTestVectorsTest extends PasskeysTestCase
         yield '§16.9 packed / ES512' => ['packed-es512', CoseAlgorithmIdentifier::ES512, 'packed-x5c'];
         yield '§16.10 packed / RS256' => ['packed-rs256', CoseAlgorithmIdentifier::RS256, 'packed-x5c'];
         yield '§16.11 packed / EdDSA (Ed25519)' => ['packed-ed25519', CoseAlgorithmIdentifier::EdDSA, 'packed-x5c'];
-        yield '§16.12 packed / Ed448' => ['packed-ed448', CoseAlgorithmIdentifier::Ed448, 'packed-x5c'];
+    }
+
+    /**
+     * Ed448 is not supported: the §16.12 vector's credential public key (the fully-specified
+     * algorithm -53) must be refused as soon as its authenticator data is parsed.
+     */
+    public function testRejectsEd448Credential(): void
+    {
+        $registration = self::loadVector('packed-ed448')->getObject('registration');
+        $attestationObject = self::registrationCredential($registration)->response->parseAttestationObject();
+
+        try {
+            $attestationObject->parseAuthenticatorData();
+            self::fail('The Ed448 credential public key was not rejected');
+
+        } catch (MalformedDataException $e) {
+            $previous = $e->getPrevious();
+            self::assertInstanceOf(CoseKeyException::class, $previous);
+            self::assertSame('Unsupported OKP algorithm -53', $previous->getMessage());
+        }
     }
 
     /**
@@ -230,6 +243,24 @@ final class SpecTestVectorsTest extends PasskeysTestCase
             backupEligible: $authData->isBackupEligible(),
             backupState: $authData->isBackupState(),
         ));
+    }
+
+    /**
+     * @return PublicKeyCredential<AuthenticatorAttestationResponse>
+     */
+    private static function registrationCredential(JsonObject $registration): PublicKeyCredential
+    {
+        $credentialId = self::hexField($registration, 'credentialId');
+
+        return PublicKeyCredential::fromRegistrationResponseJson(self::jsonObject([
+            'id' => Base64::urlEncode($credentialId),
+            'rawId' => Base64::urlEncode($credentialId),
+            'type' => 'public-key',
+            'response' => [
+                'clientDataJSON' => Base64::urlEncode(self::hexField($registration, 'clientDataJSON')),
+                'attestationObject' => Base64::urlEncode(self::hexField($registration, 'attestationObject')),
+            ],
+        ]));
     }
 
     /**

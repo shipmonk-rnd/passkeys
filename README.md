@@ -4,7 +4,7 @@ A from-scratch, spec-compliant [WebAuthn Level 3](https://www.w3.org/TR/webauthn
 
 - 🔑 **Easy-to-use:** wire four methods to four HTTP endpoints
 - 🔧 **Full control:** the low-level WebAuthn API is public too
-- 🕸️ **Zero dependencies:** only PHP and `ext-openssl`
+- 🕸️ **Zero dependencies:** only PHP, `ext-openssl` and `ext-sodium`
 - 🧪 **100 % code coverage:** enforced in CI
 - 🔬 **PHPStan max level:** strict rules, zero ignores
 
@@ -17,8 +17,9 @@ engine, response parsing, COSE/CBOR primitives) is public but considered
 
 ## Requirements
 
-- PHP **8.4+** (Ed25519/Ed448 support in `ext-openssl` requires OpenSSL 3.0 / PHP 8.4)
-- `ext-openssl`
+- PHP **8.1+**
+- `ext-openssl` (ECDSA and RSA signatures)
+- `ext-sodium` (Ed25519 signatures; `ext-openssl` cannot verify EdDSA before PHP 8.4)
 
 ## Installation
 
@@ -381,7 +382,8 @@ decoding, canonical base64url, a strict JSON accessor).
 
 ### Supported signature algorithms
 
-Signatures are verified through `ext-openssl` with the COSE algorithm identifiers below:
+Signatures are verified through `ext-openssl` (ECDSA, RSA) and `ext-sodium` (EdDSA) with the COSE
+algorithm identifiers below:
 
 | COSE alg | Constant | Algorithm |
 |---:|---|---|
@@ -390,7 +392,8 @@ Signatures are verified through `ext-openssl` with the COSE algorithm identifier
 | `-36`  | `CoseAlgorithmIdentifier::ES512` | ECDSA w/ SHA-512 (P-521) |
 | `-257` | `CoseAlgorithmIdentifier::RS256` | RSASSA-PKCS1-v1_5 w/ SHA-256 |
 | `-8`   | `CoseAlgorithmIdentifier::EdDSA` | EdDSA (restricted to Ed25519 per WebAuthn [§5.8.5](https://www.w3.org/TR/webauthn-3/#sctn-alg-identifier)) |
-| `-53`  | `CoseAlgorithmIdentifier::Ed448` | EdDSA w/ Ed448, fully specified (RFC 9864) |
+
+Ed448 (COSE alg `-53`) is not supported: libsodium has no Ed448.
 
 ## Development
 

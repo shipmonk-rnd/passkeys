@@ -2,8 +2,10 @@
 
 namespace ShipMonk\PasskeysTests\Cose;
 
+use OpenSSLAsymmetricKey;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
+use ReflectionMethod;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
 use ShipMonk\Passkeys\Cose\CoseEc2Key;
 use ShipMonk\Passkeys\Cose\CoseKey;
@@ -22,6 +24,42 @@ final class CoseKeyTest extends CryptoTestCase
 {
 
     /**
+     * The DER SubjectPublicKeyInfo we build from a COSE key must be byte-for-byte
+     * identical to what OpenSSL emits for the same key.
+     *
+     * @param CoseAlgorithmIdentifier::* $alg
+     * @param class-string<CoseKey>      $expectedClass
+     */
+    #[DataProvider('provideOpenSslAlgorithms')]
+    public function testSubjectPublicKeyInfoMatchesOpenssl(
+        int $alg,
+        string $expectedClass,
+    ): void
+    {
+        [$coseKey, $privateKey] = self::generateCoseKeyPair($alg);
+
+        self::assertInstanceOf($expectedClass, $coseKey);
+        self::assertInstanceOf(OpenSSLAsymmetricKey::class, $privateKey);
+        self::assertSame(
+            bin2hex(self::pemToDer(self::stringField(self::keyDetails($privateKey), 'key'))),
+            bin2hex(self::derSubjectPublicKeyInfo($coseKey)),
+        );
+    }
+
+    /**
+     * The key types verified with ext-openssl, i.e. those encoded as a SubjectPublicKeyInfo.
+     *
+     * @return iterable<string, array{CoseAlgorithmIdentifier::*, class-string<CoseKey>}>
+     */
+    public static function provideOpenSslAlgorithms(): iterable
+    {
+        yield 'P-256 / ES256' => [CoseAlgorithmIdentifier::ES256, CoseEc2Key::class];
+        yield 'P-384 / ES384' => [CoseAlgorithmIdentifier::ES384, CoseEc2Key::class];
+        yield 'P-521 / ES512' => [CoseAlgorithmIdentifier::ES512, CoseEc2Key::class];
+        yield 'RSA / RS256' => [CoseAlgorithmIdentifier::RS256, CoseRsaKey::class];
+    }
+
+    /**
      * @return iterable<string, array{CoseAlgorithmIdentifier::*, class-string<CoseKey>}>
      */
     public static function provideAlgorithms(): iterable
@@ -31,7 +69,6 @@ final class CoseKeyTest extends CryptoTestCase
         yield 'P-521 / ES512' => [CoseAlgorithmIdentifier::ES512, CoseEc2Key::class];
         yield 'RSA / RS256' => [CoseAlgorithmIdentifier::RS256, CoseRsaKey::class];
         yield 'Ed25519 / EdDSA' => [CoseAlgorithmIdentifier::EdDSA, CoseOkpKey::class];
-        yield 'Ed448' => [CoseAlgorithmIdentifier::Ed448, CoseOkpKey::class];
     }
 
     /**
@@ -277,25 +314,32 @@ final class CoseKeyTest extends CryptoTestCase
             [1 => CoseOkpKey::KTY, 3 => CoseAlgorithmIdentifier::EdDSA, -1 => 99, -2 => $x],
         ];
 
-        yield 'OKP fully-specified algorithm / curve mismatch' => [
-            'OKP algorithm -53 requires curve 7, got 6',
-            [1 => CoseOkpKey::KTY, 3 => CoseAlgorithmIdentifier::Ed448, -1 => CoseOkpKey::CRV_ED25519, -2 => $x],
+        yield 'OKP Ed448 (unsupported)' => [
+            'Unsupported OKP algorithm -53',
+            [1 => CoseOkpKey::KTY, 3 => -53, -1 => 7, -2 => str_pad('', 57, "\x01")],
         ];
 
         yield 'OKP generic EdDSA with Ed448 curve (WebAuthn §5.8.5 requires Ed25519)' => [
             'OKP algorithm -8 requires curve 6, got 7',
-            [1 => CoseOkpKey::KTY, 3 => CoseAlgorithmIdentifier::EdDSA, -1 => CoseOkpKey::CRV_ED448, -2 => $x],
+            [1 => CoseOkpKey::KTY, 3 => CoseAlgorithmIdentifier::EdDSA, -1 => 7, -2 => $x],
         ];
 
         yield 'OKP wrong Ed25519 key length' => [
             'OKP curve 6 requires 32-byte public key',
             [1 => CoseOkpKey::KTY, 3 => CoseAlgorithmIdentifier::EdDSA, -1 => CoseOkpKey::CRV_ED25519, -2 => 'short'],
         ];
+    }
 
-        yield 'OKP wrong Ed448 key length' => [
-            'OKP curve 7 requires 57-byte public key',
-            [1 => CoseOkpKey::KTY, 3 => CoseAlgorithmIdentifier::Ed448, -1 => CoseOkpKey::CRV_ED448, -2 => $x],
-        ];
+    /**
+     * Reaches the private DER encoder — an internal detail of {@see CoseKey::verify()}
+     * this test still asserts against directly.
+     */
+    private static function derSubjectPublicKeyInfo(CoseKey $coseKey): string
+    {
+        $der = (new ReflectionMethod($coseKey, 'toDerSubjectPublicKeyInfo'))->invoke($coseKey);
+        self::assertIsString($der);
+
+        return $der;
     }
 
 }

@@ -2,15 +2,16 @@
 
 namespace ShipMonk\Passkeys\Cose;
 
-use OpenSSLAsymmetricKey;
 use ShipMonk\Passkeys\Cbor\CborEncoder;
 use ShipMonk\Passkeys\Cbor\CborMap;
 use ShipMonk\Passkeys\Cbor\CborMapException;
-use function openssl_pkey_new;
+use function sodium_crypto_sign_verify_detached;
 use function strlen;
+use const SODIUM_CRYPTO_SIGN_BYTES;
 
 /**
- * COSE key of type OKP (Octet Key Pair), i.e. an Edwards-curve key such as Ed25519.
+ * COSE key of type OKP (Octet Key Pair), i.e. an Edwards-curve key. Only Ed25519 is supported,
+ * verified with ext-sodium (ext-openssl cannot verify EdDSA signatures before PHP 8.4).
  *
  * @extends CoseKey<key-of<self::ALGORITHMS>>
  *
@@ -18,56 +19,49 @@ use function strlen;
  * @see https://www.rfc-editor.org/rfc/rfc9053.html#section-7.2 OKP key parameters
  * @api
  */
-final readonly class CoseOkpKey extends CoseKey
+final class CoseOkpKey extends CoseKey
 {
 
     /**
      * Key type value for OKP keys.
      */
-    public const int KTY = 1;
+    public const KTY = 1;
 
     /**
      * COSE curve identifier: Ed25519.
      */
-    public const int CRV_ED25519 = 6;
-
-    /**
-     * COSE curve identifier: Ed448.
-     */
-    public const int CRV_ED448 = 7;
+    public const CRV_ED25519 = 6;
 
     /**
      * OKP key label: curve (crv).
      */
-    public const int LABEL_CRV = -1;
+    public const LABEL_CRV = -1;
 
     /**
      * OKP key label: public key (x).
      */
-    public const int LABEL_X = -2;
+    public const LABEL_X = -2;
 
     /**
-     * Maps each supported algorithm to its mandated curve, public-key length in bytes,
-     * and OpenSSL key-type name.
+     * Maps each supported algorithm to its mandated curve and public-key length in bytes.
      *
      * WebAuthn §5.8.5 requires keys with the generic EdDSA identifier to use Ed25519, so
-     * despite being polymorphic in plain COSE it pins a single curve here; Ed448 keys must
-     * use the fully-specified RFC 9864 identifier.
+     * despite being polymorphic in plain COSE it pins a single curve here. Ed448 (the
+     * fully-specified RFC 9864 identifier -53) is not supported.
      */
-    private const array ALGORITHMS = [
-        CoseAlgorithmIdentifier::EdDSA => [self::CRV_ED25519, 32, 'ed25519'],
-        CoseAlgorithmIdentifier::Ed448 => [self::CRV_ED448, 57, 'ed448'],
+    private const ALGORITHMS = [
+        CoseAlgorithmIdentifier::EdDSA => [self::CRV_ED25519, 32],
     ];
 
     /**
      * @param key-of<self::ALGORITHMS> $alg
      * @param self::CRV_*              $crv
-     * @param string                   $x   raw public key bytes (fixed length for the curve)
+     * @param non-empty-string         $x   raw public key bytes (fixed length for the curve)
      */
     private function __construct(
         int $alg,
-        public int $crv,
-        public string $x,
+        public readonly int $crv,
+        public readonly string $x,
     )
     {
         parent::__construct($alg);
@@ -110,19 +104,18 @@ final readonly class CoseOkpKey extends CoseKey
         ]);
     }
 
-    protected function toOpenSslPublicKey(): OpenSSLAsymmetricKey|false
+    public function verify(
+        string $message,
+        string $signature,
+    ): bool
     {
-        return openssl_pkey_new([
-            self::ALGORITHMS[$this->alg][2] => [
-                'pub_key' => $this->x,
-            ],
-        ]);
-    }
+        // libsodium throws on a signature of the wrong length; like any other malformed
+        // signature, that is a verification failure, not an exception.
+        if (strlen($signature) !== SODIUM_CRYPTO_SIGN_BYTES) {
+            return false;
+        }
 
-    protected function getOpenSslAlgorithm(): int
-    {
-        // EdDSA is a pure signature scheme; OpenSSL takes no separate message digest.
-        return 0;
+        return sodium_crypto_sign_verify_detached($signature, $message, $this->x);
     }
 
 }

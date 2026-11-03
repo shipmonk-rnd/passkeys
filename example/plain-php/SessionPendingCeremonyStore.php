@@ -21,7 +21,7 @@ final class SessionPendingCeremonyStore implements PendingCeremonyStore
     /**
      * How many unfinished ceremonies to keep per browser session (oldest dropped first).
      */
-    private const int MAX_PENDING = 8;
+    private const MAX_PENDING = 8;
 
     public function rememberPendingAuthentication(PendingAuthentication $pending): void
     {
