@@ -131,6 +131,48 @@ final class RelyingPartyTest extends CryptoTestCase
         self::assertSame($alg, $result->publicKey->alg);
     }
 
+    public function testPackedSelfAttestationHashesClientDataIncludingBom(): void
+    {
+        $clientDataJson = "\xEF\xBB\xBF" . self::clientDataJson('webauthn.create', self::CHALLENGE, self::ORIGIN, null, null);
+        $credential = self::registrationCredential(
+            $this->coseEntries,
+            fmt: 'packed',
+            attestationKey: $this->privateKey,
+            attestationAlg: CoseAlgorithmIdentifier::ES256,
+            clientDataJsonOverride: $clientDataJson,
+        );
+
+        $result = (new RelyingParty())->verifyRegistration(
+            $credential,
+            self::registrationExpectations(),
+            new InMemoryCredentialStore(),
+        );
+
+        self::assertSame(RegistrationResult::ATTESTATION_SELF, $result->attestationType);
+        self::assertSame(self::CREDENTIAL_ID, $result->credentialId);
+        self::assertSame($clientDataJson, $credential->response->clientDataJSON);
+    }
+
+    public function testAuthenticationHashesClientDataIncludingBom(): void
+    {
+        $clientDataJson = "\xEF\xBB\xBF" . self::clientDataJson('webauthn.get', self::CHALLENGE, self::ORIGIN, null, null);
+        $credential = self::authenticationCredential(
+            $this->privateKey,
+            CoseAlgorithmIdentifier::ES256,
+            clientDataJsonOverride: $clientDataJson,
+        );
+
+        $result = (new RelyingParty())->verifyAuthentication(
+            $credential,
+            self::authenticationExpectations(),
+            self::storeWith($this->registeredRecord()),
+        );
+
+        self::assertSame(self::CREDENTIAL_ID, $result->credentialId);
+        self::assertSame(self::USER_HANDLE, $result->userHandle);
+        self::assertSame($clientDataJson, $credential->response->clientDataJSON);
+    }
+
     /**
      * @return iterable<string, array{CoseAlgorithmIdentifier::*}>
      */
@@ -1135,6 +1177,7 @@ final class RelyingPartyTest extends CryptoTestCase
         bool $tamperAttestationSignature = false,
         bool $signWrongAttestationMessage = false,
         ?string $attStmtOverride = null,
+        ?string $clientDataJsonOverride = null,
     ): PublicKeyCredential
     {
         $flags ??= self::FLAGS_UP_UV | AuthenticatorData::FLAG_ATTESTED_CREDENTIAL_DATA;
@@ -1144,7 +1187,7 @@ final class RelyingPartyTest extends CryptoTestCase
             : null;
 
         $authData = self::authenticatorData($rpId, $flags, $signCount, $attestedCredentialData);
-        $clientDataJson = self::clientDataJson($type, $challenge, $origin, $crossOrigin, $topOrigin);
+        $clientDataJson = $clientDataJsonOverride ?? self::clientDataJson($type, $challenge, $origin, $crossOrigin, $topOrigin);
 
         $attStmt = $attStmtOverride ?? CborTestEncoder::map([]);
 
@@ -1203,11 +1246,12 @@ final class RelyingPartyTest extends CryptoTestCase
         bool $tamperSignature = false,
         ?string $topOrigin = null,
         ?string $authDataOverride = null,
+        ?string $clientDataJsonOverride = null,
     ): PublicKeyCredential
     {
         $flags ??= self::FLAGS_UP_UV;
         $authData = $authDataOverride ?? self::authenticatorData($rpId, $flags, $signCount, null);
-        $clientDataJson = self::clientDataJson($type, $challenge, $origin, $crossOrigin, $topOrigin);
+        $clientDataJson = $clientDataJsonOverride ?? self::clientDataJson($type, $challenge, $origin, $crossOrigin, $topOrigin);
 
         $signature = self::sign($privateKey, $authData . hash('sha256', $clientDataJson, binary: true), $alg);
 
