@@ -2,6 +2,7 @@
 
 namespace ShipMonk\PasskeysTests\Cose;
 
+use OpenSSLAsymmetricKey;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
@@ -25,7 +26,7 @@ use const OPENSSL_ALGO_SHA256;
 final class CoseKeyVerifyTest extends CryptoTestCase
 {
 
-    private const string MESSAGE = 'authenticatorData||clientDataHash 0123456789abcdef';
+    private const MESSAGE = 'authenticatorData||clientDataHash 0123456789abcdef';
 
     /**
      * @param CoseAlgorithmIdentifier::* $alg
@@ -74,7 +75,6 @@ final class CoseKeyVerifyTest extends CryptoTestCase
         yield 'ES512' => [CoseAlgorithmIdentifier::ES512];
         yield 'RS256' => [CoseAlgorithmIdentifier::RS256];
         yield 'EdDSA' => [CoseAlgorithmIdentifier::EdDSA];
-        yield 'Ed448' => [CoseAlgorithmIdentifier::Ed448];
     }
 
     public function testConstructionThrowsWhenPublicKeyCannotBeLoaded(): void
@@ -116,22 +116,18 @@ final class CoseKeyVerifyTest extends CryptoTestCase
     }
 
     /**
-     * A key whose material OpenSSL refuses to load, optionally logging a real error to the queue
-     * on the way — the two shapes a load failure takes in practice.
+     * A key whose material OpenSSL refuses to load, optionally logging a real error to the queue.
      */
     private static function unloadableKey(bool $logOpenSslError = false): CoseKey
     {
-        return new readonly class ($logOpenSslError) extends CoseKey {
+        return new class ($logOpenSslError) extends CoseKey {
 
             public function __construct(bool $logOpenSslError)
             {
-                parent::__construct(CoseAlgorithmIdentifier::ES256, static function () use ($logOpenSslError): false {
-                    if ($logOpenSslError) {
-                        openssl_pkey_get_public('not a key at all');
-                    }
-
-                    return false;
-                });
+                parent::__construct(
+                    CoseAlgorithmIdentifier::ES256,
+                    static fn (): OpenSSLAsymmetricKey|false => $logOpenSslError ? openssl_pkey_get_public('not a key at all') : false,
+                );
             }
 
             public function toBytes(): string
@@ -149,7 +145,8 @@ final class CoseKeyVerifyTest extends CryptoTestCase
 
     /**
      * A malformed signature is a verification failure (false), never an exception —
-     * regardless of whether OpenSSL reports it as 0 (RSA/EdDSA) or -1 (ECDSA DER parse).
+     * regardless of whether OpenSSL reports it as 0 (RSA) or -1 (ECDSA DER parse), or libsodium
+     * refuses it for its length (EdDSA).
      */
     /**
      * @param CoseAlgorithmIdentifier::* $alg
@@ -191,29 +188,28 @@ final class CoseKeyVerifyTest extends CryptoTestCase
     }
 
     /**
-     * RFC 8032 §7.4, Blank: the sign bit is set in this public key. The encoding check must
+     * RFC 8032 §7.1, Test SHA(abc): the sign bit is set in this public key. The encoding check must
      * ignore that bit when comparing y, but preserve it for signature verification.
      */
-    public function testVerifiesEd448KnownAnswerVector(): void
+    public function testVerifiesEd25519KnownAnswerVectorWithSignBitSet(): void
     {
-        $publicKey = self::bytesFromHex(
-            '5fd7449b59b461fd2ce787ec616ad46a1da1342485a70e1f8a0ea75d80e96778'
-            . 'edf124769b46c7061bd6783df1e50f6cd1fa1abeafe8256180',
+        $publicKey = self::bytesFromHex('ec172b93ad5e563bf4932c70e1245034c35467ef2efd4d64ebf819683467e2bf');
+        $message = self::bytesFromHex(
+            'ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a'
+            . '2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f',
         );
         $signature = self::bytesFromHex(
-            '533a37f6bbe457251f023c0d88f976ae2dfb504a843e34d2074fd823d41a591f'
-            . '2b233f034f628281f2fd7a22ddd47d7828c59bd0a21bfd3980ff0d2028d4b18a'
-            . '9df63e006c5d1c2d345b925d8dc00b4104852db99ac5c7cdda8530a113a0f4db'
-            . 'b61149f05a7363268c71d95808ff2e652600',
+            'dc2a4459e7369633a52b1bf277839a00201009a3efbf3ecb69bea2186c26b589'
+            . '09351fc9ac90b3ecfdfbc7c66431e0303dca179c138ac17ad9bef1177331a704',
         );
         $coseKey = CoseKey::fromCborMap(self::cborMap([
             1 => CoseOkpKey::KTY,
-            3 => CoseAlgorithmIdentifier::Ed448,
-            -1 => CoseOkpKey::CRV_ED448,
+            3 => CoseAlgorithmIdentifier::EdDSA,
+            -1 => CoseOkpKey::CRV_ED25519,
             -2 => $publicKey,
         ]));
 
-        self::assertTrue($coseKey->verify('', $signature));
+        self::assertTrue($coseKey->verify($message, $signature));
         self::assertFalse($coseKey->verify('different message', $signature));
     }
 

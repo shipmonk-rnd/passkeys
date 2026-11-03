@@ -62,7 +62,7 @@ final class PasskeyStore implements PasskeyStoreInterface
      * The demo's fixed accounts as email => plaintext password, seeded on construction. A real
      * service gets its users from normal user-management and would never hard-code a password.
      */
-    private const array DEMO_ACCOUNTS = [
+    private const DEMO_ACCOUNTS = [
         'alice@example.com' => 'alice',
         'bob@example.com' => 'bob',
     ];

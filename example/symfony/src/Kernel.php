@@ -31,7 +31,7 @@ final class Kernel extends BaseKernel
      * The demo's fixed accounts as email => plaintext password, seeded on first boot. A real service
      * gets its users from normal user management and would never hard-code a password.
      */
-    private const array DEMO_ACCOUNTS = [
+    private const DEMO_ACCOUNTS = [
         'alice@example.com' => 'alice',
         'bob@example.com' => 'bob',
     ];
@@ -61,7 +61,7 @@ final class Kernel extends BaseKernel
         $entityManager = $this->container->get('doctrine.orm.default_entity_manager');
         assert($entityManager instanceof EntityManagerInterface);
 
-        new SchemaTool($entityManager)->createSchema($entityManager->getMetadataFactory()->getAllMetadata());
+        (new SchemaTool($entityManager))->createSchema($entityManager->getMetadataFactory()->getAllMetadata());
 
         foreach (self::DEMO_ACCOUNTS as $email => $password) {
             $entityManager->persist(new User(
