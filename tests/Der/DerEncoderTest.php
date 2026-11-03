@@ -8,44 +8,59 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use ShipMonk\Passkeys\Der\DerEncoder;
 use ShipMonk\PasskeysTests\PasskeysTestCase;
 use function bin2hex;
-use function chr;
-use function intdiv;
-use function ord;
-use function pack;
-use function random_int;
-use function strlen;
-use function substr;
+use function str_repeat;
 
+/**
+ * Known-answer vectors. The INTEGER, NULL, BIT STRING and OBJECT IDENTIFIER encodings agree with
+ * `openssl asn1parse -genstr`; the SubjectPublicKeyInfo the encoder builds is checked against
+ * OpenSSL's own export in {@see \ShipMonk\PasskeysTests\Cose\CoseKeyTest}.
+ */
 #[CoversClass(DerEncoder::class)]
 final class DerEncoderTest extends PasskeysTestCase
 {
 
-    #[DataProvider('provideEncodeIntData')]
-    public function testEncodeInt(
-        string $bytes,
-        string $expected,
+    #[DataProvider('provideUnsignedInts')]
+    public function testEncodeUnsignedInt(
+        string $bytesHex,
+        string $expectedHex,
     ): void
     {
-        self::assertSame($expected, DerEncoder::encodeUnsignedInt($bytes));
+        self::assertSame($expectedHex, bin2hex(DerEncoder::encodeUnsignedInt(self::bytesFromHex($bytesHex))));
     }
 
     /**
-     * @return iterable<array{string, string}>
+     * @return iterable<string, array{string, string}>
      */
-    public static function provideEncodeIntData(): iterable
+    public static function provideUnsignedInts(): iterable
     {
-        yield ["\x00", "\x02\x01\x00"];
-        yield ["\x01", "\x02\x01\x01"];
-        yield ["\x00\x00", "\x02\x01\x00"];
-
-        for ($i = 0; $i < 1000; $i++) {
-            $int = random_int(0, 1_000_000);
-            $bytes = pack('N', $int);
-            yield [$bytes, self::derUnsignedInteger($bytes)];
-        }
+        yield 'no bytes encode zero' => ['', '020100'];
+        yield 'zero' => ['00', '020100'];
+        yield 'zero with leading zero bytes' => ['000000', '020100'];
+        yield 'one' => ['01', '020101'];
+        yield 'largest value without a sign byte' => ['7f', '02017f'];
+        yield 'high bit set gets a sign byte' => ['80', '02020080'];
+        yield 'leading zero bytes dropped before the sign byte' => ['000080', '02020080'];
+        yield 'leading zero bytes dropped' => ['00000100', '02020100'];
+        yield 'zero bytes after the first non-zero one stay' => ['010000', '0203010000'];
+        yield 'RSA exponent 65537' => ['010001', '0203010001'];
+        yield '2048-bit modulus (long-form length)' => [
+            str_repeat('ff', 256),
+            '0282010100' . str_repeat('ff', 256),
+        ];
     }
 
-    #[DataProvider('provideEncodeObjectIdentifierData')]
+    public function testEncodeBitString(): void
+    {
+        self::assertSame('030100', bin2hex(DerEncoder::encodeBitString('')));
+        self::assertSame('0303000102', bin2hex(DerEncoder::encodeBitString("\x01\x02")));
+    }
+
+    public function testEncodeNull(): void
+    {
+        self::assertSame('0500', bin2hex(DerEncoder::encodeNull()));
+    }
+
+    #[DataProvider('provideObjectIdentifiers')]
     public function testEncodeObjectIdentifier(
         string $oid,
         string $expectedHex,
@@ -55,122 +70,98 @@ final class DerEncoderTest extends PasskeysTestCase
     }
 
     /**
-     * @return iterable<array{string, string}>
+     * @return iterable<string, array{string, string}>
      */
-    public static function provideEncodeObjectIdentifierData(): iterable
+    public static function provideObjectIdentifiers(): iterable
     {
         yield 'id-ecPublicKey' => ['1.2.840.10045.2.1', '06072a8648ce3d0201'];
         yield 'prime256v1 (P-256)' => ['1.2.840.10045.3.1.7', '06082a8648ce3d030107'];
         yield 'secp384r1 (P-384)' => ['1.3.132.0.34', '06052b81040022'];
         yield 'secp521r1 (P-521)' => ['1.3.132.0.35', '06052b81040023'];
         yield 'rsaEncryption' => ['1.2.840.113549.1.1.1', '06092a864886f70d010101'];
-        yield 'two arcs only' => ['1.2', '06012a'];
-        yield 'first arc 0, second arc 0' => ['0.0', '060100'];
-        yield 'first arc 2 (id-at-commonName)' => ['2.5.4.3', '0603550403'];
+        yield 'smallest' => ['0.0', '060100'];
+        yield 'largest second arc under root 1' => ['1.39', '06014f'];
+        yield 'second arc of 40 under root 2' => ['2.40', '060178'];
+        yield 'X.690 example (multi-byte first subidentifier)' => ['2.999.3', '0603883703'];
+        yield '18-digit arc' => ['1.2.999999999999999999', '060a2a8df0add6babb8fff7f'];
+        yield '18-digit second arc' => ['2.999999999999999999', '06098df0add6babb90804f'];
     }
 
-    #[DataProvider('provideInvalidObjectIdentifierData')]
-    public function testEncodeInvalidObjectIdentifier(string $oid): void
+    #[DataProvider('provideInvalidObjectIdentifiers')]
+    public function testEncodeObjectIdentifierRejectsMalformedInput(string $oid): void
     {
-        $this->expectException(LogicException::class);
-        DerEncoder::encodeObjectIdentifier($oid);
+        self::assertException(
+            LogicException::class,
+            "Invalid object identifier '{$oid}'",
+            static fn () => DerEncoder::encodeObjectIdentifier($oid),
+        );
     }
 
     /**
-     * @return iterable<array{string}>
+     * @return iterable<string, array{string}>
      */
-    public static function provideInvalidObjectIdentifierData(): iterable
+    public static function provideInvalidObjectIdentifiers(): iterable
     {
+        yield 'empty' => [''];
         yield 'single arc' => ['1'];
-        yield 'negative first arc' => ['-1.2'];
-        yield 'first arc too large' => ['3.0'];
-        yield 'negative second arc' => ['1.-2.3'];
-        yield 'negative later arc' => ['1.2.-3'];
+        yield 'root above 2' => ['3.0'];
+        yield 'negative root' => ['-1.2'];
+        yield 'second arc of 40 under root 0' => ['0.40'];
+        yield 'second arc of 40 under root 1' => ['1.40'];
+        yield 'negative arc' => ['1.-2'];
+        yield 'leading zero in root' => ['01.2'];
+        yield 'leading zero in arc' => ['1.2.03'];
+        yield 'empty arc' => ['1..2'];
+        yield 'trailing dot' => ['1.2.'];
+        yield 'leading dot' => ['.1.2'];
+        yield 'non-digit arc' => ['1.2.x'];
+        yield 'leading garbage' => ['x1.2'];
+        yield 'trailing garbage' => ['1.2x'];
+        yield 'trailing newline' => ["1.2\n"];
+        yield '19-digit arc' => ['1.2.1000000000000000000'];
+        yield '19-digit second arc' => ['2.1000000000000000000'];
     }
 
     public function testEncodeSequence(): void
     {
-        self::assertSame("\x30\x00", DerEncoder::encodeSequence());
-        self::assertSame("\x30\x02\x05\x00", DerEncoder::encodeSequence(DerEncoder::encodeNull()));
+        self::assertSame('3000', bin2hex(DerEncoder::encodeSequence()));
+        self::assertSame('30020500', bin2hex(DerEncoder::encodeSequence(DerEncoder::encodeNull())));
         self::assertSame(
-            "\x30\x06\x02\x01\x01\x02\x01\x02",
-            DerEncoder::encodeSequence(DerEncoder::encodeUnsignedInt("\x01"), DerEncoder::encodeUnsignedInt("\x02")),
+            '3006020101020102',
+            bin2hex(DerEncoder::encodeSequence(DerEncoder::encodeUnsignedInt("\x01"), DerEncoder::encodeUnsignedInt("\x02"))),
+        );
+        self::assertSame(
+            '300430020500',
+            bin2hex(DerEncoder::encodeSequence(DerEncoder::encodeSequence(DerEncoder::encodeNull()))),
         );
     }
 
-    public function testEncodeBitString(): void
-    {
-        // tag 0x03, length (content + 1 leading "unused bits" byte), then 0x00 and the content bytes.
-        self::assertSame("\x03\x01\x00", DerEncoder::encodeBitString(''));
-        self::assertSame("\x03\x04\x00\x01\x02\x03", DerEncoder::encodeBitString("\x01\x02\x03"));
-    }
-
     /**
-     * @param non-negative-int $length
+     * Every element type shares the same tag-length-value framing; SEQUENCE takes arbitrary contents,
+     * so it shows the length octets at each boundary of the short and long forms.
      */
-    #[DataProvider('provideEncodeLengthData')]
-    public function testEncodeLength(
+    #[DataProvider('provideLengths')]
+    public function testEncodesLengthInTheShortestForm(
         int $length,
-        string $expected,
+        string $expectedHeaderHex,
     ): void
     {
-        self::assertSame($expected, DerEncoder::encodeLength($length));
+        $contents = str_repeat("\xab", $length);
+
+        self::assertSame($expectedHeaderHex . bin2hex($contents), bin2hex(DerEncoder::encodeSequence($contents)));
     }
 
     /**
-     * @return iterable<array{non-negative-int, string}>
+     * @return iterable<string, array{int, string}>
      */
-    public static function provideEncodeLengthData(): iterable
+    public static function provideLengths(): iterable
     {
-        yield [0, "\x00"];
-        yield [1, "\x01"];
-        yield [38, "\x26"];
-        yield [127, "\x7f"];
-        yield [128, "\x81\x80"];
-        yield [201, "\x81\xc9"];
-        yield [255, "\x81\xff"];
-        yield [256, "\x82\x01\x00"];
-
-        for ($i = 0; $i < 1000; $i++) {
-            $int = random_int(0, 1_000_000);
-            yield [$int, self::derLength($int)];
-        }
-    }
-
-    private static function derLength(int $len): string
-    {
-        if ($len < 128) {
-            return chr($len);
-        }
-        $lenBytes = '';
-        while ($len > 0) {
-            $lenBytes = chr($len % 256) . $lenBytes;
-            $len = intdiv($len, 256);
-        }
-        return chr(0x80 | strlen($lenBytes)) . $lenBytes;
-    }
-
-    private static function derUnsignedInteger(string $bytes): string
-    {
-        $len = strlen($bytes);
-
-        // Remove leading zero bytes
-        $i = 0;
-        for (; $i < ($len - 1); $i++) {
-            if (ord($bytes[$i]) !== 0) {
-                break;
-            }
-        }
-        if ($i !== 0) {
-            $bytes = substr($bytes, $i);
-        }
-
-        // If most significant bit is set, prefix with another zero to prevent it being seen as negative number
-        if ((ord($bytes[0]) & 0x80) !== 0) {
-            $bytes = "\x00" . $bytes;
-        }
-
-        return "\x02" . self::derLength(strlen($bytes)) . $bytes;
+        yield 'largest short form' => [127, '307f'];
+        yield 'smallest long form' => [128, '308180'];
+        yield 'largest one-byte long form' => [255, '3081ff'];
+        yield 'smallest two-byte long form' => [256, '30820100'];
+        yield 'largest two-byte long form' => [65_535, '3082ffff'];
+        yield 'smallest three-byte long form' => [65_536, '3083010000'];
     }
 
 }

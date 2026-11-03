@@ -3,89 +3,124 @@
 namespace ShipMonk\Passkeys\Der;
 
 use LogicException;
-use function array_map;
+use function array_slice;
 use function chr;
-use function count;
 use function explode;
 use function implode;
 use function ltrim;
 use function ord;
 use function pack;
+use function preg_match;
 use function strlen;
 
+/**
+ * A minimal DER encoder, scoped to what the library needs in order to hand a COSE key to ext-openssl
+ * as a SubjectPublicKeyInfo ({@see \ShipMonk\Passkeys\Cose\CoseEc2Key}, {@see \ShipMonk\Passkeys\Cose\CoseRsaKey}):
+ * INTEGER, BIT STRING, NULL, OBJECT IDENTIFIER and SEQUENCE, each with a definite length in its
+ * shortest form.
+ *
+ * @see https://www.itu.int/rec/T-REC-X.690 X.690 §8 (encoding rules) and §10 (DER restrictions)
+ * @internal an implementation detail of the PHP 8.1 support, not covered by the backward-compatibility promise
+ */
 final class DerEncoder
 {
 
+    /**
+     * INTEGER from the big-endian bytes of a non-negative value (leading zero bytes are allowed).
+     *
+     * DER requires the shortest two's-complement form, so leading zero bytes are dropped and a
+     * single zero byte is put back when the high bit is set, which would otherwise read as negative.
+     */
     public static function encodeUnsignedInt(string $bytes): string
     {
         $bytes = ltrim($bytes, "\x00");
 
-        if (strlen($bytes) === 0 || ord($bytes[0]) >= 0x80) {
+        if ($bytes === '' || ord($bytes[0]) >= 0x80) {
             $bytes = "\x00{$bytes}";
         }
 
-        return "\x02" . self::encodeLength(strlen($bytes)) . $bytes;
+        return self::encode(0x02, $bytes);
     }
 
+    /**
+     * BIT STRING of whole bytes: the leading "unused bits" byte is always zero.
+     */
     public static function encodeBitString(string $bytes): string
     {
-        return "\x03" . self::encodeLength(strlen($bytes) + 1) . "\x00{$bytes}";
+        return self::encode(0x03, "\x00{$bytes}");
     }
 
     public static function encodeNull(): string
     {
-        return "\x05\x00";
+        return self::encode(0x05, '');
     }
 
     /**
-     * Encodes an OBJECT IDENTIFIER given in dotted-decimal notation (e.g. "1.2.840.10045.2.1").
+     * OBJECT IDENTIFIER given in dotted-decimal notation, e.g. "1.2.840.10045.2.1".
+     *
+     * @throws LogicException when the identifier is malformed (the library passes only constants, so that is a bug)
      */
     public static function encodeObjectIdentifier(string $oid): string
     {
-        $arcs = array_map(static fn (string $arc): int => (int) $arc, explode('.', $oid));
+        // At least two arcs, the first one 0, 1 or 2, each a canonical decimal (no leading zeros)
+        // of at most 18 digits, so that no arithmetic below can overflow an int.
+        $arc = '(0|[1-9][0-9]{0,17})';
 
-        if (count($arcs) < 2 || $arcs[0] < 0 || $arcs[0] > 2 || $arcs[1] < 0) {
+        if (preg_match("~^([0-2])\\.{$arc}((?:\\.{$arc})*)\$~D", $oid, $matches) !== 1) {
             throw new LogicException("Invalid object identifier '{$oid}'");
         }
 
-        $content = self::encodeBase128($arcs[0] * 40 + $arcs[1]);
+        [, $first, $second, $rest] = $matches;
 
-        for ($i = 2; $i < count($arcs); $i++) {
-            if ($arcs[$i] < 0) {
-                throw new LogicException("Invalid object identifier '{$oid}'");
-            }
-
-            $content .= self::encodeBase128($arcs[$i]);
+        // The first two arcs share one subidentifier, 40 * first + second (X.690 §8.19.4), which is
+        // unambiguous only when the second arc under the roots 0 and 1 stays below 40.
+        if ($first !== '2' && (int) $second >= 40) {
+            throw new LogicException("Invalid object identifier '{$oid}'");
         }
 
-        return "\x06" . self::encodeLength(strlen($content)) . $content;
-    }
+        $contents = self::encodeSubidentifier(40 * (int) $first + (int) $second);
 
-    public static function encodeSequence(string ...$elements): string
-    {
-        $content = implode('', $elements);
+        // $rest is either empty or ".arc.arc…", so the first exploded piece is always empty.
+        foreach (array_slice(explode('.', $rest), 1) as $subsequentArc) {
+            $contents .= self::encodeSubidentifier((int) $subsequentArc);
+        }
 
-        return "\x30" . self::encodeLength(strlen($content)) . $content;
+        return self::encode(0x06, $contents);
     }
 
     /**
-     * @param non-negative-int $length
+     * SEQUENCE of already encoded elements, in the given order.
      */
-    public static function encodeLength(int $length): string
+    public static function encodeSequence(string ...$elements): string
     {
+        return self::encode(0x30, implode('', $elements));
+    }
+
+    /**
+     * Identifier octet, length octets and contents (X.690 §8.1). A length below 128 takes the short
+     * form, a longer one the long form with no leading zero bytes (X.690 §8.1.3, §10.1).
+     */
+    private static function encode(
+        int $tag,
+        string $contents,
+    ): string
+    {
+        $length = strlen($contents);
+
         if ($length < 0x80) {
-            return chr($length);
+            return chr($tag) . chr($length) . $contents;
         }
 
         $lengthBytes = ltrim(pack('J', $length), "\x00");
-        return chr(0x80 | strlen($lengthBytes)) . $lengthBytes;
+
+        return chr($tag) . chr(0x80 | strlen($lengthBytes)) . $lengthBytes . $contents;
     }
 
     /**
-     * Encodes a non-negative integer as a base-128 value with continuation bits,
-     * as used for the arcs of an OBJECT IDENTIFIER.
+     * Base-128 digits, most significant first, with the high bit set on all but the last
+     * (X.690 §8.19.2).
      */
-    private static function encodeBase128(int $value): string
+    private static function encodeSubidentifier(int $value): string
     {
         $bytes = chr($value & 0x7F);
         $value >>= 7;

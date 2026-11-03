@@ -108,6 +108,8 @@ abstract class CoseKey
      * @param int $algorithm the OpenSSL message-digest algorithm (an OPENSSL_ALGO_* constant)
      *
      * @throws CoseKeyLoadException if OpenSSL rejects the key material
+     *
+     * @internal an implementation detail of the PHP 8.1 support, not covered by the backward-compatibility promise
      */
     final protected static function verifyWithOpenSsl(
         string $subjectPublicKeyInfo,
