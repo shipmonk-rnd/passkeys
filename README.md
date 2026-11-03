@@ -400,10 +400,14 @@ imports reject noncanonical encodings and the complete small-order point sets, f
 signs. The sets come from [libsodium's Ed25519 check](https://github.com/jedisct1/libsodium/blob/1.0.18/src/libsodium/crypto_core/ed25519/ref10/ed25519_ref10.c#L1022-L1075)
 and [Bouncy Castle's Ed448 encoding check](https://github.com/bcgit/bc-java/blob/r1rv80/core/src/main/java/org/bouncycastle/math/ec/rfc8032/Ed448.java#L179-L212).
 
-These checks prevent enrollment of off-curve EC keys and small-order Edwards keys for which
-publicly constructible signatures can verify without a private key. The threat requires
-enrollment of a degenerate key; it does not compromise existing correctly generated credentials.
-OpenSSL key loading alone does not reject weak Edwards keys.
+EC validation fails early: older versions could save an off-curve EC key with `fmt: none`, but
+OpenSSL would reject that key at each login. The registration check prevents saving such an
+unusable credential.
+
+The Edwards checks address a forgery risk: small-order keys can accept publicly constructible
+signatures without a private key. That risk requires enrollment of a degenerate key; existing
+correctly generated credentials remain valid. OpenSSL key loading alone does not reject weak
+Edwards keys.
 
 These are targeted checks: they do **not** prove proper key generation, private-key possession,
 or full Edwards on-curve / prime-order subgroup membership. In particular, a `none` attestation
@@ -416,6 +420,23 @@ also available for direct callers and throws `CoseKeyLoadException` on failure. 
 imports raise `CoseKeyException`; registration reports reason `malformed_response` through the
 existing response parser. Loading previously stored Edwards keys with `CoseKey::fromBytes()`
 applies the same checks and can now reject such keys before signature verification.
+
+### Upgrade note for 1.0.0: audit stored credentials
+
+Before serving requests with 1.0.0, audit existing credential records with the new library:
+
+1. Load each stored COSE public key with `CoseKey::fromBytes()` (decode any storage-specific
+   base64 encoding first). This applies the new Edwards encoding and small-order checks.
+2. For each `CoseEc2Key`, also call `validatePublicPoint()`. `fromBytes()` alone does not detect
+   off-curve EC points that an older `none` registration could have saved.
+3. Handle `CoseKeyException` and `CoseKeyLoadException` in the audit. Revoke or remove credentials
+   that fail either check, and have affected users enroll replacements through your normal
+   authenticated account-recovery flow.
+
+Complete this cleanup before the upgrade. A `CoseKeyException` thrown while your `PasskeyStore`
+loads a rejected key is not converted to `VerificationException`. It can fail authentication
+and either options endpoint when they load that account's credentials, causing an HTTP 500 if
+the application does not handle it. The audit has the targeted validation limits described above.
 
 ## Development
 
