@@ -392,6 +392,35 @@ Signatures are verified through `ext-openssl` with the COSE algorithm identifier
 | `-8`   | `CoseAlgorithmIdentifier::EdDSA` | EdDSA (restricted to Ed25519 per WebAuthn [§5.8.5](https://www.w3.org/TR/webauthn-3/#sctn-alg-identifier)) |
 | `-53`  | `CoseAlgorithmIdentifier::Ed448` | EdDSA w/ Ed448, fully specified (RFC 9864) |
 
+### Credential key checks and limits
+
+Registration checks EC2 points with OpenSSL's native EC affine-point validation, so off-curve
+keys fail before registration can save them, including with `fmt: none`. Ed25519 and Ed448
+imports reject noncanonical encodings and the complete small-order point sets, for both x
+signs. The sets come from [libsodium's Ed25519 check](https://github.com/jedisct1/libsodium/blob/1.0.18/src/libsodium/crypto_core/ed25519/ref10/ed25519_ref10.c#L1022-L1075)
+and [Bouncy Castle's Ed448 encoding check](https://github.com/bcgit/bc-java/blob/r1rv80/core/src/main/java/org/bouncycastle/math/ec/rfc8032/Ed448.java#L179-L212).
+
+EC validation fails early: older versions could save an off-curve EC key with `fmt: none`, but
+OpenSSL would reject that key at each login. The registration check prevents saving such an
+unusable credential.
+
+The Edwards checks address a forgery risk: small-order keys can accept publicly constructible
+signatures without a private key. That risk requires enrollment of a degenerate key; existing
+correctly generated credentials remain valid. OpenSSL key loading alone does not reject weak
+Edwards keys.
+
+These are targeted checks: they do **not** prove proper key generation, private-key possession,
+or full Edwards on-curve / prime-order subgroup membership. In particular, a `none` attestation
+does not prove possession, and the Edwards checks do not reject every off-curve or mixed-order
+point. Signature verification still uses OpenSSL.
+
+Off-curve EC keys report `VerificationException` with reason `unusable_credential_key` during
+registration, as they already do during authentication. `CoseEc2Key::validatePublicPoint()` is
+also available for direct callers and throws `CoseKeyLoadException` on failure. Rejected Edwards
+imports raise `CoseKeyException`; registration reports reason `malformed_response` through the
+existing response parser. Loading previously stored Edwards keys with `CoseKey::fromBytes()`
+applies the same checks and can now reject such keys before signature verification.
+
 ## Development
 
 ```sh
