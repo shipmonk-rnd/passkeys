@@ -377,7 +377,7 @@ Below that sit the building blocks: the options models with `toJson()`
 (`PublicKeyCredentialCreationOptions` / `PublicKeyCredentialRequestOptions`), full response
 parsing (`PublicKeyCredential`, `AttestationObject`, `AuthenticatorData`, `CollectedClientData`),
 COSE key parsing and signature verification (`CoseKey::verify()`), and the primitives (CBOR
-decoding, DER encoding, canonical base64url, a strict JSON accessor).
+decoding, canonical base64url, a strict JSON accessor).
 
 ### Supported signature algorithms
 

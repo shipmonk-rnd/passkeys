@@ -89,7 +89,7 @@ final class FakeAuthenticatorTest extends PasskeysTestCase
 
         $second = $flow->authenticate($authenticator->authenticate($flow->authenticationOptions(self::ALICE)->toJson()));
         self::assertSame(2, $second->newSignCount);
-        self::assertSame(2, $passkey->signCount);
+        self::assertSame(2, $passkey->getSignCount());
     }
 
     /**
@@ -303,7 +303,7 @@ final class FakeAuthenticatorTest extends PasskeysTestCase
         ], JSON_THROW_ON_ERROR));
 
         self::assertStringContainsString(Base64::urlEncode($passkey->credentialId), $responseJson);
-        self::assertSame(1, $passkey->signCount);
+        self::assertSame(1, $passkey->getSignCount());
     }
 
     /**
@@ -336,7 +336,7 @@ final class FakeAuthenticatorTest extends PasskeysTestCase
             'rpId' => self::RP_ID,
         ], JSON_THROW_ON_ERROR));
 
-        self::assertSame(1, $passkey->signCount);
+        self::assertSame(1, $passkey->getSignCount());
     }
 
     #[DataProvider('provideMalformedOptions')]

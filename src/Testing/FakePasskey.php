@@ -29,9 +29,17 @@ final class FakePasskey
         public readonly string $userHandle,
         public readonly int $algorithm,
         public readonly OpenSSLAsymmetricKey $privateKey,
-        public private(set) int $signCount = 0,
+        private int $signCount = 0,
     )
     {
+    }
+
+    /**
+     * The current signature counter: 0 for a passkey that has not asserted yet, incremented by each assertion.
+     */
+    public function getSignCount(): int
+    {
+        return $this->signCount;
     }
 
     /**
