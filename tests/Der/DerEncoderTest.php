@@ -164,4 +164,25 @@ final class DerEncoderTest extends PasskeysTestCase
         yield 'smallest three-byte long form' => [65_536, '3083010000'];
     }
 
+    /**
+     * The Base64 body is wrapped at exactly 64 characters (RFC 7468 §2): 48 bytes fill one line,
+     * one more byte starts a second.
+     */
+    public function testToPem(): void
+    {
+        self::assertSame(
+            "-----BEGIN PUBLIC KEY-----\n"
+            . str_repeat('A', 64) . "\n"
+            . "-----END PUBLIC KEY-----\n",
+            DerEncoder::toPem('PUBLIC KEY', str_repeat("\x00", 48)),
+        );
+        self::assertSame(
+            "-----BEGIN PRIVATE KEY-----\n"
+            . str_repeat('A', 64) . "\n"
+            . "AA==\n"
+            . "-----END PRIVATE KEY-----\n",
+            DerEncoder::toPem('PRIVATE KEY', str_repeat("\x00", 49)),
+        );
+    }
+
 }

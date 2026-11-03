@@ -13,14 +13,13 @@ use ShipMonk\Passkeys\Cose\CoseKey;
 use ShipMonk\Passkeys\Cose\CoseOkpKey;
 use ShipMonk\Passkeys\Cose\CoseRsaKey;
 use ShipMonk\Passkeys\Credential\AuthenticatorData;
+use ShipMonk\Passkeys\Der\DerEncoder;
 use ShipMonk\Passkeys\Json\JsonObject;
 use ShipMonk\Passkeys\Json\JsonObjectException;
 use function array_map;
 use function array_reverse;
 use function base64_decode;
-use function base64_encode;
 use function chr;
-use function chunk_split;
 use function hash;
 use function in_array;
 use function is_array;
@@ -372,11 +371,7 @@ final class FakeAuthenticator
     private function generateEd25519KeyPair(int $algorithm): array
     {
         $seed = random_bytes(SODIUM_CRYPTO_SIGN_SEEDBYTES);
-        $key = openssl_pkey_get_private(
-            "-----BEGIN PRIVATE KEY-----\n"
-            . chunk_split(base64_encode(self::ED25519_PKCS8_PREFIX . $seed), 64, "\n")
-            . "-----END PRIVATE KEY-----\n",
-        );
+        $key = openssl_pkey_get_private(DerEncoder::toPem('PRIVATE KEY', self::ED25519_PKCS8_PREFIX . $seed));
 
         if ($key === false) {
             throw new LogicException('Failed to load an Ed25519 private key: ' . openssl_error_string());

@@ -47,7 +47,29 @@ final class CoseKeyTest extends CryptoTestCase
     }
 
     /**
-     * The key types verified with ext-openssl, i.e. those encoded as a SubjectPublicKeyInfo.
+     * Fixed vector (independent of the OpenSSL oracle, which cannot generate Ed25519 keys before
+     * PHP 8.4): the RFC 8032 §7.1 Test 1 public key must encode to the exact RFC 8410 §4 Ed25519
+     * SubjectPublicKeyInfo.
+     */
+    public function testEd25519SubjectPublicKeyInfoKnownAnswer(): void
+    {
+        $publicKey = self::bytesFromHex('d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a');
+
+        $coseKey = CoseKey::fromCborMap(self::cborMap([
+            1 => CoseOkpKey::KTY,
+            3 => CoseAlgorithmIdentifier::EdDSA,
+            -1 => CoseOkpKey::CRV_ED25519,
+            -2 => $publicKey,
+        ]));
+
+        self::assertSame(
+            '302a300506032b6570032100d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a',
+            bin2hex(self::derSubjectPublicKeyInfo($coseKey)),
+        );
+    }
+
+    /**
+     * The key types whose SubjectPublicKeyInfo OpenSSL can produce as an oracle on every PHP version.
      *
      * @return iterable<string, array{CoseAlgorithmIdentifier::*, class-string<CoseKey>}>
      */
