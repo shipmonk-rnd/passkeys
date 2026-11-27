@@ -4,7 +4,7 @@ namespace ShipMonk\Passkeys\Ceremony;
 
 use ShipMonk\Passkeys\Cbor\CborMapException;
 use ShipMonk\Passkeys\Cose\CoseKey;
-use ShipMonk\Passkeys\Cose\CoseKeyLoadException;
+use ShipMonk\Passkeys\Cose\CoseKeyException;
 use ShipMonk\Passkeys\Credential\AttestationObject;
 use ShipMonk\Passkeys\Credential\AuthenticatorAssertionResponse;
 use ShipMonk\Passkeys\Credential\AuthenticatorAttestationResponse;
@@ -70,7 +70,7 @@ final class RelyingParty
      * @param PublicKeyCredential<AuthenticatorAttestationResponse> $credential
      *
      * @throws VerificationException on any failed §7.1 check, if the response is malformed, or if
-     *     an existing credential's key cannot be loaded during the duplicate check
+     *     an existing credential's key cannot be imported during the duplicate check
      */
     public function verifyRegistration(
         PublicKeyCredential $credential,
@@ -88,7 +88,7 @@ final class RelyingParty
                 $e,
             );
 
-        } catch (CoseKeyLoadException $e) {
+        } catch (CoseKeyException $e) {
             throw new VerificationException(
                 VerificationException::UNUSABLE_CREDENTIAL_KEY,
                 'Stored credential key is unusable: ' . $e->getMessage(),
@@ -100,7 +100,7 @@ final class RelyingParty
     /**
      * @param PublicKeyCredential<AuthenticatorAttestationResponse> $credential
      *
-     * @throws CoseKeyLoadException
+     * @throws CoseKeyException
      * @throws MalformedDataException
      * @throws VerificationException
      */
@@ -286,7 +286,7 @@ final class RelyingParty
      * @param PublicKeyCredential<AuthenticatorAssertionResponse> $credential
      *
      * @throws VerificationException on any failed §7.2 check, if the response is malformed, or if
-     *     the stored credential key cannot be loaded by OpenSSL
+     *     the stored credential key cannot be imported
      */
     public function verifyAuthentication(
         PublicKeyCredential $credential,
@@ -304,7 +304,7 @@ final class RelyingParty
                 $e,
             );
 
-        } catch (CoseKeyLoadException $e) {
+        } catch (CoseKeyException $e) {
             // A stored key the verifier cannot use is a stored-data fault; surfaced as a distinct
             // reason so it stays distinguishable from a genuine signature mismatch.
             throw new VerificationException(
@@ -318,7 +318,7 @@ final class RelyingParty
     /**
      * @param PublicKeyCredential<AuthenticatorAssertionResponse> $credential
      *
-     * @throws CoseKeyLoadException
+     * @throws CoseKeyException
      * @throws MalformedDataException
      * @throws VerificationException
      */

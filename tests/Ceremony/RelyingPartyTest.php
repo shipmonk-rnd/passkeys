@@ -485,14 +485,19 @@ final class RelyingPartyTest extends CryptoTestCase
         }
     }
 
-    public function testRegistrationRejectsUnusableStoredKeyDuringDuplicateCheck(): void
+    #[DataProvider('provideUnusableStoredKeys')]
+    public function testRegistrationRejectsUnusableStoredKeyDuringDuplicateCheck(
+        string $keyBytes,
+        string $message,
+    ): void
     {
         $credential = self::registrationCredential($this->coseEntries);
+        $store = self::storeWithUnusableKey($keyBytes);
 
         $this->assertVerificationFailure(
             VerificationException::UNUSABLE_CREDENTIAL_KEY,
-            static fn () => (new RelyingParty())->verifyRegistration($credential, self::registrationExpectations(), self::storeWithUnusableKey()),
-            'Stored credential key is unusable: %s',
+            static fn () => (new RelyingParty())->verifyRegistration($credential, self::registrationExpectations(), $store),
+            'Stored credential key is unusable: ' . $message,
         );
     }
 
@@ -772,14 +777,37 @@ final class RelyingPartyTest extends CryptoTestCase
         );
     }
 
-    public function testAuthenticationRejectsUnusableStoredKey(): void
+    #[DataProvider('provideUnusableStoredKeys')]
+    public function testAuthenticationRejectsUnusableStoredKey(
+        string $keyBytes,
+        string $message,
+    ): void
     {
         $this->assertAuthenticationFails(
             VerificationException::UNUSABLE_CREDENTIAL_KEY,
             self::authenticationCredential($this->privateKey, CoseAlgorithmIdentifier::ES256),
-            self::storeWithUnusableKey(),
-            'Stored credential key is unusable: %s',
+            self::storeWithUnusableKey($keyBytes),
+            'Stored credential key is unusable: ' . $message,
         );
+    }
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function provideUnusableStoredKeys(): iterable
+    {
+        yield 'off-curve EC2 point' => [
+            CborTestEncoder::intMap([
+                1 => 2,
+                3 => CoseAlgorithmIdentifier::ES256,
+                -1 => 1,
+                -2 => str_repeat("\x00", 32),
+                -3 => str_repeat("\x00", 32),
+            ]),
+            'Failed to load public key for COSE algorithm -7: error:%a',
+        ];
+        yield 'unsupported key type' => [CborTestEncoder::intMap([1 => 0]), 'Unsupported COSE key type 0'];
+        yield 'malformed CBOR' => ["\xff", 'Malformed COSE key'];
     }
 
     public function testAuthenticationFlagsPossibleCloneOnEqualNonZeroCounter(): void
@@ -1138,18 +1166,9 @@ final class RelyingPartyTest extends CryptoTestCase
         return $store;
     }
 
-    private static function storeWithUnusableKey(): CredentialStore
+    private static function storeWithUnusableKey(string $keyBytes): CredentialStore
     {
-        // Older versions could store off-curve EC2 points. OpenSSL now rejects them at lookup.
-        $bytes = CborTestEncoder::intMap([
-            1 => 2,
-            3 => CoseAlgorithmIdentifier::ES256,
-            -1 => 1,
-            -2 => str_repeat("\x00", 32),
-            -3 => str_repeat("\x00", 32),
-        ]);
-
-        return new class ($bytes, self::USER_HANDLE) implements CredentialStore {
+        return new class ($keyBytes, self::USER_HANDLE) implements CredentialStore {
 
             public function __construct(
                 private readonly string $keyBytes,

@@ -10,7 +10,7 @@ use ShipMonk\Passkeys\Ceremony\RegistrationExpectations;
 use ShipMonk\Passkeys\Ceremony\RelyingParty;
 use ShipMonk\Passkeys\Ceremony\VerificationException;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
-use ShipMonk\Passkeys\Cose\CoseKeyLoadException;
+use ShipMonk\Passkeys\Cose\CoseKeyException;
 use ShipMonk\Passkeys\Credential\MalformedDataException;
 use ShipMonk\Passkeys\Credential\PublicKeyCredential;
 use ShipMonk\Passkeys\Enum\AuthenticatorTransport;
@@ -108,7 +108,7 @@ class PasskeyFlow
      *     for a blank field. Normalize it the way your accounts store it (trim it, lower-case an
      *     email) first.
      *
-     * @throws CoseKeyLoadException if OpenSSL rejects a stored public key during import
+     * @throws CoseKeyException if a stored public key cannot be imported
      */
     public function authenticationOptions(?string $username = null): PublicKeyCredentialRequestOptions
     {
@@ -160,7 +160,7 @@ class PasskeyFlow
      *
      * @param string $responseJson raw request body containing the authentication response JSON
      *
-     * @throws CoseKeyLoadException if OpenSSL rejects a stored public key while loading the allow-list
+     * @throws CoseKeyException if a stored public key cannot be imported while loading the allow-list
      * @throws VerificationException
      */
     public function authenticate(string $responseJson): AuthenticationResult
@@ -239,7 +239,7 @@ class PasskeyFlow
      * @param string|null $displayName          a friendlier account label ("Alice Doe"), defaulting to the username
      * @param bool        $conditionalMediation whether the options are for a `mediation: "conditional"` creation
      *
-     * @throws CoseKeyLoadException if OpenSSL rejects a stored public key during import
+     * @throws CoseKeyException if a stored public key cannot be imported
      */
     public function registrationOptions(
         string $userHandle,
@@ -398,7 +398,7 @@ class PasskeyFlow
      *
      * @param string $userHandle raw user handle bytes
      *
-     * @throws CoseKeyLoadException if OpenSSL rejects a stored public key during import
+     * @throws CoseKeyException if a stored public key cannot be imported
      */
     public function allAcceptedCredentialsSignal(string $userHandle): AllAcceptedCredentialsSignal
     {
@@ -441,7 +441,7 @@ class PasskeyFlow
      * @param string $userHandle raw user handle bytes
      * @return list<PublicKeyCredentialDescriptor>|null
      *
-     * @throws CoseKeyLoadException
+     * @throws CoseKeyException
      */
     private function credentialDescriptorsFor(string $userHandle): ?array
     {

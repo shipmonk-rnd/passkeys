@@ -74,7 +74,7 @@ final readonly class CoseRsaKey extends CoseKey
      * @param string                     $n   modulus as minimal big-endian bytes (no leading zeros)
      * @param string                     $e   public exponent as minimal big-endian bytes (no leading zeros)
      *
-     * @throws CoseKeyLoadException
+     * @throws CoseKeyException
      */
     private function __construct(
         int $alg,
@@ -88,7 +88,6 @@ final readonly class CoseRsaKey extends CoseKey
     /**
      * @throws CborMapException
      * @throws CoseKeyException
-     * @throws CoseKeyLoadException
      */
     public static function fromCborMap(CborMap $map): self
     {

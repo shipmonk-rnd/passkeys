@@ -7,7 +7,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
 use ShipMonk\Passkeys\Cose\CoseEc2Key;
 use ShipMonk\Passkeys\Cose\CoseKey;
-use ShipMonk\Passkeys\Cose\CoseKeyLoadException;
+use ShipMonk\Passkeys\Cose\CoseKeyException;
 use ShipMonk\Passkeys\Cose\CoseOkpKey;
 use ShipMonk\Passkeys\Cose\CoseRsaKey;
 use ShipMonk\PasskeysTests\CryptoTestCase;
@@ -21,7 +21,7 @@ use const OPENSSL_ALGO_SHA256;
 #[CoversClass(CoseEc2Key::class)]
 #[CoversClass(CoseOkpKey::class)]
 #[CoversClass(CoseRsaKey::class)]
-#[CoversClass(CoseKeyLoadException::class)]
+#[CoversClass(CoseKeyException::class)]
 final class CoseKeyVerifyTest extends CryptoTestCase
 {
 
@@ -80,7 +80,7 @@ final class CoseKeyVerifyTest extends CryptoTestCase
     public function testConstructionThrowsWhenPublicKeyCannotBeLoaded(): void
     {
         self::assertException(
-            CoseKeyLoadException::class,
+            CoseKeyException::class,
             'Failed to load public key for COSE algorithm -7',
             self::unloadableKey(...),
         );
@@ -93,7 +93,7 @@ final class CoseKeyVerifyTest extends CryptoTestCase
     public function testReportsTheOpenSslErrorsBehindALoadFailure(): void
     {
         self::assertException(
-            CoseKeyLoadException::class,
+            CoseKeyException::class,
             'Failed to load public key for COSE algorithm -7: error:%a',
             static fn () => self::unloadableKey(logOpenSslError: true),
         );
@@ -109,7 +109,7 @@ final class CoseKeyVerifyTest extends CryptoTestCase
         self::assertFalse(openssl_pkey_get_public('not a key at all'));
 
         self::assertException(
-            CoseKeyLoadException::class,
+            CoseKeyException::class,
             'Failed to load public key for COSE algorithm -7',
             self::unloadableKey(...),
         );

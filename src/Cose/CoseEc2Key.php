@@ -76,7 +76,7 @@ final readonly class CoseEc2Key extends CoseKey
      * @param string                   $y   raw y-coordinate bytes (fixed length for the curve)
      *
      * @see https://github.com/openssl/openssl/blob/openssl-3.0.18/crypto/ec/ec_lib.c#L861-L881
-     * @throws CoseKeyLoadException if OpenSSL rejects the public point
+     * @throws CoseKeyException if OpenSSL rejects the public point
      */
     private function __construct(
         int $alg,
@@ -98,7 +98,6 @@ final readonly class CoseEc2Key extends CoseKey
     /**
      * @throws CborMapException
      * @throws CoseKeyException
-     * @throws CoseKeyLoadException
      */
     public static function fromCborMap(CborMap $map): self
     {

@@ -104,7 +104,7 @@ final readonly class CoseOkpKey extends CoseKey
      * @param self::CRV_*              $crv
      * @param string                   $x   raw public key bytes (fixed length for the curve)
      *
-     * @throws CoseKeyLoadException
+     * @throws CoseKeyException
      */
     private function __construct(
         int $alg,
@@ -122,7 +122,6 @@ final readonly class CoseOkpKey extends CoseKey
     /**
      * @throws CborMapException
      * @throws CoseKeyException
-     * @throws CoseKeyLoadException
      */
     public static function fromCborMap(CborMap $map): self
     {

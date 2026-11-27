@@ -8,7 +8,6 @@ use ShipMonk\Passkeys\Cbor\CborMap;
 use ShipMonk\Passkeys\Cbor\CborMapException;
 use ShipMonk\Passkeys\Cbor\InvalidCborException;
 use ShipMonk\Passkeys\Cose\CoseKeyException;
-use ShipMonk\Passkeys\Cose\CoseKeyLoadException;
 
 /**
  * @api
@@ -64,7 +63,7 @@ final readonly class AuthenticatorData
                 );
             });
 
-        } catch (BytesReaderException | CborMapException | CoseKeyException | CoseKeyLoadException | InvalidCborException $e) {
+        } catch (BytesReaderException | CborMapException | CoseKeyException | InvalidCborException $e) {
             throw new MalformedDataException('Malformed authenticator data', $e);
         }
     }

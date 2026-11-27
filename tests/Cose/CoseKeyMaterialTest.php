@@ -8,7 +8,6 @@ use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
 use ShipMonk\Passkeys\Cose\CoseEc2Key;
 use ShipMonk\Passkeys\Cose\CoseKey;
 use ShipMonk\Passkeys\Cose\CoseKeyException;
-use ShipMonk\Passkeys\Cose\CoseKeyLoadException;
 use ShipMonk\Passkeys\Cose\CoseOkpKey;
 use ShipMonk\PasskeysTests\Cbor\CborTestEncoder;
 use ShipMonk\PasskeysTests\CryptoTestCase;
@@ -54,8 +53,8 @@ final class CoseKeyMaterialTest extends CryptoTestCase
         array $entries,
     ): void
     {
-        self::assertException(CoseKeyLoadException::class, $message, static fn () => CoseKey::fromCborMap(self::cborMap($entries)));
-        self::assertException(CoseKeyLoadException::class, $message, static fn () => CoseKey::fromBytes(CborTestEncoder::intMap($entries)));
+        self::assertException(CoseKeyException::class, $message, static fn () => CoseKey::fromCborMap(self::cborMap($entries)));
+        self::assertException(CoseKeyException::class, $message, static fn () => CoseKey::fromBytes(CborTestEncoder::intMap($entries)));
         self::assertFalse(openssl_error_string());
     }
 
@@ -88,7 +87,7 @@ final class CoseKeyMaterialTest extends CryptoTestCase
             CoseEc2Key::fromCborMap($map);
             self::fail('Expected an invalid public point');
 
-        } catch (CoseKeyLoadException $e) {
+        } catch (CoseKeyException $e) {
             $message = $e->getMessage();
         }
 
@@ -98,7 +97,7 @@ final class CoseKeyMaterialTest extends CryptoTestCase
             CoseEc2Key::fromCborMap($map);
             self::fail('Expected an invalid public point');
 
-        } catch (CoseKeyLoadException $e) {
+        } catch (CoseKeyException $e) {
             self::assertSame($message, $e->getMessage());
         }
 

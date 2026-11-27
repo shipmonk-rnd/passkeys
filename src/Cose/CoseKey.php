@@ -41,7 +41,7 @@ abstract readonly class CoseKey
      * @param callable(): (OpenSSLAsymmetricKey|false) $loadOpenSslPublicKey
      *
      * @param-immediately-invoked-callable $loadOpenSslPublicKey
-     * @throws CoseKeyLoadException if OpenSSL rejects the key material
+     * @throws CoseKeyException if OpenSSL rejects the key material
      */
     protected function __construct(
         public int $alg,
@@ -53,7 +53,7 @@ abstract readonly class CoseKey
 
         if ($publicKey === false) {
             $errors = self::getOpenSslErrors();
-            throw new CoseKeyLoadException("Failed to load public key for COSE algorithm {$alg}" . ($errors === '' ? '' : ": {$errors}"));
+            throw new CoseKeyException("Failed to load public key for COSE algorithm {$alg}" . ($errors === '' ? '' : ": {$errors}"));
         }
 
         // OpenSSL can leave errors queued even after a successful import.
@@ -64,7 +64,6 @@ abstract readonly class CoseKey
     /**
      * @throws CborMapException
      * @throws CoseKeyException
-     * @throws CoseKeyLoadException
      */
     public static function fromCborMap(CborMap $map): CoseKey
     {
@@ -83,7 +82,6 @@ abstract readonly class CoseKey
      * credential's public key. The inverse of {@see self::toBytes()}.
      *
      * @throws CoseKeyException on malformed input or rejected key material
-     * @throws CoseKeyLoadException if OpenSSL rejects the key material
      */
     public static function fromBytes(string $bytes): CoseKey
     {

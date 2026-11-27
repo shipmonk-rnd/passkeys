@@ -9,7 +9,6 @@ use ShipMonk\Passkeys\Cbor\CborMapException;
 use ShipMonk\Passkeys\Cbor\InvalidCborException;
 use ShipMonk\Passkeys\Cose\CoseKey;
 use ShipMonk\Passkeys\Cose\CoseKeyException;
-use ShipMonk\Passkeys\Cose\CoseKeyLoadException;
 
 /**
  * @api
@@ -33,7 +32,6 @@ final readonly class AttestedCredentialData
      * @throws BytesReaderException
      * @throws CborMapException
      * @throws CoseKeyException
-     * @throws CoseKeyLoadException
      * @throws InvalidCborException
      */
     public static function fromBytesReader(BytesReader $bytesReader): AttestedCredentialData

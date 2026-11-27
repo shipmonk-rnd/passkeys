@@ -13,7 +13,6 @@ use ShipMonk\Passkeys\Ceremony\VerificationException;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
 use ShipMonk\Passkeys\Cose\CoseKey;
 use ShipMonk\Passkeys\Cose\CoseKeyException;
-use ShipMonk\Passkeys\Cose\CoseKeyLoadException;
 use ShipMonk\Passkeys\Credential\AuthenticatorData;
 use ShipMonk\Passkeys\Credential\MalformedDataException;
 use ShipMonk\Passkeys\Enum\AuthenticatorAttachment;
@@ -684,7 +683,7 @@ final class PasskeyFlowTest extends CryptoTestCase
             $malformedData = $e->getPrevious();
             self::assertInstanceOf(MalformedDataException::class, $malformedData);
             $cause = $malformedData->getPrevious();
-            self::assertInstanceOf(CoseKeyLoadException::class, $cause);
+            self::assertInstanceOf(CoseKeyException::class, $cause);
             self::assertStringMatchesFormat($message, $cause->getMessage());
         }
 
