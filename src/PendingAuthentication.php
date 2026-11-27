@@ -5,8 +5,7 @@ namespace ShipMonk\Passkeys;
 /**
  * The server-side state of one authentication ceremony started by
  * {@see PasskeyFlow::authenticationOptions()} and finished by {@see PasskeyFlow::authenticate()}:
- * the issued challenge and — when the user identified themselves first (two-step login) — the
- * user handle the assertion must belong to.
+ * the issued challenge and, when pinned to an account, the user handle the assertion must match.
  *
  * The flow keys pending ceremonies by their challenge, so several may exist at once per browser
  * session.

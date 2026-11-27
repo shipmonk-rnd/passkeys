@@ -10,10 +10,9 @@ A from-scratch, spec-compliant [WebAuthn Level 3](https://www.w3.org/TR/webauthn
 
 The intended entry point is the high-level **`ShipMonk\Passkeys\PasskeyFlow`**: construct it with
 your relying party identity and two small storage interfaces, wire its four methods to four HTTP
-endpoints, and you have passkey registration and login — usernameless, two-step by email, and
-conditional-mediation (autofill), all at once. Everything beneath it (the `RelyingParty` ceremony
-engine, response parsing, COSE/CBOR primitives) is public but considered
-[low-level API](#low-level-api).
+endpoints, and you have passkey registration and discoverable sign-in, including autofill.
+Everything beneath it (the `RelyingParty` ceremony engine, response parsing, COSE/CBOR primitives)
+is public but considered [low-level API](#low-level-api).
 
 ## Requirements
 
@@ -103,29 +102,14 @@ the user.
 
 ### Authentication
 
-One pair of endpoints covers all three ways passkey login is offered — usually together, on the
-same page:
-
-- a dedicated **"sign in with a passkey" button** and **conditional-mediation autofill**: call
-  `authenticationOptions(null)` — no username is known, a discoverable credential identifies the
-  user via its user handle;
-- a **two-step login form** (email first): pass the entered username. If the account is known, the
-  ceremony is pinned to it — an assertion by any other user's credential is rejected. An unknown
-  username pins the ceremony too, to a fresh handle that belongs to no account, and by default
-  gets the usernameless empty `allowCredentials` — so a non-existent account and one without
-  passkeys look and fail alike. A *known* account with passkeys still stands out through its
-  non-empty `allowCredentials`; override `getEnumerationHardeningSecret()` to close that leak too,
-  so every username returns the same response shape (see
-  [Username-enumeration hardening](#username-enumeration-hardening)).
-
-In the two-step form, normalize the entered username the way your accounts store it (trim it,
-lower-case an email) before you pass it in, and pass `null` for a blank field. A username that
-matches no account — a typo included — gets a ceremony that every passkey fails, so after a failed
-sign-in, offer the usernameless "sign in with a passkey" button.
+For public sign-in, call `authenticationOptions()` for both the passkey button and
+conditional-mediation autofill. The options omit `allowCredentials`, and the discoverable passkey
+identifies the account. Registration requires discoverable credentials by default. If an email-first
+form requires a match, check the entered email against the verified account before signing the user in.
 
 ```php
 // POST /login/options
-$options = $flow->authenticationOptions($emailOrNull);
+$options = $flow->authenticationOptions();
 echo $options->toJson();   // hand to navigator.credentials.get() on the client
 
 // POST /login/verify
@@ -137,7 +121,7 @@ try {
     }
 } catch (VerificationException $e) {
     // malformed input, an expired/replayed challenge, a failed check — all end up here.
-    // Log $e->reason, but answer every failure with the same generic error (see below).
+    // Log $e->reason, but answer every failure with the same generic error.
 }
 ```
 
@@ -157,9 +141,8 @@ The flow owns no state; you implement two small interfaces:
   [Signal API](#keeping-credential-providers-in-sync-signal-api)), plus the two writes
   `saveCredential()` and `updateCredential()`. Typically a thin repository over the same database
   that holds your users. `findCredentialsByUserHandle()` must return an empty list — never throw —
-  for a handle that belongs to no account: the two-step flow looks up a fresh `generateUserHandle()`
-  value for an unknown username. If your handles have a fixed format (e.g. UUIDs), override
-  `generateUserHandle()` to return that format.
+  for a handle that belongs to no account, including the fresh `generateUserHandle()` value used for
+  an unknown username. If your handles have a fixed format, override `generateUserHandle()` to match it.
 - **`ShipMonk\Passkeys\PendingCeremonyStore`** — the transient side: ceremonies started but not
   yet finished, keyed by challenge. Implement it on something browser-session-scoped (the PHP
   session, a short-TTL cache), never on durable storage. Its consume-on-read semantics make each
@@ -175,51 +158,16 @@ To change any of them, subclass `PasskeyFlow` and override the corresponding pro
 
 #### Username-enumeration hardening
 
-In the two-step flow, an account with passkeys returns a non-empty `allowCredentials` while a
-non-existent one (or an account without passkeys) returns none — so a probing attacker can tell,
-from the shape of `/login/options`, which usernames have passkeys (WebAuthn
-[§14.6.2](https://www.w3.org/TR/webauthn-3/#sctn-username-enumeration)). Override
-`getEnumerationHardeningSecret()` to return a fixed, high-entropy secret (≥16 bytes, the same on
-every request, kept out of source control) and those responses instead carry a **stable, plausible
-fabricated descriptor** derived from the username — indistinguishable from a real one, so the
-distinction disappears:
+Passing a username to `authenticationOptions()` pins the ceremony to that account and exposes its
+credential IDs in `allowCredentials`. Reserve it for compatibility with non-discoverable credentials
+or signed-in reauthentication. For reauthentication, get the username from the authenticated
+session and bind the challenge to that account and purpose in your application.
 
-```php
-final class MyFlow extends PasskeyFlow
-{
-    protected function getEnumerationHardeningSecret(): ?string
-    {
-        return $this->appSecrets->passkeyEnumerationKey();  // fixed 32 random bytes from config
-    }
-}
-```
-
-The decoy only shapes the options response; verification is untouched. A ceremony for a
-non-existent account is pinned to a handle that belongs to no account, so it fails exactly like one
-for an account without passkeys — even when an attacker answers it with a valid passkey of their
-own account. It equalizes the response, not every side channel — the per-account response
-*timing* and the credential *count* can still differ slightly; override
-`fabricateAllowCredentials()` if you need to narrow those too.
-
-**Answer every failed sign-in with the same generic error.** The `VerificationException` reason
-and message tell the cases apart: a forged signature over a real credential fails with
-`invalid_signature`, the decoy id with `unknown_credential`, and a passkey of another account with
-`credential_not_allowed` or `user_handle_mismatch`, depending on the account. Sending them back
-from `/login/verify` undoes the hardening — §14.6.2 asks that a failure because "the signature is
-invalid" looks the same as one because "no such user or credential is registered". Log them
-instead (the message contains client-supplied values such as the origin, so keep it out of the log
-line itself):
-
-```php
-} catch (VerificationException $e) {
-    $logger->info('Passkey sign-in failed: {reason}', ['reason' => $e->reason, 'message' => $e->getMessage()]);
-    http_response_code(400);
-    echo json_encode(['message' => 'Sign-in failed']);
-}
-```
-
-The one exception is the [Signal API](#keeping-credential-providers-in-sync-signal-api)'s
-unknown-credential hint, and only while the hardening is off.
+If you need a username on a public endpoint, override `getEnumerationHardeningSecret()` with a
+fixed, high-entropy secret (at least 16 bytes, shared across instances). This supplies a stable
+decoy for usernames with no passkeys, masking the empty-vs-nonempty difference
+([WebAuthn §14.6.2](https://www.w3.org/TR/webauthn-3/#sctn-username-enumeration)). Real credential
+IDs, counts, transports, and response timing can still leak information.
 
 ### Keeping credential providers in sync (Signal API)
 
@@ -248,9 +196,9 @@ await PublicKeyCredential.signalCurrentUserDetails(details);
 must stay authoritative: a provider hides any of its passkeys you leave out, so never build the
 list from a filtered subset.
 
-The third signal, `signalUnknownCredential()`, needs no server-built payload — the browser already
-holds the credential id it just tried and your RP ID. When `authenticate()` rejects a login with
-`VerificationException::UNKNOWN_CREDENTIAL`, tell the page, and let it prune that one credential:
+The third signal, `signalUnknownCredential()`, can prune a single credential when
+`authenticate()` rejects it with `VerificationException::UNKNOWN_CREDENTIAL`. The browser already
+has the credential ID and RP ID:
 
 ```js
 if (loginFailedAsUnknownCredential) {
@@ -258,12 +206,8 @@ if (loginFailedAsUnknownCredential) {
 }
 ```
 
-Telling the page *why* a sign-in failed breaks the generic-error rule of
-[username-enumeration hardening](#username-enumeration-hardening): with
-`getEnumerationHardeningSecret()` set, an attacker could replay a listed credential id and learn
-from the hint whether it is fabricated. So send this hint only while the hardening is off. With it
-on, rely on `signalAllAcceptedCredentials()` after each successful sign-in, which prunes stale
-passkeys too.
+For public sign-in, keep failures generic and use `signalAllAcceptedCredentials()` after success.
+An unknown-credential hint can reveal whether a credential ID is registered.
 
 ## Examples
 
