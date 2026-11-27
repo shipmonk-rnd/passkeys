@@ -16,8 +16,8 @@ is public but considered [low-level API](#low-level-api).
 
 ## Requirements
 
-- PHP **8.4+** (Ed25519/Ed448 support in `ext-openssl` requires OpenSSL 3.0 / PHP 8.4)
-- `ext-openssl`
+- **64-bit PHP 8.4+**
+- `ext-openssl` built with **OpenSSL 3.0+** for Ed25519 and Ed448 support
 
 ## Installation
 

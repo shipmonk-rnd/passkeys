@@ -12,7 +12,9 @@
     ],
     "require": {
         "php": ">=8.4",
-        "ext-openssl": "*"
+        "php-64bit": "*",
+        "ext-openssl": "*",
+        "lib-openssl": ">=3.0"
     },
     "require-dev": {
         "ext-pdo": "*",
