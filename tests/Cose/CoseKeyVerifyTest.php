@@ -203,4 +203,31 @@ final class CoseKeyVerifyTest extends CryptoTestCase
         self::assertFalse($coseKey->verify('', $tampered));
     }
 
+    /**
+     * RFC 8032 §7.4, Blank: the sign bit is set in this public key. The encoding check must
+     * ignore that bit when comparing y, but preserve it for signature verification.
+     */
+    public function testVerifiesEd448KnownAnswerVector(): void
+    {
+        $publicKey = self::bytesFromHex(
+            '5fd7449b59b461fd2ce787ec616ad46a1da1342485a70e1f8a0ea75d80e96778'
+            . 'edf124769b46c7061bd6783df1e50f6cd1fa1abeafe8256180',
+        );
+        $signature = self::bytesFromHex(
+            '533a37f6bbe457251f023c0d88f976ae2dfb504a843e34d2074fd823d41a591f'
+            . '2b233f034f628281f2fd7a22ddd47d7828c59bd0a21bfd3980ff0d2028d4b18a'
+            . '9df63e006c5d1c2d345b925d8dc00b4104852db99ac5c7cdda8530a113a0f4db'
+            . 'b61149f05a7363268c71d95808ff2e652600',
+        );
+        $coseKey = CoseKey::fromCborMap(self::cborMap([
+            1 => CoseOkpKey::KTY,
+            3 => CoseAlgorithmIdentifier::Ed448,
+            -1 => CoseOkpKey::CRV_ED448,
+            -2 => $publicKey,
+        ]));
+
+        self::assertTrue($coseKey->verify('', $signature));
+        self::assertFalse($coseKey->verify('different message', $signature));
+    }
+
 }
