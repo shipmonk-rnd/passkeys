@@ -13,13 +13,13 @@ use function strlen;
  *
  * @api
  */
-final class AuthenticationExpectations
+final readonly class AuthenticationExpectations
 {
 
     /**
      * WebAuthn §13.4.3 recommends challenges carry at least 16 bytes of entropy.
      */
-    private const MIN_CHALLENGE_LENGTH = 16;
+    private const int MIN_CHALLENGE_LENGTH = 16;
 
     /**
      * @param string            $rpId                    the RP ID whose SHA-256 must equal `authData.rpIdHash`
@@ -34,14 +34,14 @@ final class AuthenticationExpectations
      * @throws InvalidArgumentException if the challenge is shorter than 16 bytes
      */
     public function __construct(
-        public readonly string $challenge,
-        public readonly string $rpId,
-        public readonly array $origins,
-        public readonly ?array $allowedCredentialIds = null,
-        public readonly bool $requireUserVerification = false,
-        public readonly bool $allowCrossOrigin = false,
-        public readonly array $allowedTopOrigins = [],
-        public readonly ?string $expectedUserHandle = null,
+        public string $challenge,
+        public string $rpId,
+        public array $origins,
+        public ?array $allowedCredentialIds = null,
+        public bool $requireUserVerification = false,
+        public bool $allowCrossOrigin = false,
+        public array $allowedTopOrigins = [],
+        public ?string $expectedUserHandle = null,
     )
     {
         if (strlen($challenge) < self::MIN_CHALLENGE_LENGTH) {

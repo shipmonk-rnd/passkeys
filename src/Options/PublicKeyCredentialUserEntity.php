@@ -12,13 +12,13 @@ use function strlen;
  * @see https://www.w3.org/TR/webauthn-3/#dictdef-publickeycredentialuserentityjson
  * @api
  */
-final class PublicKeyCredentialUserEntity extends PublicKeyCredentialEntity implements JsonSerializable
+final readonly class PublicKeyCredentialUserEntity extends PublicKeyCredentialEntity implements JsonSerializable
 {
 
     /**
      * The {@link https://www.w3.org/TR/webauthn-3/#user-handle user handle} must be 1 to 64 bytes.
      */
-    public const MAX_ID_LENGTH = 64;
+    public const int MAX_ID_LENGTH = 64;
 
     /**
      * @param string $id raw user handle bytes — an opaque identifier, not an email or username
@@ -26,9 +26,9 @@ final class PublicKeyCredentialUserEntity extends PublicKeyCredentialEntity impl
      * @throws InvalidArgumentException if the id is empty or longer than 64 bytes
      */
     public function __construct(
-        public readonly string $id,
+        public string $id,
         string $name,
-        public readonly string $displayName,
+        public string $displayName,
     )
     {
         if ($id === '' || strlen($id) > self::MAX_ID_LENGTH) {

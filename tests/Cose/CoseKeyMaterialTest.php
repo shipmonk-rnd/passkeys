@@ -11,6 +11,7 @@ use ShipMonk\Passkeys\Cose\CoseKeyException;
 use ShipMonk\Passkeys\Cose\CoseOkpKey;
 use ShipMonk\PasskeysTests\Cbor\CborTestEncoder;
 use ShipMonk\PasskeysTests\CryptoTestCase;
+use function bin2hex;
 use function chr;
 use function openssl_error_string;
 use function openssl_pkey_get_public;
@@ -25,8 +26,8 @@ final class CoseKeyMaterialTest extends CryptoTestCase
 {
 
     // P-256 generator coordinates from SEC 2 v2 §2.4.2.
-    private const P256_BASE_POINT_X = '6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296';
-    private const P256_BASE_POINT_Y = '4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5';
+    private const string P256_BASE_POINT_X = '6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296';
+    private const string P256_BASE_POINT_Y = '4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5';
 
     /**
      * Both enrollment's map import and stored-key deserialization must reject these keys.
@@ -144,7 +145,8 @@ final class CoseKeyMaterialTest extends CryptoTestCase
     }
 
     /**
-     * Ed25519 vectors: libsodium 1.0.18 ge25519_has_small_order.
+     * Ed25519 vectors: libsodium 1.0.18 ge25519_has_small_order. Ed448 vectors:
+     * Bouncy Castle r1rv80 Ed448.checkPointFullVar (y = 0, 1, p - 1).
      * Each vector is tested with both sign bits, including the invalid negative-zero encodings.
      *
      * @return iterable<string, array{string, array<int, int|string>}>
@@ -152,31 +154,50 @@ final class CoseKeyMaterialTest extends CryptoTestCase
     public static function provideRejectedKeyMaterial(): iterable
     {
         $smallOrder = [
-            str_repeat('00', 32),
-            '01' . str_repeat('00', 31),
-            '26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05',
-            'c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a',
-            'ec' . str_repeat('ff', 30) . '7f',
+            CoseOkpKey::CRV_ED25519 => [
+                str_repeat('00', 32),
+                '01' . str_repeat('00', 31),
+                '26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05',
+                'c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a',
+                'ec' . str_repeat('ff', 30) . '7f',
+            ],
+            CoseOkpKey::CRV_ED448 => [
+                str_repeat('00', 57),
+                '01' . str_repeat('00', 56),
+                'fe' . str_repeat('ff', 27) . 'fe' . str_repeat('ff', 27) . '00',
+            ],
         ];
 
         $noncanonical = [
-            'ed' . str_repeat('ff', 30) . '7f', // p, an alias for y = 0
-            'ee' . str_repeat('ff', 30) . '7f', // p + 1, an alias for the identity
-            str_repeat('ff', 31) . '7f',
+            CoseOkpKey::CRV_ED25519 => [
+                'ed' . str_repeat('ff', 30) . '7f', // p, an alias for y = 0
+                'ee' . str_repeat('ff', 30) . '7f', // p + 1, an alias for the identity
+                str_repeat('ff', 31) . '7f',
+            ],
+            CoseOkpKey::CRV_ED448 => [
+                str_repeat('ff', 28) . 'fe' . str_repeat('ff', 27) . '00', // p
+                str_repeat('00', 28) . str_repeat('ff', 28) . '00', // p + 1
+                str_repeat('ff', 56) . '00',
+            ],
         ];
 
-        $crv = CoseOkpKey::CRV_ED25519;
+        // RFC 8032 §5.2.3: all seven unused bits must be zero, independently of the x sign.
+        for ($bit = 0; $bit < 7; $bit++) {
+            $noncanonical[CoseOkpKey::CRV_ED448][] = str_repeat('00', 56) . bin2hex(chr(1 << $bit));
+        }
 
-        foreach (['small-order public key' => $smallOrder, 'noncanonical public key encoding' => $noncanonical] as $reason => $vectors) {
-            foreach ($vectors as $index => $hex) {
-                foreach ([0, 0x80] as $sign) {
-                    $key = self::bytesFromHex($hex);
-                    $key[strlen($key) - 1] = chr(ord($key[strlen($key) - 1]) | $sign);
+        foreach ([CoseOkpKey::CRV_ED25519 => CoseAlgorithmIdentifier::EdDSA, CoseOkpKey::CRV_ED448 => CoseAlgorithmIdentifier::Ed448] as $crv => $alg) {
+            foreach (['small-order public key' => $smallOrder[$crv], 'noncanonical public key encoding' => $noncanonical[$crv]] as $reason => $vectors) {
+                foreach ($vectors as $index => $hex) {
+                    foreach ([0, 0x80] as $sign) {
+                        $key = self::bytesFromHex($hex);
+                        $key[strlen($key) - 1] = chr(ord($key[strlen($key) - 1]) | $sign);
 
-                    yield "OKP {$crv}, {$reason}, vector {$index}, sign {$sign}" => [
-                        "OKP curve {$crv} has {$reason}",
-                        [1 => CoseOkpKey::KTY, 3 => CoseAlgorithmIdentifier::EdDSA, -1 => $crv, -2 => $key],
-                    ];
+                        yield "OKP {$crv}, {$reason}, vector {$index}, sign {$sign}" => [
+                            "OKP curve {$crv} has {$reason}",
+                            [1 => CoseOkpKey::KTY, 3 => $alg, -1 => $crv, -2 => $key],
+                        ];
+                    }
                 }
             }
         }
@@ -219,6 +240,14 @@ final class CoseKeyMaterialTest extends CryptoTestCase
             CoseOkpKey::CRV_ED25519,
             "\x01" . str_repeat("\x00", 31),
             self::bytesFromHex('58' . str_repeat('66', 31)) . "\x01" . str_repeat("\x00", 31),
+        ];
+
+        yield 'Ed448 order-four point' => [
+            CoseAlgorithmIdentifier::Ed448,
+            CoseOkpKey::CRV_ED448,
+            str_repeat("\x00", 57),
+            self::bytesFromHex('14fa30f25b790898adc8d74e2c13bdfdc4397ce61cffd33ad7c2a0051e9c78874098a36c7373ea4b62c7c9563720768824bcb66e71463f6900')
+                . "\x01" . str_repeat("\x00", 56),
         ];
     }
 

@@ -11,9 +11,6 @@ use ShipMonk\Passkeys\Cbor\InvalidCborException;
 use function implode;
 use function openssl_error_string;
 use function openssl_verify;
-use function sodium_crypto_sign_verify_detached;
-use function strlen;
-use const SODIUM_CRYPTO_SIGN_BYTES;
 
 /**
  * A COSE_Key as used by WebAuthn credential public keys.
@@ -24,20 +21,20 @@ use const SODIUM_CRYPTO_SIGN_BYTES;
  * @see https://www.rfc-editor.org/rfc/rfc9053.html key type / algorithm parameters
  * @api
  */
-abstract class CoseKey
+abstract readonly class CoseKey
 {
 
     /**
      * Common COSE key label: key type (kty).
      */
-    public const LABEL_KTY = 1;
+    public const int LABEL_KTY = 1;
 
     /**
      * Common COSE key label: algorithm (alg).
      */
-    public const LABEL_ALG = 3;
+    public const int LABEL_ALG = 3;
 
-    private readonly OpenSSLAsymmetricKey $openSslPublicKey;
+    private OpenSSLAsymmetricKey $openSslPublicKey;
 
     /**
      * @param TAlg                                     $alg
@@ -47,7 +44,7 @@ abstract class CoseKey
      * @throws CoseKeyException if OpenSSL rejects the key material
      */
     protected function __construct(
-        public readonly int $alg,
+        public int $alg,
         callable $loadOpenSslPublicKey,
     )
     {
@@ -105,12 +102,13 @@ abstract class CoseKey
     abstract public function toBytes(): string;
 
     /**
-     * Verifies a signature over $message against this public key using ext-openssl, or
-     * ext-sodium for EdDSA.
+     * Verifies a signature over $message against this public key using ext-openssl.
      *
      * For ECDSA algorithms the signature is expected in the ASN.1 DER form
      * (Ecdsa-Sig-Value) produced by authenticators; for RSASSA-PKCS1-v1_5 it is the
-     * raw signature; for EdDSA it is the raw Ed25519 (64-byte) signature.
+     * raw signature; for EdDSA it is the raw Ed25519 (64-byte) or Ed448 (114-byte)
+     * signature. All are what
+     * {@see \openssl_verify()} consumes directly (EdDSA requires OpenSSL 3.0 / PHP 8.4).
      *
      * @see https://www.rfc-editor.org/rfc/rfc9053.html signature algorithms
      */
@@ -119,16 +117,7 @@ abstract class CoseKey
         string $signature,
     ): bool
     {
-        $algorithm = $this->getOpenSslAlgorithm();
-
-        // Before PHP 8.4, ext-openssl can load Ed25519 keys but cannot verify with them.
-        // libsodium throws on a signature of the wrong length, so reject it first.
-        if ($this instanceof CoseOkpKey) {
-            return strlen($signature) === SODIUM_CRYPTO_SIGN_BYTES
-                && sodium_crypto_sign_verify_detached($signature, $message, $this->x);
-        }
-
-        $result = openssl_verify($message, $signature, $this->openSslPublicKey, $algorithm);
+        $result = openssl_verify($message, $signature, $this->openSslPublicKey, $this->getOpenSslAlgorithm());
 
         // 1 = verified; 0 = signature does not match; -1 = malformed signature or an
         // OpenSSL error. A caller cannot tell attacker-supplied garbage apart from a

@@ -10,7 +10,7 @@ namespace ShipMonk\Passkeys\Ceremony;
  *
  * @api
  */
-final class AuthenticationResult
+final readonly class AuthenticationResult
 {
 
     /**
@@ -24,12 +24,12 @@ final class AuthenticationResult
      *       ceremony itself does not fail on it.
      */
     public function __construct(
-        public readonly string $credentialId,
-        public readonly string $userHandle,
-        public readonly int $newSignCount,
-        public readonly bool $userVerified,
-        public readonly bool $backupState,
-        public readonly bool $possibleClone,
+        public string $credentialId,
+        public string $userHandle,
+        public int $newSignCount,
+        public bool $userVerified,
+        public bool $backupState,
+        public bool $possibleClone,
     )
     {
     }
