@@ -54,14 +54,16 @@ final class CoseKeyMaterialTest extends CryptoTestCase
         array $entries,
     ): void
     {
-        $key = CoseEc2Key::fromCborMap(self::cborMap($entries));
-        self::assertException(CoseKeyLoadException::class, $message, $key->validatePublicPoint(...));
+        self::assertException(CoseKeyLoadException::class, $message, static fn () => CoseKey::fromCborMap(self::cborMap($entries)));
+        self::assertException(CoseKeyLoadException::class, $message, static fn () => CoseKey::fromBytes(CborTestEncoder::intMap($entries)));
         self::assertFalse(openssl_error_string());
     }
 
-    public function testPointValidationClearsStaleOpenSslErrors(): void
+    public function testEcImportClearsStaleOpenSslErrors(): void
     {
-        $key = CoseEc2Key::fromCborMap(self::cborMap([
+        self::assertFalse(openssl_pkey_get_public('not a key at all'));
+
+        CoseEc2Key::fromCborMap(self::cborMap([
             1 => CoseEc2Key::KTY,
             3 => CoseAlgorithmIdentifier::ES256,
             -1 => CoseEc2Key::CRV_P256,
@@ -69,23 +71,21 @@ final class CoseKeyMaterialTest extends CryptoTestCase
             -3 => self::bytesFromHex(self::P256_BASE_POINT_Y),
         ]));
 
-        self::assertFalse(openssl_pkey_get_public('not a key at all'));
-        $key->validatePublicPoint();
         self::assertFalse(openssl_error_string());
     }
 
-    public function testPointValidationDoesNotReportStaleOpenSslErrors(): void
+    public function testEcImportDoesNotReportStaleOpenSslErrors(): void
     {
-        $key = CoseEc2Key::fromCborMap(self::cborMap([
+        $map = self::cborMap([
             1 => CoseEc2Key::KTY,
             3 => CoseAlgorithmIdentifier::ES256,
             -1 => CoseEc2Key::CRV_P256,
             -2 => str_repeat("\x00", 32),
             -3 => str_repeat("\x00", 32),
-        ]));
+        ]);
 
         try {
-            $key->validatePublicPoint();
+            CoseEc2Key::fromCborMap($map);
             self::fail('Expected an invalid public point');
 
         } catch (CoseKeyLoadException $e) {
@@ -95,7 +95,7 @@ final class CoseKeyMaterialTest extends CryptoTestCase
         self::assertFalse(openssl_pkey_get_public('not a key at all'));
 
         try {
-            $key->validatePublicPoint();
+            CoseEc2Key::fromCborMap($map);
             self::fail('Expected an invalid public point');
 
         } catch (CoseKeyLoadException $e) {
@@ -110,7 +110,6 @@ final class CoseKeyMaterialTest extends CryptoTestCase
         foreach ([CoseAlgorithmIdentifier::ES256, CoseAlgorithmIdentifier::ES384, CoseAlgorithmIdentifier::ES512] as $alg) {
             [$key, $privateKey] = self::generateCoseKeyPair($alg);
             self::assertInstanceOf(CoseEc2Key::class, $key);
-            $key->validatePublicPoint();
             self::assertTrue($key->verify('message', self::sign($privateKey, 'message', $alg)));
         }
     }

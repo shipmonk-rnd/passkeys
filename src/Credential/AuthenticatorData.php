@@ -8,6 +8,7 @@ use ShipMonk\Passkeys\Cbor\CborMap;
 use ShipMonk\Passkeys\Cbor\CborMapException;
 use ShipMonk\Passkeys\Cbor\InvalidCborException;
 use ShipMonk\Passkeys\Cose\CoseKeyException;
+use ShipMonk\Passkeys\Cose\CoseKeyLoadException;
 
 /**
  * @api
@@ -36,6 +37,7 @@ final readonly class AuthenticatorData
     }
 
     /**
+     * @throws CoseKeyLoadException
      * @throws MalformedDataException
      */
     public static function fromBytes(string $bytes): AuthenticatorData

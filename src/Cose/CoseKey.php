@@ -46,6 +46,7 @@ abstract readonly class CoseKey
     /**
      * @throws CborMapException
      * @throws CoseKeyException
+     * @throws CoseKeyLoadException
      */
     public static function fromCborMap(CborMap $map): CoseKey
     {
@@ -64,6 +65,7 @@ abstract readonly class CoseKey
      * credential's public key. The inverse of {@see self::toBytes()}.
      *
      * @throws CoseKeyException on malformed input or rejected key material
+     * @throws CoseKeyLoadException if OpenSSL rejects an EC2 public point
      */
     public static function fromBytes(string $bytes): CoseKey
     {
@@ -117,9 +119,8 @@ abstract readonly class CoseKey
     }
 
     /**
-     * Builds an ext-openssl public key handle for this key by constructing it directly from
-     * its parameters via {@see \openssl_pkey_new()}, the form consumed by {@see \openssl_verify()}
-     * in {@see self::verify()}. Returns false if OpenSSL rejects the key material.
+     * Returns the ext-openssl public key handle used by {@see self::verify()}.
+     * Returns false if OpenSSL rejects key material imported on demand.
      */
     abstract protected function toOpenSslPublicKey(): OpenSSLAsymmetricKey|false;
 

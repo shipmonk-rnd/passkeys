@@ -3,7 +3,6 @@
 namespace ShipMonk\Passkeys\Ceremony;
 
 use ShipMonk\Passkeys\Cbor\CborMapException;
-use ShipMonk\Passkeys\Cose\CoseEc2Key;
 use ShipMonk\Passkeys\Cose\CoseKey;
 use ShipMonk\Passkeys\Cose\CoseKeyLoadException;
 use ShipMonk\Passkeys\Credential\AttestationObject;
@@ -90,8 +89,6 @@ final class RelyingParty
             );
 
         } catch (CoseKeyLoadException $e) {
-            // The attested key already passed COSE parsing and the algorithm allow-list, so
-            // if OpenSSL still cannot load it, the key material itself is at fault.
             throw new VerificationException(
                 VerificationException::UNUSABLE_CREDENTIAL_KEY,
                 'Attested credential key is unusable: ' . $e->getMessage(),
@@ -165,12 +162,6 @@ final class RelyingParty
                 VerificationException::UNSUPPORTED_ALGORITHM,
                 "Credential public key algorithm {$publicKey->alg} is not among the allowed algorithms",
             );
-        }
-
-        // Credential key validity is independent of the attestation format.
-        // Edwards encoding / small-order checks already ran during COSE import.
-        if ($publicKey instanceof CoseEc2Key) {
-            $publicKey->validatePublicPoint();
         }
 
         // §7.1 steps 21–24: verify the attestation statement. `none` carries no statement; `packed`

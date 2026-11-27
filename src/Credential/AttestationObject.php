@@ -4,6 +4,7 @@ namespace ShipMonk\Passkeys\Credential;
 
 use ShipMonk\Passkeys\Cbor\CborMap;
 use ShipMonk\Passkeys\Cbor\CborMapException;
+use ShipMonk\Passkeys\Cose\CoseKeyLoadException;
 
 /**
  * @api
@@ -35,6 +36,7 @@ final readonly class AttestationObject
     }
 
     /**
+     * @throws CoseKeyLoadException
      * @throws MalformedDataException
      */
     public function parseAuthenticatorData(): AuthenticatorData

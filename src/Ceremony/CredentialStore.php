@@ -2,6 +2,8 @@
 
 namespace ShipMonk\Passkeys\Ceremony;
 
+use ShipMonk\Passkeys\Cose\CoseKeyLoadException;
+
 /**
  * The relying party's read access to its stored credentials, keyed by credential id.
  *
@@ -17,6 +19,8 @@ interface CredentialStore
 
     /**
      * @param string $credentialId raw credential id bytes (not base64url-encoded)
+     *
+     * @throws CoseKeyLoadException if OpenSSL rejects the stored public key during import
      */
     public function findCredentialByCredentialId(string $credentialId): ?CredentialRecord;
 

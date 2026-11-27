@@ -70,11 +70,16 @@ final readonly class CoseEc2Key extends CoseKey
         CoseAlgorithmIdentifier::ES512 => [self::CRV_P521, 66, 'secp521r1', OPENSSL_ALGO_SHA512],
     ];
 
+    private OpenSSLAsymmetricKey $openSslPublicKey;
+
     /**
      * @param key-of<self::ALGORITHMS> $alg
      * @param self::CRV_*              $crv
      * @param string                   $x   raw x-coordinate bytes (fixed length for the curve)
      * @param string                   $y   raw y-coordinate bytes (fixed length for the curve)
+     *
+     * @see https://github.com/openssl/openssl/blob/openssl-3.0.18/crypto/ec/ec_lib.c#L861-L881
+     * @throws CoseKeyLoadException if OpenSSL rejects the public point
      */
     private function __construct(
         int $alg,
@@ -84,11 +89,31 @@ final readonly class CoseEc2Key extends CoseKey
     )
     {
         parent::__construct($alg);
+
+        $this->clearOpenSslErrors();
+
+        // PHP imports x/y through EC_POINT_set_affine_coordinates(), which checks curve membership.
+        $publicKey = openssl_pkey_new([
+            'ec' => [
+                'curve_name' => self::ALGORITHMS[$alg][2],
+                'x' => $x,
+                'y' => $y,
+            ],
+        ]);
+
+        if ($publicKey === false) {
+            throw new CoseKeyLoadException("EC2 curve {$crv} has invalid public point: " . $this->getOpenSslErrors());
+        }
+
+        // OpenSSL can leave errors queued even after a successful public-only EC import.
+        $this->clearOpenSslErrors();
+        $this->openSslPublicKey = $publicKey;
     }
 
     /**
      * @throws CborMapException
      * @throws CoseKeyException
+     * @throws CoseKeyLoadException
      */
     public static function fromCborMap(CborMap $map): self
     {
@@ -114,27 +139,6 @@ final readonly class CoseEc2Key extends CoseKey
         return new self($alg, $crv, $x, $y);
     }
 
-    /**
-     * Checks the public point before accepting a registration, independently of its attestation.
-     * PHP's EC import passes x/y through EC_POINT_set_affine_coordinates(), which checks curve
-     * membership. This guarantee is specific to EC affine import, not key loading in general.
-     * Signature verification uses the same native import, so also checks the point.
-     *
-     * @see https://github.com/openssl/openssl/blob/openssl-3.0.18/crypto/ec/ec_lib.c#L861-L881
-     * @throws CoseKeyLoadException if OpenSSL rejects the public point
-     */
-    public function validatePublicPoint(): void
-    {
-        $this->clearOpenSslErrors();
-
-        if ($this->toOpenSslPublicKey() === false) {
-            throw new CoseKeyLoadException("EC2 curve {$this->crv} has invalid public point: " . $this->getOpenSslErrors());
-        }
-
-        // OpenSSL can leave errors queued even after a successful public-only EC import.
-        $this->clearOpenSslErrors();
-    }
-
     public function toBytes(): string
     {
         return CborEncoder::encodeMap([
@@ -146,15 +150,9 @@ final readonly class CoseEc2Key extends CoseKey
         ]);
     }
 
-    protected function toOpenSslPublicKey(): OpenSSLAsymmetricKey|false
+    protected function toOpenSslPublicKey(): OpenSSLAsymmetricKey
     {
-        return openssl_pkey_new([
-            'ec' => [
-                'curve_name' => self::ALGORITHMS[$this->alg][2],
-                'x' => $this->x,
-                'y' => $this->y,
-            ],
-        ]);
+        return $this->openSslPublicKey;
     }
 
     protected function getOpenSslAlgorithm(): int
