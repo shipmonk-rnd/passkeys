@@ -21,7 +21,7 @@ use const JSON_THROW_ON_ERROR;
  * @see https://www.w3.org/TR/webauthn-3/#sctn-signalAllAcceptedCredentials
  * @api
  */
-final class AllAcceptedCredentialsSignal implements JsonSerializable
+final readonly class AllAcceptedCredentialsSignal implements JsonSerializable
 {
 
     /**
@@ -30,9 +30,9 @@ final class AllAcceptedCredentialsSignal implements JsonSerializable
      * @param list<string> $allAcceptedCredentialIds raw credential id bytes for every credential still accepted for the user
      */
     public function __construct(
-        public readonly string $rpId,
-        public readonly string $userId,
-        public readonly array $allAcceptedCredentialIds,
+        public string $rpId,
+        public string $userId,
+        public array $allAcceptedCredentialIds,
     )
     {
     }

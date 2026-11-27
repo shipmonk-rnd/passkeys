@@ -16,11 +16,11 @@ use const JSON_THROW_ON_ERROR;
 /**
  * @api
  */
-final class JsonObject
+final readonly class JsonObject
 {
 
     private function __construct(
-        private readonly stdClass $object,
+        private stdClass $object,
     )
     {
     }

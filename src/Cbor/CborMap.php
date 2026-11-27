@@ -8,14 +8,14 @@ use function is_array;
 use function is_int;
 use function is_string;
 
-final class CborMap
+final readonly class CborMap
 {
 
     /**
      * @param array<int|string, mixed> $map
      */
     private function __construct(
-        private readonly array $map,
+        private array $map,
     )
     {
     }

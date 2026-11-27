@@ -51,24 +51,21 @@ use const JSON_THROW_ON_ERROR;
 final class RelyingPartyTest extends CryptoTestCase
 {
 
-    private const RP_ID = 'example.com';
-    private const ORIGIN = 'https://example.com';
-    private const CHALLENGE = 'a-fixed-32-byte-challenge-value!';
-    private const USER_HANDLE = 'user-handle-0001';
-    private const CREDENTIAL_ID = "\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a";
-    private const AAGUID = "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10";
+    private const string RP_ID = 'example.com';
+    private const string ORIGIN = 'https://example.com';
+    private const string CHALLENGE = 'a-fixed-32-byte-challenge-value!';
+    private const string USER_HANDLE = 'user-handle-0001';
+    private const string CREDENTIAL_ID = "\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a";
+    private const string AAGUID = "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10";
 
-    private const FLAGS_UP_UV = AuthenticatorData::FLAG_USER_PRESENT | AuthenticatorData::FLAG_USER_VERIFIED;
+    private const int FLAGS_UP_UV = AuthenticatorData::FLAG_USER_PRESENT | AuthenticatorData::FLAG_USER_VERIFIED;
 
     /**
      * @var array<int, int|string>
      */
     private array $coseEntries;
 
-    /**
-     * @var OpenSSLAsymmetricKey|non-empty-string
-     */
-    private OpenSSLAsymmetricKey|string $privateKey;
+    private OpenSSLAsymmetricKey $privateKey;
 
     protected function setUp(): void
     {
@@ -1204,9 +1201,8 @@ final class RelyingPartyTest extends CryptoTestCase
      * signature is well-formed but does not verify, and `$attStmtOverride` replaces the statement
      * CBOR wholesale (for the x5c / missing-field negatives).
      *
-     * @param array<int, int|string>                     $coseEntries
-     * @param OpenSSLAsymmetricKey|non-empty-string|null $attestationKey
-     * @param CoseAlgorithmIdentifier::*|null            $attestationAlg
+     * @param array<int, int|string>          $coseEntries
+     * @param CoseAlgorithmIdentifier::*|null $attestationAlg
      * @return PublicKeyCredential<AuthenticatorAttestationResponse>
      */
     private static function registrationCredential(
@@ -1223,7 +1219,7 @@ final class RelyingPartyTest extends CryptoTestCase
         bool $includeAttestedCredentialData = true,
         ?string $topOrigin = null,
         ?string $attestationObjectOverride = null,
-        OpenSSLAsymmetricKey|string|null $attestationKey = null,
+        ?OpenSSLAsymmetricKey $attestationKey = null,
         ?int $attestationAlg = null,
         ?int $attStmtAlgOverride = null,
         bool $tamperAttestationSignature = false,
@@ -1280,12 +1276,11 @@ final class RelyingPartyTest extends CryptoTestCase
     }
 
     /**
-     * @param OpenSSLAsymmetricKey|non-empty-string $privateKey
-     * @param CoseAlgorithmIdentifier::*            $alg
+     * @param CoseAlgorithmIdentifier::* $alg
      * @return PublicKeyCredential<AuthenticatorAssertionResponse>
      */
     private static function authenticationCredential(
-        OpenSSLAsymmetricKey|string $privateKey,
+        OpenSSLAsymmetricKey $privateKey,
         int $alg,
         string $type = 'webauthn.get',
         string $challenge = self::CHALLENGE,

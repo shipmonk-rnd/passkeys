@@ -8,16 +8,16 @@ use ShipMonk\Passkeys\Cbor\CborMapException;
 /**
  * @api
  */
-final class AttestationObject
+final readonly class AttestationObject
 {
 
     /**
      * @param string $authData raw authenticator data bytes; parse with {@see self::parseAuthenticatorData()}
      */
     private function __construct(
-        public readonly string $authData,
-        public readonly string $fmt,
-        public readonly CborMap $attStmt,
+        public string $authData,
+        public string $fmt,
+        public CborMap $attStmt,
     )
     {
     }

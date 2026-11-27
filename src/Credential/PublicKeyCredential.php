@@ -18,7 +18,7 @@ use ShipMonk\Passkeys\Json\JsonObjectException;
  * @see https://www.w3.org/TR/webauthn-3/#iface-pkcredential
  * @api
  */
-final class PublicKeyCredential
+final readonly class PublicKeyCredential
 {
 
     /**
@@ -27,12 +27,12 @@ final class PublicKeyCredential
      * @param AuthenticatorAttachment|null $authenticatorAttachment null when the client sent none or an unknown value (the spec instructs relying parties to treat unknown values as null)
      */
     private function __construct(
-        public readonly string $id,
-        public readonly string $rawId,
-        public readonly PublicKeyCredentialType $type,
-        public readonly AuthenticatorResponse $response,
-        public readonly ?AuthenticatorAttachment $authenticatorAttachment,
-        public readonly ?JsonObject $clientExtensionResults,
+        public string $id,
+        public string $rawId,
+        public PublicKeyCredentialType $type,
+        public AuthenticatorResponse $response,
+        public ?AuthenticatorAttachment $authenticatorAttachment,
+        public ?JsonObject $clientExtensionResults,
     )
     {
     }

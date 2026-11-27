@@ -34,17 +34,13 @@ final class InMemoryPasskeyStore implements PasskeyStore
 
     /**
      * @var list<AuthenticationResult> everything passed to updateCredential()
-     *
-     * @phpstan-readonly-allow-private-mutation
      */
-    public array $updatedCredentials = [];
+    public private(set) array $updatedCredentials = [];
 
     /**
      * @var list<RegisteredPasskey> everything passed to saveCredential()
-     *
-     * @phpstan-readonly-allow-private-mutation
      */
-    public array $savedPasskeys = [];
+    public private(set) array $savedPasskeys = [];
 
     public function addUser(
         string $username,

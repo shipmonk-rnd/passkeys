@@ -17,17 +17,13 @@ final class InMemoryPendingCeremonyStore implements PendingCeremonyStore
 
     /**
      * @var array<string, PendingAuthentication> base64(challenge) → pending ceremony
-     *
-     * @phpstan-readonly-allow-private-mutation
      */
-    public array $pendingAuthentications = [];
+    public private(set) array $pendingAuthentications = [];
 
     /**
      * @var array<string, PendingRegistration> base64(challenge) → pending ceremony
-     *
-     * @phpstan-readonly-allow-private-mutation
      */
-    public array $pendingRegistrations = [];
+    public private(set) array $pendingRegistrations = [];
 
     public function rememberPendingAuthentication(PendingAuthentication $pending): void
     {

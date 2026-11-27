@@ -11,26 +11,31 @@ final class CoseAlgorithmIdentifier
     /**
      * ECDSA w/ SHA-256
      */
-    public const ES256 = -7;
+    public const int ES256 = -7;
 
     /**
      * ECDSA w/ SHA-384
      */
-    public const ES384 = -35;
+    public const int ES384 = -35;
 
     /**
      * ECDSA w/ SHA-512
      */
-    public const ES512 = -36;
+    public const int ES512 = -36;
 
     /**
      * RSASSA-PKCS1-v1_5 w/ SHA-256
      */
-    public const RS256 = -257;
+    public const int RS256 = -257;
 
     /**
      * EdDSA; polymorphic in plain COSE, but WebAuthn §5.8.5 restricts it to Ed25519
      */
-    public const EdDSA = -8;
+    public const int EdDSA = -8;
+
+    /**
+     * EdDSA w/ Ed448, fully specified (RFC 9864); the only identifier usable for Ed448 within WebAuthn
+     */
+    public const int Ed448 = -53;
 
 }

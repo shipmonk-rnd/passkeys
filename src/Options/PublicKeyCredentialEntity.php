@@ -5,11 +5,11 @@ namespace ShipMonk\Passkeys\Options;
 /**
  * @api
  */
-abstract class PublicKeyCredentialEntity
+abstract readonly class PublicKeyCredentialEntity
 {
 
     public function __construct(
-        public readonly string $name,
+        public string $name,
     )
     {
     }
