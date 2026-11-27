@@ -415,13 +415,13 @@ or full Edwards on-curve / prime-order subgroup membership. In particular, a `no
 does not prove possession, and the Edwards checks do not reject every off-curve or mixed-order
 point. Signature verification still uses OpenSSL.
 
-OpenSSL import failures raise `CoseKeyLoadException`, including when loading a stored
-key with `CoseKey::fromBytes()`. Registration and authentication report reason
-`unusable_credential_key` when that exception occurs during verification. Rejected Edwards
-imports raise `CoseKeyException`; registration reports reason `malformed_response` through the
-existing response parser. Loading stored Edwards keys with `CoseKey::fromBytes()` applies the
-same checks. Use `toBytes()` and `fromBytes()` for persistence: PHP's `serialize()` cannot
-serialize the OpenSSL handle inside a COSE key.
+Direct imports, including `CoseKey::fromBytes()`, raise `CoseKeyLoadException` if OpenSSL
+rejects the key and `CoseKeyException` if a COSE check fails. If the key came from an
+authenticator response, the parser wraps either exception in `MalformedDataException` and
+verification reports `malformed_response`. If a credential lookup fails with
+`CoseKeyLoadException` during verification, the reason is `unusable_credential_key`.
+Use `toBytes()` and `fromBytes()` for persistence: PHP's `serialize()` cannot serialize
+the OpenSSL handle inside a COSE key.
 
 ## Development
 

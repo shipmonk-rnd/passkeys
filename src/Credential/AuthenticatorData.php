@@ -37,7 +37,6 @@ final readonly class AuthenticatorData
     }
 
     /**
-     * @throws CoseKeyLoadException
      * @throws MalformedDataException
      */
     public static function fromBytes(string $bytes): AuthenticatorData
@@ -65,7 +64,7 @@ final readonly class AuthenticatorData
                 );
             });
 
-        } catch (BytesReaderException | CborMapException | CoseKeyException | InvalidCborException $e) {
+        } catch (BytesReaderException | CborMapException | CoseKeyException | CoseKeyLoadException | InvalidCborException $e) {
             throw new MalformedDataException('Malformed authenticator data', $e);
         }
     }

@@ -15,6 +15,7 @@ use ShipMonk\Passkeys\Cose\CoseKey;
 use ShipMonk\Passkeys\Cose\CoseKeyException;
 use ShipMonk\Passkeys\Cose\CoseKeyLoadException;
 use ShipMonk\Passkeys\Credential\AuthenticatorData;
+use ShipMonk\Passkeys\Credential\MalformedDataException;
 use ShipMonk\Passkeys\Enum\AuthenticatorAttachment;
 use ShipMonk\Passkeys\Enum\AuthenticatorTransport;
 use ShipMonk\Passkeys\Enum\PublicKeyCredentialType;
@@ -664,7 +665,6 @@ final class PasskeyFlowTest extends CryptoTestCase
         array $entries,
     ): void
     {
-        // Offer all three EC algorithms so the point check, not the algorithm allow-list, fails.
         $flow = new class (self::RP_ID, 'Example', [self::ORIGIN], $this->store, $this->pending) extends PasskeyFlow {
 
             protected function getAllowedAlgorithms(): array
@@ -680,8 +680,10 @@ final class PasskeyFlowTest extends CryptoTestCase
             self::fail('Expected off-curve point to be rejected');
 
         } catch (VerificationException $e) {
-            self::assertSame(VerificationException::UNUSABLE_CREDENTIAL_KEY, $e->reason);
-            $cause = $e->getPrevious();
+            self::assertSame(VerificationException::MALFORMED_RESPONSE, $e->reason);
+            $malformedData = $e->getPrevious();
+            self::assertInstanceOf(MalformedDataException::class, $malformedData);
+            $cause = $malformedData->getPrevious();
             self::assertInstanceOf(CoseKeyLoadException::class, $cause);
             self::assertStringMatchesFormat($message, $cause->getMessage());
         }

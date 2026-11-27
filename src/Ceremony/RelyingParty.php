@@ -70,7 +70,7 @@ final class RelyingParty
      * @param PublicKeyCredential<AuthenticatorAttestationResponse> $credential
      *
      * @throws VerificationException on any failed §7.1 check, if the response is malformed, or if
-     *     the attested credential key is unusable (unsupported algorithm / cannot be loaded)
+     *     an existing credential's key cannot be loaded during the duplicate check
      */
     public function verifyRegistration(
         PublicKeyCredential $credential,
@@ -91,7 +91,7 @@ final class RelyingParty
         } catch (CoseKeyLoadException $e) {
             throw new VerificationException(
                 VerificationException::UNUSABLE_CREDENTIAL_KEY,
-                'Attested credential key is unusable: ' . $e->getMessage(),
+                'Stored credential key is unusable: ' . $e->getMessage(),
                 $e,
             );
         }
@@ -286,7 +286,7 @@ final class RelyingParty
      * @param PublicKeyCredential<AuthenticatorAssertionResponse> $credential
      *
      * @throws VerificationException on any failed §7.2 check, if the response is malformed, or if
-     *     the stored credential key is unusable (unsupported algorithm / cannot be loaded)
+     *     the stored credential key cannot be loaded by OpenSSL
      */
     public function verifyAuthentication(
         PublicKeyCredential $credential,

@@ -462,8 +462,7 @@ final class RelyingPartyTest extends CryptoTestCase
 
     public function testRegistrationRejectsUnusableAttestedKey(): void
     {
-        // The all-zero P-256 point parses as COSE and passes the algorithm allow-list, but must
-        // fail point validation before attestation dispatch, including for unsupported formats.
+        // The off-curve point must fail while parsing authenticator data, before attestation dispatch.
         $coseEntries = [
             1 => 2,
             3 => CoseAlgorithmIdentifier::ES256,
@@ -479,11 +478,22 @@ final class RelyingPartyTest extends CryptoTestCase
 
         foreach (['none', 'packed', 'fido-u2f'] as $fmt) {
             $this->assertRegistrationFails(
-                VerificationException::UNUSABLE_CREDENTIAL_KEY,
+                VerificationException::MALFORMED_RESPONSE,
                 self::registrationCredential($coseEntries, fmt: $fmt, attStmtOverride: $fmt === 'packed' ? $attStmt : null),
-                'Attested credential key is unusable: %s',
+                'Malformed registration response: Malformed authenticator data',
             );
         }
+    }
+
+    public function testRegistrationRejectsUnusableStoredKeyDuringDuplicateCheck(): void
+    {
+        $credential = self::registrationCredential($this->coseEntries);
+
+        $this->assertVerificationFailure(
+            VerificationException::UNUSABLE_CREDENTIAL_KEY,
+            static fn () => (new RelyingParty())->verifyRegistration($credential, self::registrationExpectations(), self::storeWithUnusableKey()),
+            'Stored credential key is unusable: %s',
+        );
     }
 
     public function testRegistrationRejectsPackedSelfAttestationWithBadSignature(): void
@@ -764,42 +774,10 @@ final class RelyingPartyTest extends CryptoTestCase
 
     public function testAuthenticationRejectsUnusableStoredKey(): void
     {
-        // Older versions could store off-curve EC2 points. OpenSSL now rejects them at lookup.
-        $bytes = CborTestEncoder::intMap([
-            1 => 2,
-            3 => CoseAlgorithmIdentifier::ES256,
-            -1 => 1,
-            -2 => str_repeat("\x00", 32),
-            -3 => str_repeat("\x00", 32),
-        ]);
-        $store = new class ($bytes, self::USER_HANDLE) implements CredentialStore {
-
-            public function __construct(
-                private readonly string $keyBytes,
-                private readonly string $userHandle,
-            )
-            {
-            }
-
-            public function findCredentialByCredentialId(string $credentialId): CredentialRecord
-            {
-                return new CredentialRecord(
-                    credentialId: $credentialId,
-                    publicKey: CoseKey::fromBytes($this->keyBytes),
-                    signCount: 0,
-                    userHandle: $this->userHandle,
-                    uvInitialized: true,
-                    backupEligible: false,
-                    backupState: false,
-                );
-            }
-
-        };
-
         $this->assertAuthenticationFails(
             VerificationException::UNUSABLE_CREDENTIAL_KEY,
             self::authenticationCredential($this->privateKey, CoseAlgorithmIdentifier::ES256),
-            $store,
+            self::storeWithUnusableKey(),
             'Stored credential key is unusable: %s',
         );
     }
@@ -1158,6 +1136,42 @@ final class RelyingPartyTest extends CryptoTestCase
         $store->add($record);
 
         return $store;
+    }
+
+    private static function storeWithUnusableKey(): CredentialStore
+    {
+        // Older versions could store off-curve EC2 points. OpenSSL now rejects them at lookup.
+        $bytes = CborTestEncoder::intMap([
+            1 => 2,
+            3 => CoseAlgorithmIdentifier::ES256,
+            -1 => 1,
+            -2 => str_repeat("\x00", 32),
+            -3 => str_repeat("\x00", 32),
+        ]);
+
+        return new class ($bytes, self::USER_HANDLE) implements CredentialStore {
+
+            public function __construct(
+                private readonly string $keyBytes,
+                private readonly string $userHandle,
+            )
+            {
+            }
+
+            public function findCredentialByCredentialId(string $credentialId): CredentialRecord
+            {
+                return new CredentialRecord(
+                    credentialId: $credentialId,
+                    publicKey: CoseKey::fromBytes($this->keyBytes),
+                    signCount: 0,
+                    userHandle: $this->userHandle,
+                    uvInitialized: true,
+                    backupEligible: false,
+                    backupState: false,
+                );
+            }
+
+        };
     }
 
     /**
