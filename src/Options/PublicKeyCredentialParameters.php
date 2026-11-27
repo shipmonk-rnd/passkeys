@@ -11,15 +11,15 @@ use stdClass;
  * @see https://www.w3.org/TR/webauthn-3/#dictdef-publickeycredentialparameters
  * @api
  */
-final readonly class PublicKeyCredentialParameters implements JsonSerializable
+final class PublicKeyCredentialParameters implements JsonSerializable
 {
 
     /**
      * @param CoseAlgorithmIdentifier::* $alg
      */
     public function __construct(
-        public PublicKeyCredentialType $type,
-        public int $alg,
+        public readonly PublicKeyCredentialType $type,
+        public readonly int $alg,
     )
     {
     }

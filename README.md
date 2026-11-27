@@ -4,7 +4,7 @@ A from-scratch, spec-compliant [WebAuthn Level 3](https://www.w3.org/TR/webauthn
 
 - 🔑 **Easy-to-use:** wire four methods to four HTTP endpoints
 - 🔧 **Full control:** the low-level WebAuthn API is public too
-- 🕸️ **Zero dependencies:** only PHP and `ext-openssl`
+- 🕸️ **Zero dependencies:** only PHP, `ext-openssl` and `ext-sodium`
 - 🧪 **100 % code coverage:** enforced in CI
 - 🔬 **PHPStan max level:** strict rules, zero ignores
 
@@ -16,8 +16,9 @@ is public but considered [low-level API](#low-level-api).
 
 ## Requirements
 
-- **64-bit PHP 8.4+**
-- `ext-openssl` built with **OpenSSL 3.0+** for Ed25519 and Ed448 support
+- **64-bit PHP 8.1+**
+- `ext-openssl` built with **OpenSSL 1.1.1+** (ECDSA and RSA signatures; loading Ed25519 keys)
+- `ext-sodium` (Ed25519 signatures; `ext-openssl` cannot verify EdDSA before PHP 8.4)
 
 ## Installation
 
@@ -325,7 +326,8 @@ decoding, canonical base64url, a strict JSON accessor).
 
 ### Supported signature algorithms
 
-Signatures are verified through `ext-openssl` with the COSE algorithm identifiers below:
+Signatures are verified through `ext-openssl` (ECDSA, RSA) and `ext-sodium` (EdDSA) with the COSE
+algorithm identifiers below:
 
 | COSE alg | Constant | Algorithm |
 |---:|---|---|
@@ -334,16 +336,16 @@ Signatures are verified through `ext-openssl` with the COSE algorithm identifier
 | `-36`  | `CoseAlgorithmIdentifier::ES512` | ECDSA w/ SHA-512 (P-521) |
 | `-257` | `CoseAlgorithmIdentifier::RS256` | RSASSA-PKCS1-v1_5 w/ SHA-256 |
 | `-8`   | `CoseAlgorithmIdentifier::EdDSA` | EdDSA (restricted to Ed25519 per WebAuthn [§5.8.5](https://www.w3.org/TR/webauthn-3/#sctn-alg-identifier)) |
-| `-53`  | `CoseAlgorithmIdentifier::Ed448` | EdDSA w/ Ed448, fully specified (RFC 9864) |
+
+Ed448 (COSE alg `-53`) is not supported: libsodium has no Ed448.
 
 ### Credential key checks and limits
 
-Every COSE key imports its public key into OpenSSL at construction and keeps the handle for
-signature verification. Registration rejects keys that OpenSSL cannot load, including with
-`fmt: none`. For EC2, OpenSSL's native affine-point validation rejects off-curve points.
-Ed25519 and Ed448 imports reject noncanonical encodings and the complete small-order point sets, for both x
-signs. The sets come from [libsodium's Ed25519 check](https://github.com/jedisct1/libsodium/blob/1.0.18/src/libsodium/crypto_core/ed25519/ref10/ed25519_ref10.c#L1022-L1075)
-and [Bouncy Castle's Ed448 encoding check](https://github.com/bcgit/bc-java/blob/r1rv80/core/src/main/java/org/bouncycastle/math/ec/rfc8032/Ed448.java#L179-L212).
+Every COSE key imports its public key into OpenSSL at construction and caches the handle.
+Registration rejects keys that OpenSSL cannot load, including with `fmt: none`. For EC2,
+OpenSSL checks that the point is on the curve when decoding it. Ed25519 imports reject
+noncanonical encodings and [all small-order points](https://github.com/jedisct1/libsodium/blob/1.0.18/src/libsodium/crypto_core/ed25519/ref10/ed25519_ref10.c#L1022-L1075)
+for both x signs.
 
 EC validation fails early: older versions could save an off-curve EC key with `fmt: none`, but
 OpenSSL would reject that key at each login. The registration check prevents saving such an
@@ -357,7 +359,7 @@ Edwards keys.
 These are targeted checks: they do **not** prove proper key generation, private-key possession,
 or full Edwards on-curve / prime-order subgroup membership. In particular, a `none` attestation
 does not prove possession, and the Edwards checks do not reject every off-curve or mixed-order
-point. Signature verification still uses OpenSSL.
+point. Signature verification uses libsodium for Ed25519 and OpenSSL for ECDSA and RSA.
 
 Direct imports raise `CoseKeyException` if a COSE check fails or OpenSSL rejects the key.
 `CoseKey::fromBytes()` also raises it for malformed COSE data. If the key came from an

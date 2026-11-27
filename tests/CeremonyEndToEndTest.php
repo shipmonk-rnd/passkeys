@@ -37,8 +37,8 @@ use const JSON_THROW_ON_ERROR;
 final class CeremonyEndToEndTest extends CryptoTestCase
 {
 
-    private const string RP_ID = 'example.com';
-    private const string CREDENTIAL_ID = "\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a";
+    private const RP_ID = 'example.com';
+    private const CREDENTIAL_ID = "\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a\x2a";
 
     /**
      * @param CoseAlgorithmIdentifier::* $alg
@@ -115,7 +115,6 @@ final class CeremonyEndToEndTest extends CryptoTestCase
         yield 'ES512' => [CoseAlgorithmIdentifier::ES512];
         yield 'RS256' => [CoseAlgorithmIdentifier::RS256];
         yield 'EdDSA' => [CoseAlgorithmIdentifier::EdDSA];
-        yield 'Ed448' => [CoseAlgorithmIdentifier::Ed448];
     }
 
     /**

@@ -18,7 +18,7 @@ use ShipMonk\Passkeys\Enum\AuthenticatorAttachment;
  *
  * @api
  */
-final readonly class RegisteredPasskey
+final class RegisteredPasskey
 {
 
     /**
@@ -27,10 +27,10 @@ final readonly class RegisteredPasskey
      * @param bool                         $conditionalMediation    whether the passkey came from a conditional-mediation (silent passkey-upgrade) ceremony — e.g. to notify the user that a passkey was created for them
      */
     public function __construct(
-        public string $userHandle,
-        public ?AuthenticatorAttachment $authenticatorAttachment,
-        public RegistrationResult $result,
-        public bool $conditionalMediation = false,
+        public readonly string $userHandle,
+        public readonly ?AuthenticatorAttachment $authenticatorAttachment,
+        public readonly RegistrationResult $result,
+        public readonly bool $conditionalMediation = false,
     )
     {
     }

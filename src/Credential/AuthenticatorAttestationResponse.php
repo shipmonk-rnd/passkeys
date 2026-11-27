@@ -15,7 +15,7 @@ use ShipMonk\Passkeys\Json\JsonObjectException;
  * @see https://www.w3.org/TR/webauthn-3/#authenticatorattestationresponse
  * @api
  */
-final readonly class AuthenticatorAttestationResponse extends AuthenticatorResponse
+final class AuthenticatorAttestationResponse extends AuthenticatorResponse
 {
 
     /**
@@ -26,8 +26,8 @@ final readonly class AuthenticatorAttestationResponse extends AuthenticatorRespo
      */
     private function __construct(
         string $clientDataJSON,
-        public string $attestationObject,
-        public ?array $transports,
+        public readonly string $attestationObject,
+        public readonly ?array $transports,
     )
     {
         parent::__construct($clientDataJSON);

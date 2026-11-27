@@ -12,7 +12,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 final class UserSession
 {
 
-    private const string USER_ID_KEY = 'auth_user_id';
+    private const USER_ID_KEY = 'auth_user_id';
 
     public function __construct(
         private readonly RequestStack $requestStack,

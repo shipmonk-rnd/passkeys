@@ -33,13 +33,13 @@ use const JSON_THROW_ON_ERROR;
 final class FakeAuthenticatorTest extends PasskeysTestCase
 {
 
-    private const string RP_ID = 'example.com';
-    private const string ORIGIN = 'https://example.com';
+    private const RP_ID = 'example.com';
+    private const ORIGIN = 'https://example.com';
 
-    private const string ALICE = 'alice@example.com';
-    private const string ALICE_HANDLE = 'alice-handle-0001';
-    private const string BOB = 'bob@example.com';
-    private const string BOB_HANDLE = 'bob-handle-000002';
+    private const ALICE = 'alice@example.com';
+    private const ALICE_HANDLE = 'alice-handle-0001';
+    private const BOB = 'bob@example.com';
+    private const BOB_HANDLE = 'bob-handle-000002';
 
     private InMemoryPasskeyStore $store;
 
@@ -102,7 +102,6 @@ final class FakeAuthenticatorTest extends PasskeysTestCase
         yield 'ES512' => [CoseAlgorithmIdentifier::ES512];
         yield 'RS256' => [CoseAlgorithmIdentifier::RS256];
         yield 'EdDSA' => [CoseAlgorithmIdentifier::EdDSA];
-        yield 'Ed448' => [CoseAlgorithmIdentifier::Ed448];
     }
 
     #[DataProvider('provideDiscoverableAllowLists')]

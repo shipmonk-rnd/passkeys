@@ -23,10 +23,10 @@ final class SessionPendingCeremonyStore implements PendingCeremonyStore
     /**
      * How many unfinished ceremonies to keep per browser session (oldest dropped first).
      */
-    private const int MAX_PENDING = 8;
+    private const MAX_PENDING = 8;
 
-    private const string AUTHENTICATIONS_KEY = 'passkey_pending_authentications';
-    private const string REGISTRATIONS_KEY = 'passkey_pending_registrations';
+    private const AUTHENTICATIONS_KEY = 'passkey_pending_authentications';
+    private const REGISTRATIONS_KEY = 'passkey_pending_registrations';
 
     public function __construct(
         private readonly RequestStack $requestStack,

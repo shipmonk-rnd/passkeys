@@ -45,13 +45,13 @@ use function strlen;
 final class RelyingParty
 {
 
-    private const string TYPE_CREATE = 'webauthn.create';
-    private const string TYPE_GET = 'webauthn.get';
+    private const TYPE_CREATE = 'webauthn.create';
+    private const TYPE_GET = 'webauthn.get';
 
     /**
      * {@link https://www.w3.org/TR/webauthn-3/#credential-id Credential IDs} are at most 1023 bytes (§7.1 step 25).
      */
-    public const int MAX_CREDENTIAL_ID_LENGTH = 1023;
+    public const MAX_CREDENTIAL_ID_LENGTH = 1023;
 
     /**
      * The {@link https://www.w3.org/TR/webauthn-3/#credential-id credential ID definition} requires
@@ -59,10 +59,10 @@ final class RelyingParty
      * this check on the relying party, but a shorter ID can only come from a non-conforming or
      * malicious authenticator, so it is rejected fail-closed.
      */
-    public const int MIN_CREDENTIAL_ID_LENGTH = 16;
+    public const MIN_CREDENTIAL_ID_LENGTH = 16;
 
-    private const string FMT_NONE = 'none';
-    private const string FMT_PACKED = 'packed';
+    private const FMT_NONE = 'none';
+    private const FMT_PACKED = 'packed';
 
     /**
      * Verifies a registration ceremony response (`navigator.credentials.create()`) per WebAuthn §7.1.
