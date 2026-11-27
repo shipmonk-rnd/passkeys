@@ -10,6 +10,7 @@ use ShipMonk\Passkeys\Ceremony\RegistrationExpectations;
 use ShipMonk\Passkeys\Ceremony\RelyingParty;
 use ShipMonk\Passkeys\Ceremony\VerificationException;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
+use ShipMonk\Passkeys\Cose\CoseKeyLoadException;
 use ShipMonk\Passkeys\Credential\MalformedDataException;
 use ShipMonk\Passkeys\Credential\PublicKeyCredential;
 use ShipMonk\Passkeys\Enum\AuthenticatorTransport;
@@ -106,6 +107,8 @@ class PasskeyFlow
      *     (email/username), or null for the dedicated-button / conditional-mediation flow — also
      *     for a blank field. Normalize it the way your accounts store it (trim it, lower-case an
      *     email) first.
+     *
+     * @throws CoseKeyLoadException if OpenSSL rejects a stored public key during import
      */
     public function authenticationOptions(?string $username = null): PublicKeyCredentialRequestOptions
     {
@@ -150,13 +153,14 @@ class PasskeyFlow
      * ({@see AuthenticationResult::$userHandle}); establishing their session is the caller's job.
      * Anything else — malformed input, an unknown or already-used challenge, a failed check —
      * throws, so a passkey login endpoint reduces to one call and one catch. Answer every failure
-     * with the same generic error and only log {@see VerificationException::$reason}: the reasons
-     * differ between a real and a fabricated credential, and between account kinds, so echoing
-     * them would undo the username-enumeration hardening (WebAuthn §14.6.2). For the one
+     * with the same generic error. Log {@see VerificationException::$reason} when available: the
+     * reasons differ between a real and a fabricated credential, and between account kinds, so
+     * echoing them would undo the username-enumeration hardening (WebAuthn §14.6.2). For the one
      * exception, see {@see self::allAcceptedCredentialsSignal()}.
      *
      * @param string $responseJson raw request body containing the authentication response JSON
      *
+     * @throws CoseKeyLoadException if OpenSSL rejects a stored public key while loading the allow-list
      * @throws VerificationException
      */
     public function authenticate(string $responseJson): AuthenticationResult
@@ -234,6 +238,8 @@ class PasskeyFlow
      *        shown by authenticator UIs to label the passkey
      * @param string|null $displayName          a friendlier account label ("Alice Doe"), defaulting to the username
      * @param bool        $conditionalMediation whether the options are for a `mediation: "conditional"` creation
+     *
+     * @throws CoseKeyLoadException if OpenSSL rejects a stored public key during import
      */
     public function registrationOptions(
         string $userHandle,
@@ -242,6 +248,7 @@ class PasskeyFlow
         bool $conditionalMediation = false,
     ): PublicKeyCredentialCreationOptions
     {
+        $excludeCredentials = $this->credentialDescriptorsFor($userHandle);
         $challenge = $this->generateChallenge();
         $this->pendingCeremonyStore->rememberPendingRegistration(new PendingRegistration($challenge, $userHandle, $conditionalMediation));
 
@@ -254,7 +261,7 @@ class PasskeyFlow
                 $this->getAllowedAlgorithms(),
             ),
             timeout: $this->getTimeout(),
-            excludeCredentials: $this->credentialDescriptorsFor($userHandle),
+            excludeCredentials: $excludeCredentials,
             authenticatorSelection: new AuthenticatorSelectionCriteria(
                 residentKey: $this->getResidentKeyRequirement(),
                 userVerification: $conditionalMediation
@@ -390,6 +397,8 @@ class PasskeyFlow
      * attacker which `allowCredentials` entries are fabricated.
      *
      * @param string $userHandle raw user handle bytes
+     *
+     * @throws CoseKeyLoadException if OpenSSL rejects a stored public key during import
      */
     public function allAcceptedCredentialsSignal(string $userHandle): AllAcceptedCredentialsSignal
     {
@@ -431,6 +440,8 @@ class PasskeyFlow
      *
      * @param string $userHandle raw user handle bytes
      * @return list<PublicKeyCredentialDescriptor>|null
+     *
+     * @throws CoseKeyLoadException
      */
     private function credentialDescriptorsFor(string $userHandle): ?array
     {

@@ -2,7 +2,6 @@
 
 namespace ShipMonk\Passkeys\Cose;
 
-use OpenSSLAsymmetricKey;
 use ShipMonk\Passkeys\Cbor\CborEncoder;
 use ShipMonk\Passkeys\Cbor\CborMap;
 use ShipMonk\Passkeys\Cbor\CborMapException;
@@ -104,6 +103,8 @@ final readonly class CoseOkpKey extends CoseKey
      * @param key-of<self::ALGORITHMS> $alg
      * @param self::CRV_*              $crv
      * @param string                   $x   raw public key bytes (fixed length for the curve)
+     *
+     * @throws CoseKeyLoadException
      */
     private function __construct(
         int $alg,
@@ -111,12 +112,17 @@ final readonly class CoseOkpKey extends CoseKey
         public string $x,
     )
     {
-        parent::__construct($alg);
+        parent::__construct($alg, static fn () => openssl_pkey_new([
+            self::ALGORITHMS[$alg][2] => [
+                'pub_key' => $x,
+            ],
+        ]));
     }
 
     /**
      * @throws CborMapException
      * @throws CoseKeyException
+     * @throws CoseKeyLoadException
      */
     public static function fromCborMap(CborMap $map): self
     {
@@ -159,15 +165,6 @@ final readonly class CoseOkpKey extends CoseKey
             [CborEncoder::encodeInt(self::LABEL_ALG), CborEncoder::encodeInt($this->alg)],
             [CborEncoder::encodeInt(self::LABEL_CRV), CborEncoder::encodeInt($this->crv)],
             [CborEncoder::encodeInt(self::LABEL_X), CborEncoder::encodeByteString($this->x)],
-        ]);
-    }
-
-    protected function toOpenSslPublicKey(): OpenSSLAsymmetricKey|false
-    {
-        return openssl_pkey_new([
-            self::ALGORITHMS[$this->alg][2] => [
-                'pub_key' => $this->x,
-            ],
         ]);
     }
 

@@ -2,7 +2,6 @@
 
 namespace ShipMonk\Passkeys\Cose;
 
-use OpenSSLAsymmetricKey;
 use ShipMonk\Passkeys\Cbor\CborEncoder;
 use ShipMonk\Passkeys\Cbor\CborMap;
 use ShipMonk\Passkeys\Cbor\CborMapException;
@@ -70,8 +69,6 @@ final readonly class CoseEc2Key extends CoseKey
         CoseAlgorithmIdentifier::ES512 => [self::CRV_P521, 66, 'secp521r1', OPENSSL_ALGO_SHA512],
     ];
 
-    private OpenSSLAsymmetricKey $openSslPublicKey;
-
     /**
      * @param key-of<self::ALGORITHMS> $alg
      * @param self::CRV_*              $crv
@@ -88,26 +85,14 @@ final readonly class CoseEc2Key extends CoseKey
         public string $y,
     )
     {
-        parent::__construct($alg);
-
-        $this->clearOpenSslErrors();
-
         // PHP imports x/y through EC_POINT_set_affine_coordinates(), which checks curve membership.
-        $publicKey = openssl_pkey_new([
+        parent::__construct($alg, static fn () => openssl_pkey_new([
             'ec' => [
                 'curve_name' => self::ALGORITHMS[$alg][2],
                 'x' => $x,
                 'y' => $y,
             ],
-        ]);
-
-        if ($publicKey === false) {
-            throw new CoseKeyLoadException("EC2 curve {$crv} has invalid public point: " . $this->getOpenSslErrors());
-        }
-
-        // OpenSSL can leave errors queued even after a successful public-only EC import.
-        $this->clearOpenSslErrors();
-        $this->openSslPublicKey = $publicKey;
+        ]));
     }
 
     /**
@@ -148,11 +133,6 @@ final readonly class CoseEc2Key extends CoseKey
             [CborEncoder::encodeInt(self::LABEL_X), CborEncoder::encodeByteString($this->x)],
             [CborEncoder::encodeInt(self::LABEL_Y), CborEncoder::encodeByteString($this->y)],
         ]);
-    }
-
-    protected function toOpenSslPublicKey(): OpenSSLAsymmetricKey
-    {
-        return $this->openSslPublicKey;
     }
 
     protected function getOpenSslAlgorithm(): int

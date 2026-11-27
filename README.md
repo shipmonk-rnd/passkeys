@@ -394,10 +394,10 @@ Signatures are verified through `ext-openssl` with the COSE algorithm identifier
 
 ### Credential key checks and limits
 
-EC2 key import checks points with OpenSSL's native EC affine-point validation, so off-curve
-keys fail before registration can save them, including with `fmt: none`. Each EC2 key keeps
-the resulting OpenSSL handle for signature verification. Ed25519 and Ed448
-imports reject noncanonical encodings and the complete small-order point sets, for both x
+Every COSE key imports its public key into OpenSSL at construction and keeps the handle for
+signature verification. Registration rejects keys that OpenSSL cannot load, including with
+`fmt: none`. For EC2, OpenSSL's native affine-point validation rejects off-curve points.
+Ed25519 and Ed448 imports reject noncanonical encodings and the complete small-order point sets, for both x
 signs. The sets come from [libsodium's Ed25519 check](https://github.com/jedisct1/libsodium/blob/1.0.18/src/libsodium/crypto_core/ed25519/ref10/ed25519_ref10.c#L1022-L1075)
 and [Bouncy Castle's Ed448 encoding check](https://github.com/bcgit/bc-java/blob/r1rv80/core/src/main/java/org/bouncycastle/math/ec/rfc8032/Ed448.java#L179-L212).
 
@@ -415,13 +415,13 @@ or full Edwards on-curve / prime-order subgroup membership. In particular, a `no
 does not prove possession, and the Edwards checks do not reject every off-curve or mixed-order
 point. Signature verification still uses OpenSSL.
 
-Off-curve EC keys raise `CoseKeyLoadException` during import, including when loading a stored
+OpenSSL import failures raise `CoseKeyLoadException`, including when loading a stored
 key with `CoseKey::fromBytes()`. Registration and authentication report reason
 `unusable_credential_key` when that exception occurs during verification. Rejected Edwards
 imports raise `CoseKeyException`; registration reports reason `malformed_response` through the
 existing response parser. Loading stored Edwards keys with `CoseKey::fromBytes()` applies the
 same checks. Use `toBytes()` and `fromBytes()` for persistence: PHP's `serialize()` cannot
-serialize the OpenSSL handle inside an EC2 key.
+serialize the OpenSSL handle inside a COSE key.
 
 ## Development
 

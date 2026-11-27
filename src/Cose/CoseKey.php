@@ -34,13 +34,31 @@ abstract readonly class CoseKey
      */
     public const int LABEL_ALG = 3;
 
+    private OpenSSLAsymmetricKey $openSslPublicKey;
+
     /**
-     * @param TAlg $alg
+     * @param TAlg                                     $alg
+     * @param callable(): (OpenSSLAsymmetricKey|false) $loadOpenSslPublicKey
+     *
+     * @param-immediately-invoked-callable $loadOpenSslPublicKey
+     * @throws CoseKeyLoadException if OpenSSL rejects the key material
      */
     protected function __construct(
         public int $alg,
+        callable $loadOpenSslPublicKey,
     )
     {
+        self::getOpenSslErrors(); // Discard stale errors before importing the key.
+        $publicKey = $loadOpenSslPublicKey();
+
+        if ($publicKey === false) {
+            $errors = self::getOpenSslErrors();
+            throw new CoseKeyLoadException("Failed to load public key for COSE algorithm {$alg}" . ($errors === '' ? '' : ": {$errors}"));
+        }
+
+        // OpenSSL can leave errors queued even after a successful import.
+        self::getOpenSslErrors();
+        $this->openSslPublicKey = $publicKey;
     }
 
     /**
@@ -65,7 +83,7 @@ abstract readonly class CoseKey
      * credential's public key. The inverse of {@see self::toBytes()}.
      *
      * @throws CoseKeyException on malformed input or rejected key material
-     * @throws CoseKeyLoadException if OpenSSL rejects an EC2 public point
+     * @throws CoseKeyLoadException if OpenSSL rejects the key material
      */
     public static function fromBytes(string $bytes): CoseKey
     {
@@ -95,22 +113,13 @@ abstract readonly class CoseKey
      * {@see \openssl_verify()} consumes directly (EdDSA requires OpenSSL 3.0 / PHP 8.4).
      *
      * @see https://www.rfc-editor.org/rfc/rfc9053.html signature algorithms
-     * @throws CoseKeyLoadException if OpenSSL rejects the key material
      */
     final public function verify(
         string $message,
         string $signature,
     ): bool
     {
-        $this->clearOpenSslErrors(); // Discard any stale entries so a failure below reports only this call's errors.
-
-        $publicKey = $this->toOpenSslPublicKey();
-
-        if ($publicKey === false) {
-            throw new CoseKeyLoadException('Failed to load public key: ' . $this->getOpenSslErrors());
-        }
-
-        $result = openssl_verify($message, $signature, $publicKey, $this->getOpenSslAlgorithm());
+        $result = openssl_verify($message, $signature, $this->openSslPublicKey, $this->getOpenSslAlgorithm());
 
         // 1 = verified; 0 = signature does not match; -1 = malformed signature or an
         // OpenSSL error. A caller cannot tell attacker-supplied garbage apart from a
@@ -119,18 +128,12 @@ abstract readonly class CoseKey
     }
 
     /**
-     * Returns the ext-openssl public key handle used by {@see self::verify()}.
-     * Returns false if OpenSSL rejects key material imported on demand.
-     */
-    abstract protected function toOpenSslPublicKey(): OpenSSLAsymmetricKey|false;
-
-    /**
      * The OpenSSL message-digest algorithm to verify with — an OPENSSL_ALGO_* constant,
      * or 0 for pure signature schemes (EdDSA), which take no separate digest.
      */
     abstract protected function getOpenSslAlgorithm(): int;
 
-    protected function getOpenSslErrors(): string
+    private static function getOpenSslErrors(): string
     {
         $errors = [];
 
@@ -139,11 +142,6 @@ abstract readonly class CoseKey
         }
 
         return implode('; ', $errors);
-    }
-
-    protected function clearOpenSslErrors(): void
-    {
-        self::getOpenSslErrors();
     }
 
 }

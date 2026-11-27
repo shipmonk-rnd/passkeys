@@ -220,7 +220,6 @@ final class RelyingParty
      *
      * @return RegistrationResult::ATTESTATION_*
      *
-     * @throws CoseKeyLoadException if the attested credential key cannot be loaded
      * @throws VerificationException
      */
     private function verifyAttestationStatement(

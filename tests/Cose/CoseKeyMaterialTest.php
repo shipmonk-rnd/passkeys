@@ -124,7 +124,7 @@ final class CoseKeyMaterialTest extends CryptoTestCase
 
             foreach ([0, 1] as $coordinate) {
                 yield "EC2 {$crv}, off-curve coordinates {$coordinate}" => [
-                    "EC2 curve {$crv} has invalid public point: error:%a",
+                    "Failed to load public key for COSE algorithm {$alg}: error:%a",
                     [1 => CoseEc2Key::KTY, 3 => $alg, -1 => $crv, -2 => str_repeat(chr($coordinate), $length), -3 => str_repeat(chr($coordinate), $length)],
                 ];
             }
@@ -134,7 +134,7 @@ final class CoseKeyMaterialTest extends CryptoTestCase
         $y[31] = $y[31] ^ "\x01";
 
         yield 'P-256 generator with one changed y bit' => [
-            'EC2 curve 1 has invalid public point: error:%a',
+            'Failed to load public key for COSE algorithm -7: error:%a',
             [
                 1 => CoseEc2Key::KTY,
                 3 => CoseAlgorithmIdentifier::ES256,
