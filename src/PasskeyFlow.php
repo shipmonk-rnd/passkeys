@@ -41,24 +41,13 @@ use const SORT_STRING;
  * A high-level, passkey-only login flow on top of the {@see RelyingParty} façade: construct it
  * with your relying party identity and storage — a durable {@see PasskeyStore} and a
  * session-scoped {@see PendingCeremonyStore} — and wire the public methods to your HTTP
- * endpoints. It covers the two common ways passkey login is offered — usually both at once, on
- * the same page:
+ * endpoints.
  *
- *  1. A dedicated "sign in with a passkey" button (and/or conditional-mediation autofill), where
- *     no username is known: call {@see self::authenticationOptions()} with null. The options carry
- *     no `allowCredentials`; a discoverable credential identifies the user via its user handle.
- *  2. A two-step login form (username/email first, password or passkey second): pass the entered
- *     username. If the account is known, the options list its credentials in `allowCredentials`
- *     and the ceremony is pinned to that account — an assertion by any other user's credential is
- *     rejected. An unknown username pins the ceremony too, to a fresh handle that belongs to no
- *     account, and by default gets the usernameless empty `allowCredentials` — so a non-existent
- *     account and a known one without passkeys look and fail alike. A *known* account with
- *     passkeys still stands out through its non-empty list. Override
- *     {@see self::getEnumerationHardeningSecret()} to close that gap: a username with no passkeys
- *     is then served a stable fabricated descriptor indistinguishable from a real one, so every
- *     username yields the same response shape (WebAuthn §14.6.2).
+ * For public sign-in (button or conditional-mediation autofill), call
+ * {@see self::authenticationOptions()} without a username. The options omit `allowCredentials`;
+ * a discoverable credential identifies the account via its user handle.
  *
- * Because both flows can run concurrently in one browser session (conditional mediation starts at
+ * Because ceremonies can run concurrently in one browser session (conditional mediation starts at
  * page load, a button click starts another ceremony), pending ceremonies are keyed by challenge:
  * {@see self::authenticate()} looks the ceremony up by the challenge inside the response instead
  * of assuming a single pending slot.
@@ -103,30 +92,21 @@ class PasskeyFlow
      * {@see self::rememberPendingAuthentication()}, and returns the options to hand to the
      * browser's `navigator.credentials.get()` (see {@see PublicKeyCredentialRequestOptions::toJson()}).
      *
-     * @param non-empty-string|null $username how the login form identified the account
-     *     (email/username), or null for the dedicated-button / conditional-mediation flow — also
-     *     for a blank field. Normalize it the way your accounts store it (trim it, lower-case an
-     *     email) first.
+     * @param non-empty-string|null $username null for public sign-in, or a normalized username to
+     *     pin the ceremony to an account and expose its credential IDs in `allowCredentials`.
+     *     Reserve this for signed-in reauthentication or non-discoverable credentials.
      *
      * @throws CoseKeyException if a stored public key cannot be imported
      */
     public function authenticationOptions(?string $username = null): PublicKeyCredentialRequestOptions
     {
-        // A supplied username always pins the ceremony. When no account has it, the pin is a fresh
-        // handle that belongs to no account, so every assertion fails exactly as it does for an
-        // account without passkeys — with the same store calls. Left unpinned, the ceremony would
-        // sign in the owner of any passkey, and tell anyone with an account which usernames do not
-        // exist (WebAuthn §14.6.2).
+        // Even an unknown username pins the ceremony, to a fresh handle that no passkey belongs to.
         $userHandle = $username === null
             ? null
             : ($this->store->findUserHandleByUsername($username) ?? $this->generateUserHandle());
         $allowCredentials = $userHandle === null ? null : $this->credentialDescriptorsFor($userHandle);
 
-        // Username-enumeration hardening (WebAuthn §14.6.2): when a username was supplied but produced
-        // no real descriptors — the account does not exist, or exists but has no passkeys — substitute
-        // a stable, plausible fabricated descriptor so this response is indistinguishable from that of
-        // an account that does have passkeys. A no-op unless getEnumerationHardeningSecret() is set;
-        // it only shapes the response — verification (keyed by the pinned user handle) is unchanged.
+        // A decoy can mask an empty allow-list without changing the account pin (WebAuthn §14.6.2).
         if ($username !== null && $allowCredentials === null) {
             $allowCredentials = $this->fabricateAllowCredentials($username);
         }
@@ -152,11 +132,8 @@ class PasskeyFlow
      * On success the returned result identifies the authenticated user
      * ({@see AuthenticationResult::$userHandle}); establishing their session is the caller's job.
      * Anything else — malformed input, an unknown or already-used challenge, a failed check —
-     * throws, so a passkey login endpoint reduces to one call and one catch. Answer every failure
-     * with the same generic error. Log {@see VerificationException::$reason} when available: the
-     * reasons differ between a real and a fabricated credential, and between account kinds, so
-     * echoing them would undo the username-enumeration hardening (WebAuthn §14.6.2). For the one
-     * exception, see {@see self::allAcceptedCredentialsSignal()}.
+     * throws. Log {@see VerificationException::$reason} when available and answer public sign-in
+     * failures with the same generic error; the reasons can disclose account or credential details.
      *
      * @param string $responseJson raw request body containing the authentication response JSON
      *
@@ -388,13 +365,10 @@ class PasskeyFlow
      * it stays authoritative: never hand the provider a filtered subset, or it hides the omitted —
      * still valid — passkeys.
      *
-     * The matching `signalUnknownCredential()` call needs no server-built payload: the browser
-     * already holds the credential id it just used and your RP ID, so it can prune a single
-     * unrecognised credential itself once {@see self::authenticate()} rejects it with
-     * {@see VerificationException::UNKNOWN_CREDENTIAL}. Telling the page that reason is the one
-     * exception to the generic sign-in error, so do it only while
-     * {@see self::getEnumerationHardeningSecret()} is null: with the hardening on, the hint tells an
-     * attacker which `allowCredentials` entries are fabricated.
+     * The browser can prune a single credential with `signalUnknownCredential()` after
+     * {@see VerificationException::UNKNOWN_CREDENTIAL}. For public sign-in, use
+     * `signalAllAcceptedCredentials()` after success; exposing the failure reason can reveal
+     * which credential IDs are registered.
      *
      * @param string $userHandle raw user handle bytes
      *
@@ -556,20 +530,9 @@ class PasskeyFlow
     }
 
     /**
-     * The secret that switches on username-enumeration hardening for the two-step flow (WebAuthn
-     * §14.6.2). It defaults to null — the mitigation off — and then {@see self::authenticationOptions()}
-     * leaves `allowCredentials` empty for a username with no passkeys, so an empty-vs-non-empty
-     * response reveals which accounts have passkeys. Return a fixed, high-entropy secret (≥16 bytes,
-     * e.g. 32 random bytes kept in app config — the *same* value on every request) and those
-     * responses instead carry a plausible fabricated descriptor, so a probing attacker can no longer
-     * tell passkey-bearing accounts from the rest.
-     *
-     * The secret MUST be stable across requests (a fresh one each time would make the fake
-     * descriptors change between probes, exposing them as fake) and MUST stay secret (anyone who
-     * knows it can recompute the fabricated ids and distinguish them from real ones). This equalizes
-     * the *response*; a determined attacker may still find residual side channels (per-account
-     * response timing, or the credential count) — override {@see self::fabricateAllowCredentials()}
-     * if you need to narrow those too.
+     * A fixed, high-entropy secret (at least 16 bytes, shared across requests and instances) lets
+     * {@see self::fabricateAllowCredentials()} mask an empty allow-list (WebAuthn §14.6.2).
+     * Real credential IDs, counts, transports, and timing can still leak information.
      *
      * @return string|null raw secret bytes, or null to disable the mitigation
      */

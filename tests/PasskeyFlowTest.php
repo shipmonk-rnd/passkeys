@@ -258,7 +258,7 @@ final class PasskeyFlowTest extends CryptoTestCase
 
         $options = $flow->authenticationOptions('carol@example.com');
 
-        // Carol exists but has no passkeys: the response is now indistinguishable from a passkeyed account…
+        // Carol has no passkeys, so her options get a decoy…
         self::assertSame(
             hash_hmac('sha256', 'carol@example.com', self::HARDENING_SECRET, true),
             $this->onlyAllowCredentialId($options),
