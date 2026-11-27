@@ -2,7 +2,6 @@
 
 namespace ShipMonk\Passkeys\Cose;
 
-use OpenSSLAsymmetricKey;
 use ShipMonk\Passkeys\Cbor\CborEncoder;
 use ShipMonk\Passkeys\Cbor\CborMap;
 use ShipMonk\Passkeys\Cbor\CborMapException;
@@ -75,6 +74,9 @@ final readonly class CoseEc2Key extends CoseKey
      * @param self::CRV_*              $crv
      * @param string                   $x   raw x-coordinate bytes (fixed length for the curve)
      * @param string                   $y   raw y-coordinate bytes (fixed length for the curve)
+     *
+     * @see https://github.com/openssl/openssl/blob/openssl-3.0.18/crypto/ec/ec_lib.c#L861-L881
+     * @throws CoseKeyException if OpenSSL rejects the public point
      */
     private function __construct(
         int $alg,
@@ -83,7 +85,14 @@ final readonly class CoseEc2Key extends CoseKey
         public string $y,
     )
     {
-        parent::__construct($alg);
+        // PHP imports x/y through EC_POINT_set_affine_coordinates(), which checks curve membership.
+        parent::__construct($alg, static fn () => openssl_pkey_new([
+            'ec' => [
+                'curve_name' => self::ALGORITHMS[$alg][2],
+                'x' => $x,
+                'y' => $y,
+            ],
+        ]));
     }
 
     /**
@@ -114,27 +123,6 @@ final readonly class CoseEc2Key extends CoseKey
         return new self($alg, $crv, $x, $y);
     }
 
-    /**
-     * Checks the public point before accepting a registration, independently of its attestation.
-     * PHP's EC import passes x/y through EC_POINT_set_affine_coordinates(), which checks curve
-     * membership. This guarantee is specific to EC affine import, not key loading in general.
-     * Signature verification uses the same native import, so also checks the point.
-     *
-     * @see https://github.com/openssl/openssl/blob/openssl-3.0.18/crypto/ec/ec_lib.c#L861-L881
-     * @throws CoseKeyLoadException if OpenSSL rejects the public point
-     */
-    public function validatePublicPoint(): void
-    {
-        $this->clearOpenSslErrors();
-
-        if ($this->toOpenSslPublicKey() === false) {
-            throw new CoseKeyLoadException("EC2 curve {$this->crv} has invalid public point: " . $this->getOpenSslErrors());
-        }
-
-        // OpenSSL can leave errors queued even after a successful public-only EC import.
-        $this->clearOpenSslErrors();
-    }
-
     public function toBytes(): string
     {
         return CborEncoder::encodeMap([
@@ -143,17 +131,6 @@ final readonly class CoseEc2Key extends CoseKey
             [CborEncoder::encodeInt(self::LABEL_CRV), CborEncoder::encodeInt($this->crv)],
             [CborEncoder::encodeInt(self::LABEL_X), CborEncoder::encodeByteString($this->x)],
             [CborEncoder::encodeInt(self::LABEL_Y), CborEncoder::encodeByteString($this->y)],
-        ]);
-    }
-
-    protected function toOpenSslPublicKey(): OpenSSLAsymmetricKey|false
-    {
-        return openssl_pkey_new([
-            'ec' => [
-                'curve_name' => self::ALGORITHMS[$this->alg][2],
-                'x' => $this->x,
-                'y' => $this->y,
-            ],
         ]);
     }
 

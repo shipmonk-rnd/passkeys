@@ -8,7 +8,6 @@ use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
 use ShipMonk\Passkeys\Cose\CoseEc2Key;
 use ShipMonk\Passkeys\Cose\CoseKey;
 use ShipMonk\Passkeys\Cose\CoseKeyException;
-use ShipMonk\Passkeys\Cose\CoseKeyLoadException;
 use ShipMonk\Passkeys\Cose\CoseOkpKey;
 use ShipMonk\PasskeysTests\Cbor\CborTestEncoder;
 use ShipMonk\PasskeysTests\CryptoTestCase;
@@ -54,14 +53,16 @@ final class CoseKeyMaterialTest extends CryptoTestCase
         array $entries,
     ): void
     {
-        $key = CoseEc2Key::fromCborMap(self::cborMap($entries));
-        self::assertException(CoseKeyLoadException::class, $message, $key->validatePublicPoint(...));
+        self::assertException(CoseKeyException::class, $message, static fn () => CoseKey::fromCborMap(self::cborMap($entries)));
+        self::assertException(CoseKeyException::class, $message, static fn () => CoseKey::fromBytes(CborTestEncoder::intMap($entries)));
         self::assertFalse(openssl_error_string());
     }
 
-    public function testPointValidationClearsStaleOpenSslErrors(): void
+    public function testEcImportClearsStaleOpenSslErrors(): void
     {
-        $key = CoseEc2Key::fromCborMap(self::cborMap([
+        self::assertFalse(openssl_pkey_get_public('not a key at all'));
+
+        CoseEc2Key::fromCborMap(self::cborMap([
             1 => CoseEc2Key::KTY,
             3 => CoseAlgorithmIdentifier::ES256,
             -1 => CoseEc2Key::CRV_P256,
@@ -69,36 +70,34 @@ final class CoseKeyMaterialTest extends CryptoTestCase
             -3 => self::bytesFromHex(self::P256_BASE_POINT_Y),
         ]));
 
-        self::assertFalse(openssl_pkey_get_public('not a key at all'));
-        $key->validatePublicPoint();
         self::assertFalse(openssl_error_string());
     }
 
-    public function testPointValidationDoesNotReportStaleOpenSslErrors(): void
+    public function testEcImportDoesNotReportStaleOpenSslErrors(): void
     {
-        $key = CoseEc2Key::fromCborMap(self::cborMap([
+        $map = self::cborMap([
             1 => CoseEc2Key::KTY,
             3 => CoseAlgorithmIdentifier::ES256,
             -1 => CoseEc2Key::CRV_P256,
             -2 => str_repeat("\x00", 32),
             -3 => str_repeat("\x00", 32),
-        ]));
+        ]);
 
         try {
-            $key->validatePublicPoint();
+            CoseEc2Key::fromCborMap($map);
             self::fail('Expected an invalid public point');
 
-        } catch (CoseKeyLoadException $e) {
+        } catch (CoseKeyException $e) {
             $message = $e->getMessage();
         }
 
         self::assertFalse(openssl_pkey_get_public('not a key at all'));
 
         try {
-            $key->validatePublicPoint();
+            CoseEc2Key::fromCborMap($map);
             self::fail('Expected an invalid public point');
 
-        } catch (CoseKeyLoadException $e) {
+        } catch (CoseKeyException $e) {
             self::assertSame($message, $e->getMessage());
         }
 
@@ -110,7 +109,6 @@ final class CoseKeyMaterialTest extends CryptoTestCase
         foreach ([CoseAlgorithmIdentifier::ES256, CoseAlgorithmIdentifier::ES384, CoseAlgorithmIdentifier::ES512] as $alg) {
             [$key, $privateKey] = self::generateCoseKeyPair($alg);
             self::assertInstanceOf(CoseEc2Key::class, $key);
-            $key->validatePublicPoint();
             self::assertTrue($key->verify('message', self::sign($privateKey, 'message', $alg)));
         }
     }
@@ -125,7 +123,7 @@ final class CoseKeyMaterialTest extends CryptoTestCase
 
             foreach ([0, 1] as $coordinate) {
                 yield "EC2 {$crv}, off-curve coordinates {$coordinate}" => [
-                    "EC2 curve {$crv} has invalid public point: error:%a",
+                    "Failed to load public key for COSE algorithm {$alg}: error:%a",
                     [1 => CoseEc2Key::KTY, 3 => $alg, -1 => $crv, -2 => str_repeat(chr($coordinate), $length), -3 => str_repeat(chr($coordinate), $length)],
                 ];
             }
@@ -135,7 +133,7 @@ final class CoseKeyMaterialTest extends CryptoTestCase
         $y[31] = $y[31] ^ "\x01";
 
         yield 'P-256 generator with one changed y bit' => [
-            'EC2 curve 1 has invalid public point: error:%a',
+            'Failed to load public key for COSE algorithm -7: error:%a',
             [
                 1 => CoseEc2Key::KTY,
                 3 => CoseAlgorithmIdentifier::ES256,

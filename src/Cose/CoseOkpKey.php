@@ -2,12 +2,14 @@
 
 namespace ShipMonk\Passkeys\Cose;
 
+use LogicException;
 use OpenSSLAsymmetricKey;
 use ShipMonk\Passkeys\Cbor\CborEncoder;
 use ShipMonk\Passkeys\Cbor\CborMap;
 use ShipMonk\Passkeys\Cbor\CborMapException;
 use function bin2hex;
 use function in_array;
+use function openssl_pkey_get_details;
 use function openssl_pkey_new;
 use function strcmp;
 use function strlen;
@@ -104,6 +106,8 @@ final readonly class CoseOkpKey extends CoseKey
      * @param key-of<self::ALGORITHMS> $alg
      * @param self::CRV_*              $crv
      * @param string                   $x   raw public key bytes (fixed length for the curve)
+     *
+     * @throws CoseKeyException
      */
     private function __construct(
         int $alg,
@@ -111,7 +115,27 @@ final readonly class CoseOkpKey extends CoseKey
         public string $x,
     )
     {
-        parent::__construct($alg);
+        $keyType = self::ALGORITHMS[$alg][2];
+
+        parent::__construct($alg, static function () use ($keyType, $x): OpenSSLAsymmetricKey|false {
+            $publicKey = openssl_pkey_new([
+                $keyType => [
+                    'pub_key' => $x,
+                ],
+            ]);
+
+            if ($publicKey !== false) {
+                // Builds without EdDSA import support can generate an unrelated RSA key instead.
+                // The details entry is named after the actual key type.
+                $details = openssl_pkey_get_details($publicKey);
+
+                if (!isset($details[$keyType])) {
+                    throw new LogicException("OpenSSL did not return a {$keyType} public key");
+                }
+            }
+
+            return $publicKey;
+        });
     }
 
     /**
@@ -159,15 +183,6 @@ final readonly class CoseOkpKey extends CoseKey
             [CborEncoder::encodeInt(self::LABEL_ALG), CborEncoder::encodeInt($this->alg)],
             [CborEncoder::encodeInt(self::LABEL_CRV), CborEncoder::encodeInt($this->crv)],
             [CborEncoder::encodeInt(self::LABEL_X), CborEncoder::encodeByteString($this->x)],
-        ]);
-    }
-
-    protected function toOpenSslPublicKey(): OpenSSLAsymmetricKey|false
-    {
-        return openssl_pkey_new([
-            self::ALGORITHMS[$this->alg][2] => [
-                'pub_key' => $this->x,
-            ],
         ]);
     }
 

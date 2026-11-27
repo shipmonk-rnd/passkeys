@@ -73,6 +73,8 @@ final readonly class CoseRsaKey extends CoseKey
      * @param value-of<self::ALGORITHMS> $alg
      * @param string                     $n   modulus as minimal big-endian bytes (no leading zeros)
      * @param string                     $e   public exponent as minimal big-endian bytes (no leading zeros)
+     *
+     * @throws CoseKeyException
      */
     private function __construct(
         int $alg,
@@ -80,7 +82,7 @@ final readonly class CoseRsaKey extends CoseKey
         public string $e,
     )
     {
-        parent::__construct($alg);
+        parent::__construct($alg, static fn () => self::loadOpenSslPublicKey($n, $e));
     }
 
     /**
@@ -135,7 +137,10 @@ final readonly class CoseRsaKey extends CoseKey
         ]);
     }
 
-    protected function toOpenSslPublicKey(): OpenSSLAsymmetricKey|false
+    private static function loadOpenSslPublicKey(
+        string $n,
+        string $e,
+    ): OpenSSLAsymmetricKey|false
     {
         // Unlike EC2 and OKP, openssl_pkey_new() cannot build a public-only RSA key: it
         // requires a private exponent d and always flags the result private, which
@@ -145,8 +150,8 @@ final readonly class CoseRsaKey extends CoseKey
         // openssl_pkey_get_public(), which yields a usable public key.
         $throwawayKey = openssl_pkey_new([
             'rsa' => [
-                'n' => $this->n,
-                'e' => $this->e,
+                'n' => $n,
+                'e' => $e,
                 'd' => '',
             ],
         ]);

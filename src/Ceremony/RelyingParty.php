@@ -3,9 +3,8 @@
 namespace ShipMonk\Passkeys\Ceremony;
 
 use ShipMonk\Passkeys\Cbor\CborMapException;
-use ShipMonk\Passkeys\Cose\CoseEc2Key;
 use ShipMonk\Passkeys\Cose\CoseKey;
-use ShipMonk\Passkeys\Cose\CoseKeyLoadException;
+use ShipMonk\Passkeys\Cose\CoseKeyException;
 use ShipMonk\Passkeys\Credential\AttestationObject;
 use ShipMonk\Passkeys\Credential\AuthenticatorAssertionResponse;
 use ShipMonk\Passkeys\Credential\AuthenticatorAttestationResponse;
@@ -71,7 +70,7 @@ final class RelyingParty
      * @param PublicKeyCredential<AuthenticatorAttestationResponse> $credential
      *
      * @throws VerificationException on any failed §7.1 check, if the response is malformed, or if
-     *     the attested credential key is unusable (unsupported algorithm / cannot be loaded)
+     *     an existing credential's key cannot be imported during the duplicate check
      */
     public function verifyRegistration(
         PublicKeyCredential $credential,
@@ -89,12 +88,10 @@ final class RelyingParty
                 $e,
             );
 
-        } catch (CoseKeyLoadException $e) {
-            // The attested key already passed COSE parsing and the algorithm allow-list, so
-            // if OpenSSL still cannot load it, the key material itself is at fault.
+        } catch (CoseKeyException $e) {
             throw new VerificationException(
                 VerificationException::UNUSABLE_CREDENTIAL_KEY,
-                'Attested credential key is unusable: ' . $e->getMessage(),
+                'Stored credential key is unusable: ' . $e->getMessage(),
                 $e,
             );
         }
@@ -103,7 +100,7 @@ final class RelyingParty
     /**
      * @param PublicKeyCredential<AuthenticatorAttestationResponse> $credential
      *
-     * @throws CoseKeyLoadException
+     * @throws CoseKeyException
      * @throws MalformedDataException
      * @throws VerificationException
      */
@@ -167,12 +164,6 @@ final class RelyingParty
             );
         }
 
-        // Credential key validity is independent of the attestation format.
-        // Edwards encoding / small-order checks already ran during COSE import.
-        if ($publicKey instanceof CoseEc2Key) {
-            $publicKey->validatePublicPoint();
-        }
-
         // §7.1 steps 21–24: verify the attestation statement. `none` carries no statement; `packed`
         // self attestation is verified against the credential public key itself. Formats that need
         // an X.509 trust path are rejected fail-closed until the attestation layer lands.
@@ -229,7 +220,6 @@ final class RelyingParty
      *
      * @return RegistrationResult::ATTESTATION_*
      *
-     * @throws CoseKeyLoadException if the attested credential key cannot be loaded
      * @throws VerificationException
      */
     private function verifyAttestationStatement(
@@ -296,7 +286,7 @@ final class RelyingParty
      * @param PublicKeyCredential<AuthenticatorAssertionResponse> $credential
      *
      * @throws VerificationException on any failed §7.2 check, if the response is malformed, or if
-     *     the stored credential key is unusable (unsupported algorithm / cannot be loaded)
+     *     the stored credential key cannot be imported
      */
     public function verifyAuthentication(
         PublicKeyCredential $credential,
@@ -314,7 +304,7 @@ final class RelyingParty
                 $e,
             );
 
-        } catch (CoseKeyLoadException $e) {
+        } catch (CoseKeyException $e) {
             // A stored key the verifier cannot use is a stored-data fault; surfaced as a distinct
             // reason so it stays distinguishable from a genuine signature mismatch.
             throw new VerificationException(
@@ -328,7 +318,7 @@ final class RelyingParty
     /**
      * @param PublicKeyCredential<AuthenticatorAssertionResponse> $credential
      *
-     * @throws CoseKeyLoadException
+     * @throws CoseKeyException
      * @throws MalformedDataException
      * @throws VerificationException
      */

@@ -2,13 +2,12 @@
 
 namespace ShipMonk\PasskeysTests\Cose;
 
-use OpenSSLAsymmetricKey;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use ShipMonk\Passkeys\Cose\CoseAlgorithmIdentifier;
 use ShipMonk\Passkeys\Cose\CoseEc2Key;
 use ShipMonk\Passkeys\Cose\CoseKey;
-use ShipMonk\Passkeys\Cose\CoseKeyLoadException;
+use ShipMonk\Passkeys\Cose\CoseKeyException;
 use ShipMonk\Passkeys\Cose\CoseOkpKey;
 use ShipMonk\Passkeys\Cose\CoseRsaKey;
 use ShipMonk\PasskeysTests\CryptoTestCase;
@@ -22,7 +21,7 @@ use const OPENSSL_ALGO_SHA256;
 #[CoversClass(CoseEc2Key::class)]
 #[CoversClass(CoseOkpKey::class)]
 #[CoversClass(CoseRsaKey::class)]
-#[CoversClass(CoseKeyLoadException::class)]
+#[CoversClass(CoseKeyException::class)]
 final class CoseKeyVerifyTest extends CryptoTestCase
 {
 
@@ -78,14 +77,12 @@ final class CoseKeyVerifyTest extends CryptoTestCase
         yield 'Ed448' => [CoseAlgorithmIdentifier::Ed448];
     }
 
-    public function testThrowsWhenPublicKeyCannotBeLoaded(): void
+    public function testConstructionThrowsWhenPublicKeyCannotBeLoaded(): void
     {
-        $key = self::unloadableKey();
-
         self::assertException(
-            CoseKeyLoadException::class,
-            'Failed to load public key%A',
-            static fn () => $key->verify('x', 'y'),
+            CoseKeyException::class,
+            'Failed to load public key for COSE algorithm -7',
+            self::unloadableKey(...),
         );
     }
 
@@ -95,30 +92,26 @@ final class CoseKeyVerifyTest extends CryptoTestCase
      */
     public function testReportsTheOpenSslErrorsBehindALoadFailure(): void
     {
-        $key = self::unloadableKey(logOpenSslError: true);
-
         self::assertException(
-            CoseKeyLoadException::class,
-            'Failed to load public key: error:%a',
-            static fn () => $key->verify('x', 'y'),
+            CoseKeyException::class,
+            'Failed to load public key for COSE algorithm -7: error:%a',
+            static fn () => self::unloadableKey(logOpenSslError: true),
         );
     }
 
     /**
      * OpenSSL's error queue is process-wide and survives across calls, so an error left there by
-     * unrelated code must not be attributed to this verification: the queue is drained on entry.
+     * unrelated code must not be attributed to this key import: the queue is drained first.
      */
     public function testDoesNotReportOpenSslErrorsLeftBehindByEarlierCalls(): void
     {
-        $key = self::unloadableKey();
-
         // Leave a stale entry in the queue, the way any earlier failed OpenSSL call would.
         self::assertFalse(openssl_pkey_get_public('not a key at all'));
 
         self::assertException(
-            CoseKeyLoadException::class,
-            'Failed to load public key: ',
-            static fn () => $key->verify('x', 'y'),
+            CoseKeyException::class,
+            'Failed to load public key for COSE algorithm -7',
+            self::unloadableKey(...),
         );
     }
 
@@ -128,23 +121,17 @@ final class CoseKeyVerifyTest extends CryptoTestCase
      */
     private static function unloadableKey(bool $logOpenSslError = false): CoseKey
     {
-        return new readonly class (CoseAlgorithmIdentifier::ES256, $logOpenSslError) extends CoseKey {
+        return new readonly class ($logOpenSslError) extends CoseKey {
 
-            public function __construct(
-                int $alg,
-                private bool $logOpenSslError,
-            )
+            public function __construct(bool $logOpenSslError)
             {
-                parent::__construct($alg);
-            }
+                parent::__construct(CoseAlgorithmIdentifier::ES256, static function () use ($logOpenSslError): false {
+                    if ($logOpenSslError) {
+                        openssl_pkey_get_public('not a key at all');
+                    }
 
-            protected function toOpenSslPublicKey(): OpenSSLAsymmetricKey|false
-            {
-                if ($this->logOpenSslError) {
-                    openssl_pkey_get_public('not a key at all');
-                }
-
-                return false;
+                    return false;
+                });
             }
 
             public function toBytes(): string

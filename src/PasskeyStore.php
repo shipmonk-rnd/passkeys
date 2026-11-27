@@ -5,6 +5,7 @@ namespace ShipMonk\Passkeys;
 use ShipMonk\Passkeys\Ceremony\AuthenticationResult;
 use ShipMonk\Passkeys\Ceremony\CredentialRecord;
 use ShipMonk\Passkeys\Ceremony\CredentialStore;
+use ShipMonk\Passkeys\Cose\CoseKeyException;
 use ShipMonk\Passkeys\Options\PublicKeyCredentialUserEntity;
 
 /**
@@ -40,6 +41,8 @@ interface PasskeyStore extends CredentialStore
      *
      * @param string $userHandle raw user handle bytes
      * @return list<CredentialRecord>
+     *
+     * @throws CoseKeyException if a stored public key cannot be imported
      */
     public function findCredentialsByUserHandle(string $userHandle): array;
 

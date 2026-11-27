@@ -10,6 +10,7 @@ use ShipMonk\Passkeys\Base64\Base64;
 use ShipMonk\Passkeys\Ceremony\AuthenticationExpectations;
 use ShipMonk\Passkeys\Ceremony\AuthenticationResult;
 use ShipMonk\Passkeys\Ceremony\CredentialRecord;
+use ShipMonk\Passkeys\Ceremony\CredentialStore;
 use ShipMonk\Passkeys\Ceremony\RegistrationExpectations;
 use ShipMonk\Passkeys\Ceremony\RegistrationResult;
 use ShipMonk\Passkeys\Ceremony\RelyingParty;
@@ -461,8 +462,7 @@ final class RelyingPartyTest extends CryptoTestCase
 
     public function testRegistrationRejectsUnusableAttestedKey(): void
     {
-        // The all-zero P-256 point parses as COSE and passes the algorithm allow-list, but must
-        // fail point validation before attestation dispatch, including for unsupported formats.
+        // The off-curve point must fail while parsing authenticator data, before attestation dispatch.
         $coseEntries = [
             1 => 2,
             3 => CoseAlgorithmIdentifier::ES256,
@@ -478,11 +478,27 @@ final class RelyingPartyTest extends CryptoTestCase
 
         foreach (['none', 'packed', 'fido-u2f'] as $fmt) {
             $this->assertRegistrationFails(
-                VerificationException::UNUSABLE_CREDENTIAL_KEY,
+                VerificationException::MALFORMED_RESPONSE,
                 self::registrationCredential($coseEntries, fmt: $fmt, attStmtOverride: $fmt === 'packed' ? $attStmt : null),
-                'Attested credential key is unusable: %s',
+                'Malformed registration response: Malformed authenticator data',
             );
         }
+    }
+
+    #[DataProvider('provideUnusableStoredKeys')]
+    public function testRegistrationRejectsUnusableStoredKeyDuringDuplicateCheck(
+        string $keyBytes,
+        string $message,
+    ): void
+    {
+        $credential = self::registrationCredential($this->coseEntries);
+        $store = self::storeWithUnusableKey($keyBytes);
+
+        $this->assertVerificationFailure(
+            VerificationException::UNUSABLE_CREDENTIAL_KEY,
+            static fn () => (new RelyingParty())->verifyRegistration($credential, self::registrationExpectations(), $store),
+            'Stored credential key is unusable: ' . $message,
+        );
     }
 
     public function testRegistrationRejectsPackedSelfAttestationWithBadSignature(): void
@@ -761,33 +777,37 @@ final class RelyingPartyTest extends CryptoTestCase
         );
     }
 
-    public function testAuthenticationRejectsUnusableStoredKey(): void
+    #[DataProvider('provideUnusableStoredKeys')]
+    public function testAuthenticationRejectsUnusableStoredKey(
+        string $keyBytes,
+        string $message,
+    ): void
     {
-        // An EC2 P-256 key (kty 2, crv 1) with an off-curve, all-zero point parses but cannot be
-        // loaded by OpenSSL, so verification raises a CoseKeyLoadException that the façade
-        // repacks into a VerificationException.
-        $record = new CredentialRecord(
-            credentialId: self::CREDENTIAL_ID,
-            publicKey: CoseKey::fromCborMap(self::cborMap([
+        $this->assertAuthenticationFails(
+            VerificationException::UNUSABLE_CREDENTIAL_KEY,
+            self::authenticationCredential($this->privateKey, CoseAlgorithmIdentifier::ES256),
+            self::storeWithUnusableKey($keyBytes),
+            'Stored credential key is unusable: ' . $message,
+        );
+    }
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function provideUnusableStoredKeys(): iterable
+    {
+        yield 'off-curve EC2 point' => [
+            CborTestEncoder::intMap([
                 1 => 2,
                 3 => CoseAlgorithmIdentifier::ES256,
                 -1 => 1,
                 -2 => str_repeat("\x00", 32),
                 -3 => str_repeat("\x00", 32),
-            ])),
-            signCount: 0,
-            userHandle: self::USER_HANDLE,
-            uvInitialized: true,
-            backupEligible: false,
-            backupState: false,
-        );
-
-        $this->assertAuthenticationFails(
-            VerificationException::UNUSABLE_CREDENTIAL_KEY,
-            self::authenticationCredential($this->privateKey, CoseAlgorithmIdentifier::ES256),
-            self::storeWith($record),
-            'Stored credential key is unusable: %s',
-        );
+            ]),
+            'Failed to load public key for COSE algorithm -7: error:%a',
+        ];
+        yield 'unsupported key type' => [CborTestEncoder::intMap([1 => 0]), 'Unsupported COSE key type 0'];
+        yield 'malformed CBOR' => ["\xff", 'Malformed COSE key'];
     }
 
     public function testAuthenticationFlagsPossibleCloneOnEqualNonZeroCounter(): void
@@ -1038,7 +1058,7 @@ final class RelyingPartyTest extends CryptoTestCase
     private function assertAuthenticationFails(
         string $reason,
         PublicKeyCredential $credential,
-        InMemoryCredentialStore $store,
+        CredentialStore $store,
         ?string $message = null,
     ): void
     {
@@ -1144,6 +1164,33 @@ final class RelyingPartyTest extends CryptoTestCase
         $store->add($record);
 
         return $store;
+    }
+
+    private static function storeWithUnusableKey(string $keyBytes): CredentialStore
+    {
+        return new class ($keyBytes, self::USER_HANDLE) implements CredentialStore {
+
+            public function __construct(
+                private readonly string $keyBytes,
+                private readonly string $userHandle,
+            )
+            {
+            }
+
+            public function findCredentialByCredentialId(string $credentialId): CredentialRecord
+            {
+                return new CredentialRecord(
+                    credentialId: $credentialId,
+                    publicKey: CoseKey::fromBytes($this->keyBytes),
+                    signCount: 0,
+                    userHandle: $this->userHandle,
+                    uvInitialized: true,
+                    backupEligible: false,
+                    backupState: false,
+                );
+            }
+
+        };
     }
 
     /**
